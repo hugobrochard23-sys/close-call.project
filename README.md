@@ -112,6 +112,10 @@ des filets d'air glissent du nez vers l'arrière pendant le boost ; la caméra z
 Un contact rasant avec le sol ou un toit fait **glisser** la roquette. Un choc de face la fait **exploser**.
 Les vitres, les murs de briques fins et les caisses se brisent.
 
+**Refonte visuelle (v028).** Propulsion en couches attachée à la tuyère, fumée qui dérive, explosions en étapes, épaves
+qui brûlent, chars et hélicoptères détaillés et animés (tourelle à inertie, recul, assiette de vol), façades sans fenêtre
+coupée, toits équipés, forêts de conifères, son du réacteur en couches. Détails et mesures : [analysis/DESIGN_REFONTE.md](analysis/DESIGN_REFONTE.md).
+
 ## Niveaux
 
 Chaque niveau reconstruit une séquence de la vidéo, avec l'interface (HUD) qu'il a dans la vidéo.

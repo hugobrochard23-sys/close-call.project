@@ -5,7 +5,7 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v027-design',
+  version: 'v028',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637

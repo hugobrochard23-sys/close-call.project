@@ -1,8 +1,9 @@
-# Refonte visuelle — copie « cold impact design » (non publiée sur GitHub)
+# Refonte visuelle (v028)
 
-Version de travail séparée, faite à la demande d'Hugo le 26/09/2026. Base : GitHub `main` au commit 95b6a19 (v027).
-Rien n'a été poussé : branche locale `design`, envoi désactivé (`git remote -v` → push `DISABLED-no-push-design-copy`).
-Lancer : `node tools/serve.js 8124` → http://localhost:8124 (la version principale reste sur 8123).
+Faite le 26/09/2026 à la demande d'Hugo, d'abord dans une copie à part (« cold impact design »), puis intégrée à `main`
+après validation (v028). Base : v027 (commit 95b6a19). Étapes : commits « Design 1 » à « Design 8 ».
+Outils d'inspection visuelle (développement, jamais chargés par le jeu) : `tools/devhelpers.js` — dans la console d'une page
+`?test=1` : `await import('/tools/devhelpers.js')`, puis `__multi`, `__side`, `__look`, `__orbit`, `__grid`.
 
 ## Ce qui a changé
 

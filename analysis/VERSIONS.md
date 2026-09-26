@@ -425,3 +425,15 @@ les 0,45 s. Pilote automatique : 9 niveaux + AUTOMAP difficile terminés, niveau
 **Vérification :** flèches : CITY 17, BRICKWORKS 0, CANYON 16 ; niveau 2 : 4 repères rouges (ordinateur et téléphone
 375×812), pilote automatique : 4/4 tanks, 22,6 s ; fusée de base vue de côté : nez gris, 0 pièce rouge ; 21 cosmétiques
 construits sans erreur.
+
+## v028 — refonte visuelle (design, effets, sons, animations, cohérence du monde)
+
+**Changements (à la demande d'Hugo, validés sur la copie de test avant intégration) :** voir
+[DESIGN_REFONTE.md](DESIGN_REFONTE.md) — particules translucides / additives, propulsion en couches, explosions en 9 étapes,
+épaves, chars et hélicoptères détaillés et animés, décor (façades, vitrines, toits, conifères, rochers, nuages), matériaux,
+réacteur en 5 couches sonores, repères des missiles ennemis. Gameplay inchangé : trajectoires de tir ennemi d'origine,
+collisions des niveaux inchangées (les équipements de toit évitent tout toit survolé par un parcours).
+
+**Vérification :** pilote automatique : 9 niveaux + AUTOMAP facile / moyen / difficile terminés, aucune erreur ; taux de
+touche des tirs ennemis sur 32 cartes AUTOMAP 26 % contre 23 % en v027 (dans le bruit : 16–25 % selon les séries) ;
+appels de dessin égaux ou inférieurs à v027 (TRENCH RUN 105 contre 140), temps par image égal ou inférieur.
