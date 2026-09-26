@@ -104,7 +104,7 @@
     const nozzle = cyl(r * 0.75, r * 0.6, 0.1, lam(c.nozzle), 10, g); nozzle.rotation.x = Math.PI / 2; nozzle.position.z = -len / 2 - 0.05;
     // design : jet de la tuyère — disque incandescent au fond de la tuyère + deux cônes lumineux (cœur jaune, enveloppe
     // orange) animés par Rocket.updateMesh (vacillement, allumage / coupure). Matériaux propres à chaque roquette.
-    const jet = new THREE.Group(); jet.position.z = -len / 2 - 0.1; g.add(jet);
+    const jet = new THREE.Group(); jet.position.z = -len / 2 - 0.1; jet.visible = false; g.add(jet);   // allumé par Rocket.updateMesh
     const disc = new THREE.Mesh(new THREE.CircleGeometry(r * 0.6, 12), new THREE.MeshBasicMaterial({ color: '#fff2c0', transparent: true, opacity: 1 }));
     disc.rotation.y = Math.PI; disc.position.z = 0.005; jet.add(disc);
     const cone = (rad, h, color, op) => {

@@ -146,14 +146,14 @@
         want = Math.atan2(-(local.x - turret.position.x), -(local.z - turret.position.z));
         const horiz = Math.hypot(local.x, local.z);
         pitch = U.clamp(Math.atan2(local.y - 2.0, horiz), -0.09, 0.55);
-        maxW = 1.5;
+        maxW = 2.2;
       } else {
         want = 0.55 * Math.sin(t * 0.21 + this.ph); pitch = 0.03 + 0.02 * Math.sin(t * 0.3 + this.ph); maxW = 0.35;
       }
       let diff = want - turret.rotation.y; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
       this.aimErr = Math.abs(diff);
       const tw = U.clamp(diff * 3.2, -maxW, maxW);
-      this.tw += U.clamp(tw - this.tw, -3 * dt, 3 * dt);
+      this.tw += U.clamp(tw - this.tw, -4.5 * dt, 4.5 * dt);
       turret.rotation.y += this.tw * dt;
       ud.gun.rotation.x += (pitch - ud.gun.rotation.x) * U.damp(3, dt);
       // recul : le tube part d'un coup, revient en 0,7 s ; la caisse bascule vers l'arrière puis se stabilise
@@ -204,8 +204,9 @@
     updateAA(dt, game, rk) {
       const A = CC.CONFIG.aa, d = game.aaThreat(), L = (p) => p[0] + (p[1] - p[0]) * d;
       this.aaCool = (this.aaCool || 0) - dt;
-      // design : le tir part de la bouche du canon (char) ou d'un panier de roquettes (hélicoptère)
-      const from = this.firePoint(_v2);
+      // point de tir de gameplay (inchangé : visibilité, portée, trajectoire) ; le départ visuel se fait à la bouche du canon
+      const from = _v2.copy(this.obb.c);
+      if (this.type === 'tank') from.addScaledVector(this.obb.uy, this.obb.hy + 0.9); else from.addScaledVector(this.obb.uy, -(this.obb.hy + 0.6));
       const to = _v.subVectors(rk.pos, from);
       const dist = to.length();
       if (dist > L(A.range) || dist < A.minRange) { this.aaSeen = 0; return; }
@@ -217,7 +218,6 @@
       if (game.world.raycast(from, to, dist - 1, (b) => b.kind === 'solid' || b.kind === 'brick')) { this.aaSeen = 0; return; }
       this.aaSeen = (this.aaSeen || 0) + dt;
       if (this.aaSeen < L(A.firstDelay)) return;
-      if (this.type === 'tank' && this.aimErr > 0.3) return;   // design : le canon doit d'abord être pointé sur la roquette
       // v023 : salves (3 derniers niveaux, AUTOMAP difficile) : plusieurs tirs rapprochés, et un tireur presque rechargé
       // qui voit la roquette ouvre le feu en même temps qu'un autre (tir groupé)
       const salvo = game.aaSalvo(), now = game.telemetry.t;
@@ -230,8 +230,9 @@
       else if (this.burst > 0) { this.burst--; this.aaCool = this.burst > 0 ? A.salvoGap : L(A.cooldown) * A.salvoRest; }
       else { this.burst = A.salvoCount - 1; this.aaCool = A.salvoGap; game.aaVolleyT = now; }
       const miss = A.miss[1] + (A.miss[0] - A.miss[1]) * Math.pow(1 - d, A.missCurve);   // la précision progresse dès le milieu du parcours
-      this.onFire(game, from, rk);
-      game.spawnEnemyMissile(from.clone(), rk, { miss, lead: L(A.lead), turn: L(A.turn), speed: L(A.speed), life: A.life, quiet: true });
+      const muzzle = this.firePoint(new V());
+      this.onFire(game, muzzle, rk);
+      game.spawnEnemyMissile(from.clone(), rk, { miss, lead: L(A.lead), turn: L(A.turn), speed: L(A.speed), life: A.life, quiet: true, visualFrom: muzzle });
     }
 
     kill(game) {
@@ -265,8 +266,11 @@
         W.vel.set(r.range(-3, 3), r.range(1, 3), r.range(-3, 3)); W.spin.set(r.range(-0.6, 0.6), r.range(2.5, 4) * (r() < 0.5 ? -1 : 1), r.range(-0.8, 0.8));
         const hit = game.world.raycast(this.object.position, new V(0, -1, 0), 400);
         W.ground = hit ? hit.point.y : this.object.position.y - 30;
+      } else if (this.type === 'house') {
+        obj.scale.set(1.05, r.range(0.42, 0.55), 1.05); obj.rotation.set(r.range(-0.05, 0.05), 0, r.range(-0.06, 0.06));   // effondrée
+        W.spread = 3;
       } else {
-        obj.position.y = -0.1;
+        obj.position.y = -0.1; obj.rotation.set(0, 0, r.range(-0.12, 0.12));
       }
       this.wreck = W;
     }
@@ -307,7 +311,8 @@
       W.fire += dt * 26 * k;
       while (W.fire > 1) {
         W.fire -= 1;
-        const p = new V(base.x + r.range(-1.2, 1.2), base.y + r.range(0.8, 1.8), base.z + r.range(-1.6, 1.6));
+        const sp = W.spread || 1;
+        const p = new V(base.x + r.range(-1.2, 1.2) * sp, base.y + r.range(0.8, 1.8), base.z + r.range(-1.6, 1.6) * sp);
         fx.flame.emit({ pos: p, vel: new V(r.range(-0.4, 0.4), r.range(1.5, 3), r.range(-0.4, 0.4)), life: r.range(0.25, 0.5), s0: 0.25, s1: r.range(0.5, 0.9) * (0.5 + k), s2: 0.1, peak: 0.3, cols: fx.pal.fireball, a: 0.75, fout: 0.3, spin: 3 });
         if (r() < 0.5) fx.darkSmoke.emit({ pos: p.clone().setY(p.y + 1), vel: new V(r.range(-0.3, 0.3), r.range(1.5, 2.8), r.range(-0.3, 0.3)), life: r.range(2, 3.4), s0: 0.4, s1: r.range(1.2, 2), s2: 2.6, peak: 0.35, cols: fx.pal.blackSmoke, drag: 0.6, a: 0.45 * (0.4 + k), fin: 0.1, fout: 0.35, wind: 1.3, turb: 1.5, spin: 0.6 });
       }
@@ -373,7 +378,10 @@
       if (opts) this.speed = this.vmax * CC.CONFIG.aa.boostStart;
       this.lead = opts ? opts.lead : 0; this.fuse = opts ? CC.CONFIG.aa.fuse : 1.0;
       this.alive = true; this.puff = 0;
+      // design : décalage purement visuel (bouche du canon → trajectoire réelle), résorbé en 0,25 s
+      this.vis = opts && opts.visualFrom ? opts.visualFrom.clone().sub(this.pos) : null; this.age = 0;
       this.object.position.copy(this.pos);
+      if (this.vis) this.object.position.add(this.vis);
     }
     update(dt, game) {
       if (!this.alive) return;
@@ -389,14 +397,16 @@
       if (this.speed < this.vmax) this.speed = Math.min(this.vmax, this.speed + this.vmax * (1 - CC.CONFIG.aa.boostStart) * dt / CC.CONFIG.aa.boostTime);
       const p0 = this.pos.clone();
       this.pos.addScaledVector(this.dir, this.speed * dt);
+      this.age += dt;
       this.object.position.copy(this.pos);
+      if (this.vis) { const k = 1 - U.smooth(0, 0.25, this.age); if (k > 0) this.object.position.addScaledVector(this.vis, k); else this.vis = null; }
       this.object.quaternion.setFromUnitVectors(new V(0, 0, 1), this.dir);
       // design : le missile tourne sur lui-même, sa tuyère vacille et grandit pendant la phase d'accélération
       this.spinA = (this.spinA || 0) + dt * 9; this.object.rotateZ(this.spinA);
       const gl = this.object.userData.glow;
       if (gl) { const f = 0.8 + 0.4 * U.fx(); gl.scale.set(f, (0.8 + 0.6 * (this.speed / this.vmax)) * f, f); }
       this.puff -= dt;
-      if (this.puff <= 0) { this.puff = 0.018; game.effects.trailPuff(this.pos.clone().addScaledVector(this.dir, -0.4), this.dir); }
+      if (this.puff <= 0) { this.puff = 0.018; game.effects.trailPuff(this.object.position.clone().addScaledVector(this.dir, -0.4), this.dir); }
       // v020 : plus courte distance pendant l'image (mouvement relatif), pas seulement en fin d'image :
       // face à face, les deux engins se rapprochent de plusieurs mètres par image et « sautaient » la détonation
       let closest = Infinity;

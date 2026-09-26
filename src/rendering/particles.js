@@ -380,7 +380,7 @@
       const back = pos.clone().addScaledVector(dir, -2.4);
       for (let i = 0; i < 16; i++) this.smoke.emit({ pos: back.clone().add(new V(r.range(-0.4, 0.4), r.range(-0.2, 0.4), r.range(-0.4, 0.4))), vel: dir.clone().multiplyScalar(-r.range(6, 14)).add(new V(r.range(-1, 1), r.range(0, 1.2), r.range(-1, 1)).multiplyScalar(2)), life: r.range(0.8, 1.5), s0: 0.2, s1: r.range(0.6, 1), s2: 1.3, peak: 0.25, cols: this.pal.smoke, drag: 2.5, a: 0.4, fout: 0.3, wind: 1, turb: 2 });
       this.ring(pos.clone().addScaledVector(dir, 1.2), dir, 0.2, 2.2, 0.22, '#ffffff', 0.35);
-      this.flash(pos, '#fff2c0', 4.5, 28, 0.3, '#ff9040');
+      this.flash(pos, '#fff2c0', 3, 24, 0.28, '#ff9040');
     }
 
     /* Éclair de bouche (canon de char, lance-missile ennemi) : cône de flamme bref, fumée qui s'enroule, étincelles, lumière. */
