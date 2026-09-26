@@ -38,6 +38,11 @@ Compatible Chrome, Edge, Firefox et Safari récents (WebGL requis).
 | F1 | liste des touches |
 | H | masquer le HUD |
 
+**Sur téléphone ou tablette (v017)** : joystick à gauche (piloter), **PROPULSION** à maintenir (moteur), **FEU** (tir /
+réapparition / reprendre après une pause), **MENU** et **R** en haut à gauche ; les menus se touchent directement.
+Couché : commandes par-dessus la vue 16:9. Debout : vue 3:4 en haut, commandes dessous, menus et boutique redisposés.
+Sur ordinateur, ajouter `#touch` à l'adresse force l'affichage des commandes tactiles (essai).
+
 Dans les menus et la boutique, tout se fait à la souris (survol pour sélectionner, clic pour valider) ; **Échap** revient en arrière.
 
 **Moteur et essence (v009, v010).** Au tir, la roquette a **0,5 s de poussée gratuite** (jauge bleue « FREE BOOST ») ;

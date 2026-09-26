@@ -267,3 +267,15 @@ Seule différence avec v011 : gravité 5,715 m/s² (moyenne Terre / Lune), G aff
 
 **Vérification :** pilote automatique : 10 cartes terminées sans crash (réserve minimale 3,2 s) ; Espace + W 6 s : 601° de rotation,
 toujours en vol, tuyère sans saut (≤ 1,6 % de l'écran par image) — mêmes valeurs que les mesures de v011.
+
+## v017 — commandes tactiles et jeu en vertical (iPhone)
+
+**Changements (à la demande d'Hugo) :** `src/input/touch.js` : joystick (visée, remplace souris / W,A,S,D), PROPULSION maintenue,
+FEU, MENU, R ; actifs seulement sur écran tactile (ou `#touch`). Couché : vue 16:9, commandes par-dessus ; jauge d'essence
+recentrée, SPEED sous TIME. Debout : vue pleine largeur au format 3:4 (`render.portraitHeight`), commandes dessous ;
+textes du HUD rapportés à la largeur, textes de droite alignés au bord, annonces recentrées ; menus dessinés dans une bande
+centrée (colonnes, titres et boutique redisposés : 2 colonnes). `CC.game` exposé pour le diagnostic.
+
+**Vérification :** téléphone simulé (375×812 et 667×375, tactile) : FEU → vol, PROPULSION → moteur et essence qui baisse,
+joystick → visée qui tourne, MENU → pause, FEU → reprise, R → recommence ; menu, difficulté, boutique, pause, résultats lisibles
+sans débordement en vertical. Ordinateur : aucune commande tactile, pilote automatique 10 cartes sans crash.

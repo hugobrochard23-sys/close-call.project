@@ -5,10 +5,11 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v016',
+  version: 'v017',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
+    portraitHeight: 4 / 3,       // CHOIX v017 : téléphone tenu droit, hauteur de la vue = largeur × 4/3
     maxPixelRatio: 1.5,
     shadows: true,
     shadowMapSize: 2048,
@@ -69,7 +70,10 @@ CC.CONFIG = {
     eyeHeight: 1.6,
   },
 
-  input: { sensitivity: 0.0021, invertY: false, maxPitchDeg: 88, autoLevel: 1.5 },   // maxPitchDeg : au lanceur seulement (v011) ; autoLevel : remise à plat de l'horizon en vol (1/s)
+  input: {
+    sensitivity: 0.0021, invertY: false, maxPitchDeg: 88, autoLevel: 1.5,
+    touch: { rate: 2.4, deadZone: 0.12, curve: 1.5 },   // CHOIX v017 : joystick tactile (rad/s à fond, zone morte, réponse progressive)
+  },   // maxPitchDeg : au lanceur seulement (v011) ; autoLevel : remise à plat de l'horizon en vol (1/s)
 
   style: {
     proximityDist: 4.0,          // ESTIMATION : distance "PROXIMITY FLIGHT"

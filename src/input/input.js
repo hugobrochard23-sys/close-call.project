@@ -37,7 +37,7 @@
       el.addEventListener('mousedown', (e) => {
         game.audio.init(); game.audio.resume();
         const r = el.getBoundingClientRect();
-        const x = (e.clientX - r.left) * (el.width / r.width), y = (e.clientY - r.top) * (el.height / r.height);
+        const x = (e.clientX - r.left) * (el.width / r.width), y = (e.clientY - r.top) * (el.height / r.height) - ((game.ui && game.ui.offsetY) || 0);
         if (game.ui && (game.state === 'MENU' || game.state === 'RESULTS' || game.paused || game.ui.overlay)) {
           if (game.ui.click(x, y)) return;
           if (game.state === 'RESULTS' && e.button === 0) { game.restartLevel(); return; }
@@ -51,7 +51,7 @@
       window.addEventListener('mouseup', (e) => { if (e.button === 2) this.grappleHeld = false; });
       el.addEventListener('mousemove', (e) => {
         const r = el.getBoundingClientRect();
-        if (game.ui) { game.ui.mouse.x = (e.clientX - r.left) * (el.width / r.width); game.ui.mouse.y = (e.clientY - r.top) * (el.height / r.height); }
+        if (game.ui) { game.ui.mouse.x = (e.clientX - r.left) * (el.width / r.width); game.ui.mouse.y = (e.clientY - r.top) * (el.height / r.height) - (game.ui.offsetY || 0); }
       });
       document.addEventListener('mousemove', (e) => {
         if (!this.locked || !this.enabled) return;
@@ -107,12 +107,14 @@
       if (turnRight) this.addAim(-ar, 0);
       if (pitchUp) this.addAim(0, ar);
       if (pitchDown) this.addAim(0, -ar);
+      const t = this.touch;   // v017 : joystick tactile (src/input/touch.js), vers le haut = cabrer comme W
+      if (t && (t.sx || t.sy)) { const tr = CC.CONFIG.input.touch.rate * dt; this.addAim(-t.sx * tr, -t.sy * tr); }
       this.constrainAim(dt);
       const st = {
         aimQ: this.aimQ.clone(),
         fire: this.fireEdge, grappleHeld: this.grappleHeld, grappleEdge: this.grappleEdge,
         retro: !!(k.ShiftLeft || k.ShiftRight),
-        thrust: !!k.Space,
+        thrust: !!k.Space || !!(t && t.thrust),
       };
       this.fireEdge = false; this.grappleEdge = false; this.edges = {};
       return st;

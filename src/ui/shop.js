@@ -46,15 +46,21 @@
       const ui = this.ui, col = CC.CONFIG.hud.colors, list = CC.Skins.list;
       ui.dim(ctx, W, H, 1);              // opaque : le menu ne doit pas dépasser derrière la grille
       const px = H * 0.0032, small = H * 0.0026;
-      ui.text(ctx, 'ROCKET SHOP', W * 0.5, H * 0.05, H * 0.0085, col.white, { align: 'center', skew: -0.2 });
-      ui.text(ctx, 'COSMETICS FOR THE MISSILE', W * 0.5, H * 0.118, small, '#bdbdbd', { align: 'center' });
-      ui.text(ctx, 'CASH ' + CC.Skins.formatPrice(game.save.cash), W * 0.95, H * 0.055, px, col.yellow, { align: 'right' });
-      ui.text(ctx, 'FICTIONAL PRICES', W * 0.95, H * 0.095, small * 0.85, '#8a8a8a', { align: 'right' });
+      // v017 : téléphone tenu droit → toute la hauteur de la vue (T = haut, HH = hauteur), 2 colonnes, solde sous le titre.
+      // Couché : T = 0 et HH = H, les formules redonnent exactement la disposition d'origine.
+      const P = ui.portrait, T = P ? -(ui.offsetY || 0) : 0, HH = P ? (ui.fullH || H) : H;
+      ui.text(ctx, 'ROCKET SHOP', W * 0.5, T + HH * (P ? 0.03 : 0.05), H * 0.0085, col.white, { align: 'center', skew: -0.2 });
+      ui.text(ctx, 'COSMETICS FOR THE MISSILE', W * 0.5, T + HH * (P ? 0.085 : 0.118), small, '#bdbdbd', { align: 'center' });
+      if (P) ui.text(ctx, 'CASH ' + CC.Skins.formatPrice(game.save.cash) + '   (FICTIONAL PRICES)', W * 0.5, T + HH * 0.115, small, col.yellow, { align: 'center' });
+      else {
+        ui.text(ctx, 'CASH ' + CC.Skins.formatPrice(game.save.cash), W * 0.95, H * 0.055, px, col.yellow, { align: 'right' });
+        ui.text(ctx, 'FICTIONAL PRICES', W * 0.95, H * 0.095, small * 0.85, '#8a8a8a', { align: 'right' });
+      }
 
-      const cols = 3, colW = W * 0.3, x0 = W * 0.035, y0 = H * 0.165, rowH = H * 0.099;
+      const cols = P ? 2 : 3, colW = W * (P ? 0.455 : 0.3), x0 = W * 0.035, y0 = T + HH * (P ? 0.15 : 0.165), rowH = HH * (P ? 0.065 : 0.099);
       for (let i = 0; i < list.length; i++) {
         const s = list[i];
-        const cx = x0 + (i % cols) * (colW + W * 0.017), cy = y0 + Math.floor(i / cols) * rowH;
+        const cx = x0 + (i % cols) * (colW + W * (P ? 0.02 : 0.017)), cy = y0 + Math.floor(i / cols) * rowH;
         const hot = ui.mouse.x >= cx && ui.mouse.x <= cx + colW && ui.mouse.y >= cy && ui.mouse.y <= cy + rowH * 0.88;
         const owned = !!game.save.owned[s.id], equipped = game.save.equipped === s.id;
         if (hot) this.sel = s.id;
@@ -63,7 +69,7 @@
         ctx.strokeStyle = equipped ? col.yellow : hot ? '#cfcfcf' : 'rgba(255,255,255,0.18)';
         ctx.lineWidth = Math.max(1, H / 540);
         ctx.strokeRect(cx, cy, colW, rowH * 0.88);
-        icon(ctx, s, cx + colW * 0.1, cy + rowH * 0.4, H * 0.04);
+        icon(ctx, s, cx + colW * 0.1, cy + rowH * 0.4, H * (P ? 0.034 : 0.04));
         const right = equipped ? 'EQUIPPED' : owned ? 'OWNED' : CC.Skins.formatPrice(s.price);
         const rightX = cx + colW - W * 0.014, nameX = cx + colW * 0.22;
         const avail = rightX - nameX;
@@ -77,7 +83,7 @@
 
       // panneau de détail : chaque ligne est coupée à la largeur réellement disponible
       const s = CC.Skins.get(this.sel);
-      const py = H * 0.875, lx = W * 0.05, rx = W * 0.95;
+      const py = T + HH * (P ? 0.87 : 0.875), lx = W * 0.05, rx = W * 0.95;
       ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(W * 0.035, py, W * 0.93, H * 0.1);
       const state = game.save.equipped === s.id ? 'EQUIPPED' : game.save.owned[s.id] ? 'OWNED - CLICK TO EQUIP' : game.save.cash >= s.price ? 'CLICK TO BUY' : 'NOT ENOUGH CASH';
       const hint = this.flash || 'ESC: BACK';

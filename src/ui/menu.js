@@ -21,7 +21,7 @@
       this.text(ctx, label, opts.align === 'left' ? x : x, y, px, col, { align: opts.align || 'center' });
     }
 
-    dim(ctx, W, H, a) { ctx.fillStyle = 'rgba(8,8,12,' + a + ')'; ctx.fillRect(0, 0, W, H); }
+    dim(ctx, W, H, a) { ctx.fillStyle = 'rgba(8,8,12,' + a + ')'; ctx.fillRect(0, -(this.offsetY || 0), W, this.fullH || H); }   // v017 : tout l'écran, pas seulement la bande
 
     draw(ctx, game, W, H) {
       this.buttons = []; this.hover = -1;
@@ -40,23 +40,24 @@
     drawMenu(ctx, game, W, H) {
       this.dim(ctx, W, H, 0.45);
       const col = CC.CONFIG.hud.colors;
-      this.text(ctx, 'CLOSE CALL', W / 2, H * 0.09, H * 0.0125, col.white, { align: 'center', skew: -0.22 });
-      this.text(ctx, 'STEER THE MISSILE. HIT THE TARGET. FLY CLOSE FOR STYLE.', W / 2, H * 0.2, H * 0.0024, col.yellow, { align: 'center' });
+      const P = this.portrait;   // v017 : en vertical, colonnes élargies (noms à gauche, records au bord droit), titre réduit
+      this.text(ctx, 'CLOSE CALL', W / 2, H * 0.09, H * (P ? 0.0095 : 0.0125), col.white, { align: 'center', skew: -0.22 });
+      this.text(ctx, 'STEER THE MISSILE. HIT THE TARGET. FLY CLOSE FOR STYLE.', W / 2, H * 0.2, H * (P ? 0.0019 : 0.0024), col.yellow, { align: 'center' });
       const best = game.save.best, px = H * 0.0036;
       CC.Levels.forEach((lv, i) => {
         const y = H * (0.275 + i * 0.068);
-        this.button(ctx, (i + 1) + '  ' + lv.name, W * 0.3, y, px, () => game.startLevel(i), { align: 'left' });
+        this.button(ctx, (i + 1) + '  ' + lv.name, W * (P ? 0.07 : 0.3), y, px, () => game.startLevel(i), { align: 'left' });
         const b = best[lv.id];
         const info = b ? U.formatTime(b.time) + '   STYLE ' + U.formatInt(b.style) : '--:--,--';
         // colonne assez à droite : un temps enregistré ("0:12,27   STYLE 1.234") ne doit pas toucher le nom du niveau
-        this.text(ctx, info, W * 0.88, y + px * 1.2, H * 0.0026, b ? '#cfcfcf' : '#7a7a7a', { align: 'right' });
+        this.text(ctx, info, W * (P ? 0.97 : 0.88), y + px * 1.2, H * 0.0026, b ? '#cfcfcf' : '#7a7a7a', { align: 'right' });
       });
       // v007 : dernière carte = carte aléatoire (le clic ouvre le choix de difficulté)
       const ny = H * (0.275 + CC.Levels.length * 0.068);
-      this.button(ctx, (CC.Levels.length + 1) + '  AUTOMAP', W * 0.3, ny, px, () => { this.overlay = 'difficulty'; }, { align: 'left', color: '#8fd0ff' });
-      this.text(ctx, 'RANDOM - 3 DIFFICULTIES', W * 0.88, ny + px * 1.2, H * 0.0026, '#8fd0ff', { align: 'right' });
+      this.button(ctx, (CC.Levels.length + 1) + '  AUTOMAP', W * (P ? 0.07 : 0.3), ny, px, () => { this.overlay = 'difficulty'; }, { align: 'left', color: '#8fd0ff' });
+      this.text(ctx, 'RANDOM - 3 DIFFICULTIES', W * (P ? 0.97 : 0.88), ny + px * 1.2, H * 0.0026, '#8fd0ff', { align: 'right' });
       this.button(ctx, 'ROCKET SHOP   ' + CC.Skins.formatPrice(game.save.cash), W / 2, H * 0.92, px, () => { this.overlay = 'shop'; }, { color: '#fdfd02' });
-      this.text(ctx, 'CLICK A LEVEL    F1: BINDS    TAB: SETTINGS', W / 2, H * 0.85, H * 0.0024, '#bdbdbd', { align: 'center' });
+      this.text(ctx, document.body.classList.contains('cc-touch') ? 'TAP A LEVEL' : 'CLICK A LEVEL    F1: BINDS    TAB: SETTINGS', W / 2, H * 0.85, H * 0.0024, '#bdbdbd', { align: 'center' });
       this.text(ctx, CC.CONFIG.version.toUpperCase(), W * 0.985, H * 0.955, H * 0.0018, '#808080', { align: 'right' });
     }
 
@@ -68,9 +69,14 @@
       this.text(ctx, 'PICK A DIFFICULTY - THE MAP IS BUILT INSTANTLY', W / 2, H * 0.25, H * 0.0026, '#c8c8c8', { align: 'center' });
       ['easy', 'medium', 'hard'].forEach((id, i) => {
         const D = CC.GEN_DIFFS[id], y = H * (0.4 + i * 0.12);
-        this.button(ctx, D.label, W / 2, y, px, () => { this.overlay = null; game.startGenerated(id); });
         const info = D.kinds.length + ' TARGETS   ' + D.length + ' M OF STREET   ' + (D.soldiers ? D.soldiers + ' HOSTILE' + (D.soldiers > 1 ? 'S' : '') : 'NO HOSTILES');
-        this.text(ctx, info, W / 2 + W * 0.13, y, H * 0.0026, '#bdbdbd', { align: 'left' });
+        if (this.portrait) {   // v017 : en vertical, la description passe sous le bouton
+          this.button(ctx, D.label, W / 2, y - H * 0.02, px, () => { this.overlay = null; game.startGenerated(id); });
+          this.text(ctx, info, W / 2, y + H * 0.045, H * 0.0024, '#bdbdbd', { align: 'center' });
+        } else {
+          this.button(ctx, D.label, W / 2, y, px, () => { this.overlay = null; game.startGenerated(id); });
+          this.text(ctx, info, W / 2 + W * 0.13, y, H * 0.0026, '#bdbdbd', { align: 'left' });
+        }
       });
       this.button(ctx, 'BACK (ESC)', W / 2, H * 0.85, px, () => { this.overlay = null; });
     }
@@ -88,7 +94,7 @@
     drawResults(ctx, game, W, H) {
       this.dim(ctx, W, H, 0.5);
       const r = game.results, col = CC.CONFIG.hud.colors, px = H * 0.0042;
-      this.text(ctx, r.title, W / 2, H * 0.2, H * 0.008, col.white, { align: 'center', skew: -0.2 });
+      this.text(ctx, r.title, W / 2, H * 0.2, H * (this.portrait ? 0.0055 : 0.008), col.white, { align: 'center', skew: -0.2 });   // v017 : « ALL TARGETS DESTROYED » tient dans la largeur
       this.text(ctx, 'TIME  ' + U.formatTime(r.time), W / 2, H * 0.36, px, col.white, { align: 'center' });
       this.text(ctx, 'STYLE ' + U.formatInt(r.style), W / 2, H * 0.43, px, col.white, { align: 'center' });
       if (r.bestTime) this.text(ctx, 'BEST  ' + U.formatTime(r.bestTime) + (r.newRecord ? '  NEW RECORD!' : ''), W / 2, H * 0.5, H * 0.003, r.newRecord ? col.yellow : '#bdbdbd', { align: 'center' });

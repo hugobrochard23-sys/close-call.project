@@ -9,27 +9,39 @@
   class HUD {
     constructor(canvas) { this.canvas = canvas; this.ctx = canvas.getContext('2d'); this.ctx.imageSmoothingEnabled = false; this._v = new V(); }
 
+    // v017 : tailles de texte rapportées à refH (= hauteur, sauf en vertical où la largeur limite : les textes du HUD,
+    // pensés pour un écran 16:9, tiennent ainsi dans la largeur du téléphone)
     text(str, x, y, pxFrac, color, opts) {
-      const H = this.canvas.height;
-      return CC.Font.draw(this.ctx, str, x, y, pxFrac * H, color, opts);
+      return CC.Font.draw(this.ctx, str, x, y, pxFrac * this.refH, color, opts);
     }
 
     draw(game, dt) {
       const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
+      this.portrait = !!game.portrait;
+      this.refH = this.portrait ? Math.min(H, W * 0.95) : H;
       ctx.clearRect(0, 0, W, H);
       ctx.imageSmoothingEnabled = false;
       const s = game.state;
       const inGame = ['AIM', 'FLIGHT', 'IMPACT', 'CRASHED', 'RESPAWN'].includes(s) || (s === 'RESULTS');
       if (inGame && game.level && game.showHud) this.drawGame(game);
-      if (game.ui) game.ui.draw(ctx, game, W, H);
+      if (game.ui) {
+        // v017 : en vertical, les menus (pensés en 16:9) sont dessinés dans une bande centrée de hauteur refH
+        const Hv = this.refH, off = Math.round((H - Hv) / 2);
+        game.ui.portrait = this.portrait; game.ui.offsetY = off; game.ui.fullH = H;
+        ctx.save(); ctx.translate(0, off);
+        game.ui.draw(ctx, game, W, Hv);
+        ctx.restore();
+      }
       if (game.debug) this.text('FPS ' + Math.round(game.fps), 0.01 * W, 0.965 * H, 0.0018, '#8f8', {});
     }
 
     drawGame(game) {
       const W = this.canvas.width, H = this.canvas.height, C = CC.CONFIG.hud, col = C.colors;
       const v = game.level.hud, rk = game.rocket;
+      // v017 : en vertical, les textes du coin haut droit sont alignés à droite sur le bord (sinon ils débordent)
+      const R = this.portrait ? { x: () => 0.97 * W, o: { align: 'right' } } : { x: (c) => c.x * W, o: undefined };
       // raccourcis
-      if (v === 'A' || v === 'C') {
+      if ((v === 'A' || v === 'C') && !document.body.classList.contains('cc-touch')) {   // rappels clavier : inutiles au doigt (v017)
         const b = C.binds[v];
         const lines = v === 'A' ? ['BINDS:F1', 'SETTINGS:TAB', 'MENU:ESC'] : ['RESET:R', 'MENU:ESC', 'SETTINGS:TAB'];
         lines.forEach((l, i) => this.text(l, b.x * W, (b.y + i * b.pitch) * H, b.px, col.white));
@@ -44,13 +56,13 @@
         this.text('TARGETS ' + game.targetsDone + '/' + game.targets.length, 0.5 * W, C.targets.y * H, C.targets.px, col.white, { align: 'center' });
       }
       if (v === 'A') {
-        this.text('THRUST:' + Math.round(CC.CONFIG.rocket.thrustHud), C.topRight.x * W, C.topRight.y * H, C.topRight.px, col.white);
-        this.text('COOLDOWN...', C.cooldown.x * W, C.cooldown.y * H, C.cooldown.px, col.yellow);
+        this.text('THRUST:' + Math.round(CC.CONFIG.rocket.thrustHud), R.x(C.topRight), C.topRight.y * H, C.topRight.px, col.white, R.o);
+        this.text('COOLDOWN...', R.x(C.cooldown), C.cooldown.y * H, C.cooldown.px, col.yellow, R.o);
       } else if (v === 'B') {
-        this.text('SCORE', C.score.x * W, C.score.y * H, C.score.px, col.white);
+        this.text('SCORE', R.x(C.score), C.score.y * H, C.score.px, col.white, R.o);
       } else {
-        this.text('TIME:∞', C.time.x * W, C.time.y * H, C.time.px, col.white);
-        if (!game.level.hideSpeed) this.text('SPEED:' + Math.round(rk && rk.active ? rk.speed : (game.state === 'AIM' ? 0 : game.lastSpeed)), C.speed.x * W, C.speed.y * H, C.speed.px, col.white);
+        this.text('TIME:∞', R.x(C.time), C.time.y * H, C.time.px, col.white, R.o);
+        if (!game.level.hideSpeed) this.text('SPEED:' + Math.round(rk && rk.active ? rk.speed : (game.state === 'AIM' ? 0 : game.lastSpeed)), R.x(C.speed), C.speed.y * H, C.speed.px, col.white, R.o);
       }
       // jauge de capacité (MESURÉE : barre jaune sur gris, sous la roquette)
       if (rk && rk.active && (rk.gaugeShowT > 0 || rk.retroActive || rk.grapple.active)) {
@@ -70,7 +82,7 @@
         else { cx = U.clamp((p.x * 0.5 + 0.5) * W, 0, W); cy = U.clamp((0.5 - p.y * 0.5) * H, 0, H); }
       }
       if (cross) {
-        const ctx = this.ctx, sz = C.crosshair.size * H / 2;
+        const ctx = this.ctx, sz = C.crosshair.size * this.refH / 2;
         ctx.strokeStyle = col.crosshair; ctx.lineWidth = Math.max(1, H / 540);
         ctx.beginPath(); ctx.moveTo(cx - sz, cy - sz); ctx.lineTo(cx + sz, cy + sz); ctx.moveTo(cx + sz, cy - sz); ctx.lineTo(cx - sz, cy + sz); ctx.stroke();
       }
@@ -107,7 +119,8 @@
         if (p.live) alpha = 0.92;
         else if (p.age > cfg.popupHold) { const f = (p.age - cfg.popupHold) / cfg.popupFade; alpha = 1 - f; rise = f * cfg.popupRise; }
         if (alpha <= 0) continue;
-        this.text(p.segments, p.x * W, (p.y - rise) * H, P.px, '#ffffff', { align: 'center', skew: P.skew, alpha });
+        const x = this.portrait ? 0.5 + (p.x - P.cx) * 0.3 : p.x;   // v017 : en vertical, annonces recentrées (sinon elles débordent à droite)
+        this.text(p.segments, x * W, (p.y - rise) * H, P.px, '#ffffff', { align: 'center', skew: P.skew, alpha });
       }
     }
 

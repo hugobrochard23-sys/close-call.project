@@ -147,8 +147,11 @@
     // ---------- dimensions (16:9 letterbox) ----------
     resize() {
       const w = window.innerWidth, h = window.innerHeight, ar = CC.CONFIG.render.aspect;
+      // v017 : téléphone tenu droit → vue pleine largeur, au plus 3:4 (plus haut, l'angle de vue horizontal devient trop étroit)
+      this.portrait = !!(CC.Touch && CC.Touch.active) && h > w;
       let cw = w, ch = Math.round(w / ar);
-      if (ch > h) { ch = h; cw = Math.round(h * ar); }
+      if (this.portrait) ch = Math.min(h, Math.round(w * CC.CONFIG.render.portraitHeight));
+      else if (ch > h) { ch = h; cw = Math.round(h * ar); }
       this.root.style.width = cw + 'px'; this.root.style.height = ch + 'px';
       const pr = this.testMode ? 1 : Math.min(window.devicePixelRatio || 1, CC.CONFIG.render.maxPixelRatio);
       this.renderer.setPixelRatio(pr);
