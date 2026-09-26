@@ -5,7 +5,7 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v018',
+  version: 'v019',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
@@ -30,10 +30,10 @@ CC.CONFIG = {
     thrustHud: 45,               // valeur affichée par le HUD A ("THRUST:45", OBSERVÉ)
     dragK: 0.0100,               // MESURÉ (v003) puis CHOIX v007 : 0,0086 → 0,0100 (vitesse de pointe 80 → 71 m/s)
     inducedDrag: 0.070,          // ESTIMATION : perte de vitesse en virage serré (v007 : 0,085 → 0,070, virage moins coûteux)
-    steerGain: 9.0,              // ESTIMATION : réponse de l'orientation au réticule (v007 : 7,5 → 9)
-    maxTurnRate: 3.5,            // rad/s, ESTIMATION (v007 : 3,0 → 3,5)
-    grip: 11.0,                  // alignement de la vitesse sur le nez (1/s) (v007 : 9 → 11)
-    gripEngineOff: 4.6,          // v007 : 3,5 → 4,6
+    steerGain: 22.0,             // réponse du nez à la visée (v007 : 7,5 → 9 ; v019 : 9 → 22, maniabilité : le nez colle au doigt)
+    maxTurnRate: 5.0,            // rad/s (v007 : 3,0 → 3,5 ; v019 : 3,5 → 5)
+    grip: 24.0,                  // alignement de la vitesse sur le nez (1/s) (v007 : 9 → 11 ; v019 : 11 → 24, la trajectoire suit le nez sans retard)
+    gripEngineOff: 9.0,          // v007 : 3,5 → 4,6 ; v019 : 4,6 → 9 (moteur coupé, la roquette reste pilotable)
     slideMaxAngleDeg: 27,        // CHOIX : contact rasant → glissade, sinon crash (v007 : 24 → 27, plus tolérant)
     slideFriction: 5.0,          // m/s² de perte en glissade
     breakSpeedFactor: 0.88,      // perte de vitesse en traversant vitre/mur de briques (ESTIMATION)
@@ -61,9 +61,10 @@ CC.CONFIG = {
     distance: 1.85,              // MESURÉ (indirect) : nez à 55 % et tuyère à 67,8 % de la hauteur ⇒ ≈ 1,5 longueur de roquette
     height: 0.52,                // MESURÉ (indirect), même calcul
     crosshairY: 0.402,           // MESURÉ : réticule à 40,2 % de la hauteur
-    followLag: 2.2,              // CHOIX v010 : vitesse (1/s) à laquelle la caméra se réaligne derrière la trajectoire (plus petit = caméra plus libre)
+    followLag: 2.0,              // CHOIX v010, revu v019 : 2e étage du lissage (1/s) ; la caméra suit la tête de la roquette (plus petit = plus doux)
+    noseLag: 3,                  // CHOIX v019 : 1er étage du lissage (1/s) : filtre les à-coups du joystick avant la caméra
     offsetLag: 7,                // lissage du décalage caméra (1/s) : dérive de la roquette à l'écran quand la visée tourne (ESTIMATION)
-    rollFromYawRate: 0.16,       // ESTIMATION : inclinaison de l'horizon en virage
+    rollFromYawRate: 0,          // v019 : 0,16 → 0 (Hugo) : l'horizon ne penche plus en virage
     rollLag: 5,
     launchBlend: 0.45,           // MESURÉ : la caméra rattrape la roquette en ≈ 0,5 s
     near: 0.05, far: 1400,

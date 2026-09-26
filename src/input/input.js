@@ -164,7 +164,9 @@
         }
         const desired = new V().subVectors(target, rk.pos).normalize();
         const vDir = rk.vel.clone().normalize();
-        const aim = desired.clone().addScaledVector(new V().subVectors(desired, vDir), this.level.pnGain !== undefined ? this.level.pnGain : 1.3).normalize();
+        // compensation du retard de la trajectoire, réglée pour grip = 11 ; une roquette plus réactive en demande moins (v019)
+        const pn = (this.level.pnGain !== undefined ? this.level.pnGain : 1.3) * Math.pow(11 / CC.CONFIG.rocket.grip, 2);
+        const aim = desired.clone().addScaledVector(new V().subVectors(desired, vDir), pn).normalize();
         if (aim.angleTo(desired) > 1.0) aim.copy(desired).lerp(aim, 1.0 / aim.angleTo(desired)).normalize();
         this.aimAt(new V().copy(rk.pos).addScaledVector(aim, 20), dt, 14);
         let wantOff = false;

@@ -286,3 +286,15 @@ sans débordement en vertical. Ordinateur : aucune commande tactile, pilote auto
 Vitesse de rotation de la visée : 138 → 86 °/s à fond, 39 → 16 °/s à mi-course.
 
 **Vérification :** téléphone simulé, joystick 0,5 s : 43° à fond (69° en v017), 8° à mi-course ; aucune erreur.
+
+## v019 — caméra qui suit la tête, horizon à plat, roquette plus maniable
+
+**Changements (à la demande d'Hugo) :**
+- caméra : s'oriente vers la tête de la roquette (et non plus la trajectoire) par un double lissage (`noseLag` 3, `followLag` 2,0) ;
+  plus d'inclinaison de l'horizon en virage (`rollFromYawRate` 0) ; le « haut » suit toujours la visée (loopings) ;
+- maniabilité : `steerGain` 9 → 22, `maxTurnRate` 3,5 → 5, `grip` 11 → 24, `gripEngineOff` 4,6 → 9 ;
+- pilote automatique : compensation du retard divisée par (grip / 11)² ; télémétrie : pose de la caméra (`cam`).
+
+**Vérification (D maintenue 0,5 s, moteur allumé, AUTOMAP facile) :** retard de la trajectoire sur la visée 19,2° → 8,2° ;
+horizon penché max 7,9° → 0° ; à-coup max de la caméra 174 → 92 °/s², rotation max 64 → 42 °/s.
+Looping Espace + W : 508° en 5 s, tuyère sans saut (≤ 1,5 % / image). Pilote automatique : 10 cartes terminées.

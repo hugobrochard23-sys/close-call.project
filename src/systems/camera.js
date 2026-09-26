@@ -19,7 +19,7 @@
       this.shake = 0;
       this.offset = new V(0, 0.5, 2);
       this.camDir = new V(0, 0, -1); this.camRight = new V(1, 0, 0); this.camUp = new V(0, 1, 0);
-      this.upRef = new V(0, 1, 0); this.prevCamDir = new V(0, 0, -1);
+      this.upRef = new V(0, 1, 0); this.prevCamDir = new V(0, 0, -1); this.camNose = new V(0, 0, -1);
     }
 
     // Offset angulaire vertical du réticule (MESURÉ y = 40,2 %).
@@ -49,7 +49,7 @@
     startLauncher(eyePos) { this.mode = 'launcher'; this.eye.copy(eyePos); this.pos.copy(eyePos); this.roll = 0; }
     startFlight() {
       this.mode = 'transition'; this.t = 0;
-      this.camDir.copy(this.aimDir); this.prevCamDir.copy(this.aimDir); this.upRef.copy(this.up);
+      this.camDir.copy(this.aimDir); this.prevCamDir.copy(this.aimDir); this.camNose.copy(this.aimDir); this.upRef.copy(this.up);
       this.updateCamBasis(); this.wantedOffset(this.offset);
     }
 
@@ -93,12 +93,12 @@
         cam.position.copy(this.eye);
         this.orient(this.aimDir, 0);
       } else if (this.mode === 'transition' || this.mode === 'chase') {
-        // la direction de la caméra rattrape la trajectoire (pas le nez ni la visée) avec retard
+        // v019 : la caméra s'oriente vers la tête de la roquette (on monte → elle pivote vers le haut), par un double
+        // lissage : le mouvement démarre et s'arrête en douceur, sans à-coup à chaque coup de joystick
         if (rk.active) {
-          const sp = rk.vel.length();
-          const target = sp > 1 ? rk.vel.clone().divideScalar(sp) : rk.fwd;
+          this.camNose.lerp(rk.fwd, U.damp(c.noseLag, dt)).normalize();
           const k = U.damp(c.followLag, dt);
-          this.camDir.lerp(target, k).normalize();
+          this.camDir.lerp(this.camNose, k).normalize();
           const u = this.upRef.clone().lerp(this.up, k);
           if (u.lengthSq() > 1e-6) this.upRef.copy(u.normalize());   // haut exactement opposé (rare) : on garde l'ancien
           this.updateCamBasis();
