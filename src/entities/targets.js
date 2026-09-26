@@ -3,7 +3,7 @@
 (function () {
   const V = THREE.Vector3;
   const U = CC.U;
-  const _v = new V(), _v2 = new V();
+  const _v = new V(), _v2 = new V(), _w = new V(), _w2 = new V();
 
   function obbFrom(obj, size, center) {
     const q = obj.getWorldQuaternion(new THREE.Quaternion());
@@ -16,8 +16,11 @@
       opts = opts || {};
       this.type = type; this.alive = true; this.t = U.rng() * 10;
       this.object = new THREE.Group();
-      this.model = type === 'tank' ? CC.Models.tank() : type === 'heli' ? CC.Models.helicopter(false) : type === 'heliCamo' ? CC.Models.helicopter(true)
+      // design : variante de teinte par char (tirée de la position : stable d'une partie à l'autre)
+      const vr = Math.abs(Math.round(pos[0] * 7 + pos[2] * 3)) % 3;
+      this.model = type === 'tank' ? CC.Models.tank(vr) : type === 'heli' ? CC.Models.helicopter(false) : type === 'heliCamo' ? CC.Models.helicopter(true)
         : type === 'truck' ? CC.Models.truck() : CC.Models.house();
+      this.ph = (vr + 1) * 1.7 + pos[0] * 0.13;             // phase propre (micro-mouvements désynchronisés)
       this.object.add(this.model);
       this.object.position.fromArray(pos);
       this.object.rotation.y = U.deg(yawDeg || 0);
@@ -29,6 +32,9 @@
       this.alert.position.set(0, this.size[1] + 1.2, 0); this.object.add(this.alert);
       this.dot = CC.Models.targetDot(); this.dot.position.fromArray(this.center); this.object.add(this.dot);
       this.obb = null;
+      this.yaw0 = this.object.rotation.y; this.yaw = this.yaw0; this.yawW = 0;   // cap (hélicoptère : tourne avec inertie)
+      this.hv = new V(); this.ha = new V(); this.prevPos = null; this.att = new V();   // vitesse / accélération lissées → assiette
+      this.tw = 0; this.recT = 9; this.puffT = 0; this.dustT = 0; this.fireIdx = 0;
       // v023 : cible qui s'enfuit — suit `opts.path` à `opts.fleeSpeed` m/s dès que la roquette est tirée, puis fait du
       // surplace au bout ; revient au départ quand le niveau recommence
       if (opts.path) {
@@ -36,6 +42,7 @@
         this.fleeSpeed = opts.fleeSpeed || 30; this.fleeDist = 0;
         this.pathLen = 0; for (let i = 1; i < this.path.length; i++) this.pathLen += this.path[i].distanceTo(this.path[i - 1]);
         this.placeOnPath();
+        this.object.rotation.y = this.yaw = this.yaw0 = this.pathYaw;
       }
       this.updateObb();
     }
@@ -44,7 +51,7 @@
       while (i < this.path.length - 2 && d > this.path[i].distanceTo(this.path[i + 1])) { d -= this.path[i].distanceTo(this.path[i + 1]); i++; }
       const a = this.path[i], b = this.path[i + 1], seg = _v.subVectors(b, a), len = seg.length();
       this.base.copy(a).addScaledVector(seg, len > 0 ? Math.min(1, d / len) : 0);
-      if (len > 0) this.object.rotation.y = Math.atan2(-seg.x, -seg.z);   // le nez dans le sens de la fuite
+      if (len > 0) this.pathYaw = Math.atan2(-seg.x, -seg.z);   // le nez dans le sens de la fuite (atteint avec inertie)
     }
     updateObb() { this.object.updateMatrixWorld(true); this.obb = obbFrom(this.object, this.size, this.center); }
 
@@ -53,36 +60,143 @@
       if (!this.alive) return;
       const rk = game.rocket && game.rocket.active ? game.rocket : null;
       if (this.path && game.state === 'FLIGHT' && rk && this.fleeDist < this.pathLen) { this.fleeDist += this.fleeSpeed * dt; this.placeOnPath(); }
-      if (this.type === 'heli' || this.type === 'heliCamo') {
-        const ud = this.model.userData;
-        ud.rotor.rotation.y += dt * 24; ud.tailRotor.rotation.x += dt * 40;
-        const side = new V(1, 0, 0).applyAxisAngle(new V(0, 1, 0), this.object.rotation.y);
-        this.object.position.copy(this.base).addScaledVector(side, Math.sin(this.t * this.driftSpeed) * this.drift);
-        this.object.position.y += Math.sin(this.t * 1.3) * 0.35;
-        this.model.rotation.z = Math.sin(this.t * this.driftSpeed) * 0.05;
-        this.model.rotation.x = Math.sin(this.t * 0.9) * 0.03;
-      }
-      if (this.type === 'tank' && rk) {
-        const d = _v.copy(rk.pos).sub(this.obb.c);
-        const dist = d.length();
-        const detected = dist < this.detectRange;
-        this.alert.visible = detected;
-        if (detected) {
-          // tourelle : lacet vers la roquette (repère local du char)
-          const local = this.object.worldToLocal(_v2.copy(rk.pos));
-          const turret = this.model.userData.turret;
-          const want = Math.atan2(-(local.x - turret.position.x), -(local.z - turret.position.z));
-          let diff = want - turret.rotation.y; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-          turret.rotation.y += U.clamp(diff, -2.2 * dt, 2.2 * dt);
-          const horiz = Math.hypot(local.x, local.z);
-          const pitch = U.clamp(Math.atan2(local.y - 2.3, horiz), -0.1, 0.6);
-          this.model.userData.gun.rotation.x += (pitch - this.model.userData.gun.rotation.x) * U.damp(4, dt);
-        }
-      }
+      if (this.type === 'heli' || this.type === 'heliCamo') this.updateHeli(dt, game, rk);
+      if (this.type === 'tank') this.updateTank(dt, game, rk);
       if (this.type === 'heli' || this.type === 'heliCamo') this.updateObb();
       // tirs anti-aériens : tanks et hélicoptères, sauf une cible qui s'enfuit (v023 : elle fuit, elle ne se bat pas)
       if (rk && game.state === 'FLIGHT' && !this.path && (this.type === 'tank' || this.type === 'heli' || this.type === 'heliCamo')) this.updateAA(dt, game, rk);
       if (this.alert.visible) this.alert.position.y = this.size[1] + 1.2 + Math.sin(this.t * 6) * 0.1;
+    }
+
+    /* Design : vol d'hélicoptère. La position suit la même trajectoire qu'avant (gameplay inchangé) mais enrichie de dérives
+     * lentes ; l'assiette découle de la vitesse et de l'accélération réellement subies (nez qui pique pour accélérer, qui se
+     * cabre pour freiner, inclinaison latérale dans les virages), lissée ; le cap tourne avec inertie (vers la fuite, ou
+     * vers la roquette quand l'appareil l'a repérée) ; rotor, feux clignotants, poussière soulevée près du sol. */
+    updateHeli(dt, game, rk) {
+      const ud = this.model.userData, t = this.t, ph = this.ph;
+      ud.rotor.rotation.y += dt * 17; ud.tailRotor.rotation.x += dt * 42;
+      ud.blur.material.opacity = 0.08 + 0.03 * Math.sin(t * 11);
+      ud.tailBlur.material.opacity = 0.1 + 0.04 * Math.sin(t * 17);
+      // position : trajectoire d'origine (dérive latérale + flottement) + petites dérives lentes, hors cible en fuite
+      const side = _v.set(Math.cos(this.yaw0), 0, -Math.sin(this.yaw0)), fwd0 = _v2.set(-Math.sin(this.yaw0), 0, -Math.cos(this.yaw0));
+      const pos = this.object.position;
+      pos.copy(this.base).addScaledVector(side, Math.sin(t * this.driftSpeed) * this.drift);
+      if (!this.path) pos.addScaledVector(side, 0.5 * Math.sin(t * 0.37 + ph)).addScaledVector(fwd0, 0.7 * Math.sin(t * 0.23 + ph * 2));
+      pos.y += Math.sin(t * 1.3) * 0.3 + 0.35 * Math.sin(t * 0.41 + ph);
+      // vitesse et accélération lissées (différences finies)
+      if (dt > 0) {
+        if (!this.prevPos) this.prevPos = pos.clone();
+        const v = _w.subVectors(pos, this.prevPos).divideScalar(dt);
+        const hv0 = _w2.copy(this.hv);
+        this.hv.lerp(v, U.damp(10, dt));
+        this.ha.lerp(hv0.subVectors(this.hv, hv0).divideScalar(dt), U.damp(5, dt));
+        this.prevPos.copy(pos);
+      }
+      // cap : vers la fuite ; sinon vers la roquette repérée (< 170 m) ; sinon cap d'origine avec une légère errance
+      let want = this.yaw0 + 0.12 * Math.sin(t * 0.2 + ph), maxW = 0.55;
+      if (this.path && this.pathYaw !== undefined && this.hv.lengthSq() > 4) { want = this.pathYaw; maxW = 2.2; }
+      else if (rk && rk.pos.distanceTo(pos) < 170) { const d = _w.subVectors(rk.pos, pos); want = Math.atan2(-d.x, -d.z); }
+      let diff = want - this.yaw; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      const tw = U.clamp(diff * 2.2, -maxW, maxW);
+      this.yawW += U.clamp(tw - this.yawW, -1.6 * dt, 1.6 * dt);
+      this.yaw += this.yawW * dt;
+      this.object.rotation.y = this.yaw;
+      // assiette : dans le repère du cap
+      const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw), rx = Math.cos(this.yaw), rz = -Math.sin(this.yaw);
+      const aF = this.ha.x * fx + this.ha.z * fz, aR = this.ha.x * rx + this.ha.z * rz;
+      const vF = this.hv.x * fx + this.hv.z * fz;
+      const pitch = U.clamp(-(aF * 0.045 + vF * 0.006), -0.32, 0.25) + 0.012 * Math.sin(t * 2.3 + ph);
+      const roll = U.clamp(-(aR * 0.05) - this.yawW * Math.min(1, this.hv.length() / 20) * 0.35, -0.4, 0.4) + 0.015 * Math.sin(t * 1.7 + ph * 3);
+      this.att.x += (pitch - this.att.x) * U.damp(3, dt); this.att.z += (roll - this.att.z) * U.damp(3, dt);
+      this.model.rotation.x = this.att.x; this.model.rotation.z = this.att.z;
+      // feux : gyrophare (éclat bref toutes les 1,2 s), feu de queue (double éclat)
+      const bk = (t + ph) % 1.2;
+      ud.beacon.visible = bk < 0.12;
+      const tk = (t * 1.3 + ph) % 1.6;
+      ud.lights[2].visible = tk < 0.06 || (tk > 0.16 && tk < 0.22);
+      // poussière soulevée par le souffle du rotor, près du sol
+      this.dustT -= dt;
+      if (this.dustT <= 0 && game.world) {
+        this.dustT = 0.22;
+        const hit = game.world.raycast(pos, _w.set(0, -1, 0), 24);
+        if (hit) {
+          const k = 1 - hit.dist / 24, r = U.fx;
+          for (let i = 0; i < 3; i++) {
+            const a = r() * 6.28, d = r.range(2, 6);
+            game.effects.smoke.emit({ pos: _w2.set(pos.x + Math.cos(a) * d, hit.point.y + 0.3, pos.z + Math.sin(a) * d), vel: _w.set(Math.cos(a) * r.range(4, 8), r.range(0.2, 0.8), Math.sin(a) * r.range(4, 8)), life: r.range(0.8, 1.4), s0: 0.4, s1: r.range(1, 1.6) * k, s2: 2 * k, peak: 0.3, cols: game.effects.pal.dust, drag: 1.8, a: 0.3 * k, fin: 0.1, fout: 0.3, wind: 1, turb: 2 });
+          }
+        }
+      }
+    }
+
+    /* Design : char. Moteur au ralenti (vibration, fumées d'échappement), tourelle qui suit la roquette avec inertie
+     * (vitesse angulaire bornée, accélération bornée), canon à hausse limitée (−5° / +31°), balayage lent quand rien n'est
+     * repéré, recul du canon et bascule de la caisse au tir. */
+    updateTank(dt, game, rk) {
+      const ud = this.model.userData, t = this.t;
+      const A = CC.CONFIG.aa, d = game.aaThreat ? game.aaThreat() : 0;
+      const trackRange = Math.max(this.detectRange, A.range[0] + (A.range[1] - A.range[0]) * d);
+      let tracking = false, dist = Infinity;
+      if (rk) { dist = rk.pos.distanceTo(this.obb.c); tracking = dist < trackRange; }
+      this.alert.visible = !!rk && dist < this.detectRange;
+      const turret = ud.turret;
+      let want, maxW, pitch;
+      if (tracking) {
+        const local = this.object.worldToLocal(_v2.copy(rk.pos));
+        want = Math.atan2(-(local.x - turret.position.x), -(local.z - turret.position.z));
+        const horiz = Math.hypot(local.x, local.z);
+        pitch = U.clamp(Math.atan2(local.y - 2.0, horiz), -0.09, 0.55);
+        maxW = 1.5;
+      } else {
+        want = 0.55 * Math.sin(t * 0.21 + this.ph); pitch = 0.03 + 0.02 * Math.sin(t * 0.3 + this.ph); maxW = 0.35;
+      }
+      let diff = want - turret.rotation.y; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      this.aimErr = Math.abs(diff);
+      const tw = U.clamp(diff * 3.2, -maxW, maxW);
+      this.tw += U.clamp(tw - this.tw, -3 * dt, 3 * dt);
+      turret.rotation.y += this.tw * dt;
+      ud.gun.rotation.x += (pitch - ud.gun.rotation.x) * U.damp(3, dt);
+      // recul : le tube part d'un coup, revient en 0,7 s ; la caisse bascule vers l'arrière puis se stabilise
+      this.recT += dt;
+      const rt = this.recT;
+      ud.slide.position.z = 0.55 * Math.min(1, rt / 0.03) * Math.exp(-rt * 5);
+      ud.body.rotation.x = 0.035 * Math.exp(-rt * 4) * Math.cos(rt * 11);
+      ud.body.position.y = 0.01 * Math.sin(t * 41 + this.ph) + 0.004 * Math.sin(t * 7.3);   // moteur au ralenti
+      // fumées d'échappement (plus épaisses juste après un tir : le moteur « tire »)
+      this.puffT -= dt;
+      if (this.puffT <= 0) {
+        this.puffT = U.fx.range(0.25, 0.5);
+        for (const e of ud.exhausts) {
+          const p = this.model.localToWorld(_w.copy(e));
+          const back = _w2.set(0, 0.2, 1).applyQuaternion(this.object.quaternion).multiplyScalar(U.fx.range(0.8, 1.6));
+          game.effects.darkSmoke.emit({ pos: p, vel: back, life: U.fx.range(0.9, 1.6), s0: 0.1, s1: U.fx.range(0.3, 0.5) * (rt < 1 ? 1.6 : 1), s2: 0.7, peak: 0.3, cols: game.effects.pal.greySmoke, drag: 1.5, a: rt < 1 ? 0.45 : 0.22, fin: 0.1, fout: 0.3, wind: 1, turb: 1.5, spin: 1 });
+        }
+      }
+    }
+
+    // Design : effets de tir (point de départ du missile, éclair de bouche, recul, son, secousse si la roquette est proche)
+    firePoint(out) {
+      const ud = this.model.userData;
+      if (this.type === 'tank') { ud.muzzle.updateWorldMatrix(true, false); return ud.muzzle.getWorldPosition(out); }
+      const fp = ud.firePoints[this.fireIdx++ % ud.firePoints.length];
+      return this.model.localToWorld(out.copy(fp));
+    }
+    onFire(game, from, rk) {
+      const dir = _w.subVectors(rk.pos, from).normalize();
+      if (this.type === 'tank') {
+        this.recT = 0;
+        const ud = this.model.userData, q = new THREE.Quaternion();
+        ud.muzzle.getWorldQuaternion(q);
+        const bore = new V(0, 0, -1).applyQuaternion(q);
+        game.effects.muzzleFlash(from.clone(), bore, 1);
+        game.effects.dustKick(this.object.position.clone().addScaledVector(bore, 3).setY(this.object.position.y + 0.1), null, 0.8);
+        game.audio.play('tankFire', from);
+      } else {
+        game.effects.muzzleFlash(from.clone(), dir.clone(), 0.45);
+        game.audio.play('heliFire', from);
+      }
+      const dist = rk.pos.distanceTo(from);
+      if (dist < 45) game.rig.shake = Math.max(game.rig.shake, 0.3 * (1 - dist / 45));
     }
 
     /* v020 : tir anti-aérien. Le tireur doit voir la roquette (pas à travers un bâtiment) et l'avoir suivie un instant ;
@@ -90,8 +204,8 @@
     updateAA(dt, game, rk) {
       const A = CC.CONFIG.aa, d = game.aaThreat(), L = (p) => p[0] + (p[1] - p[0]) * d;
       this.aaCool = (this.aaCool || 0) - dt;
-      const from = _v2.copy(this.obb.c);
-      if (this.type === 'tank') from.addScaledVector(this.obb.uy, this.obb.hy + 0.9); else from.addScaledVector(this.obb.uy, -(this.obb.hy + 0.6));
+      // design : le tir part de la bouche du canon (char) ou d'un panier de roquettes (hélicoptère)
+      const from = this.firePoint(_v2);
       const to = _v.subVectors(rk.pos, from);
       const dist = to.length();
       if (dist > L(A.range) || dist < A.minRange) { this.aaSeen = 0; return; }
@@ -103,6 +217,7 @@
       if (game.world.raycast(from, to, dist - 1, (b) => b.kind === 'solid' || b.kind === 'brick')) { this.aaSeen = 0; return; }
       this.aaSeen = (this.aaSeen || 0) + dt;
       if (this.aaSeen < L(A.firstDelay)) return;
+      if (this.type === 'tank' && this.aimErr > 0.3) return;   // design : le canon doit d'abord être pointé sur la roquette
       // v023 : salves (3 derniers niveaux, AUTOMAP difficile) : plusieurs tirs rapprochés, et un tireur presque rechargé
       // qui voit la roquette ouvre le feu en même temps qu'un autre (tir groupé)
       const salvo = game.aaSalvo(), now = game.telemetry.t;
@@ -115,13 +230,16 @@
       else if (this.burst > 0) { this.burst--; this.aaCool = this.burst > 0 ? A.salvoGap : L(A.cooldown) * A.salvoRest; }
       else { this.burst = A.salvoCount - 1; this.aaCool = A.salvoGap; game.aaVolleyT = now; }
       const miss = A.miss[1] + (A.miss[0] - A.miss[1]) * Math.pow(1 - d, A.missCurve);   // la précision progresse dès le milieu du parcours
-      game.spawnEnemyMissile(from.clone(), rk, { miss, lead: L(A.lead), turn: L(A.turn), speed: L(A.speed), life: A.life });
+      this.onFire(game, from, rk);
+      game.spawnEnemyMissile(from.clone(), rk, { miss, lead: L(A.lead), turn: L(A.turn), speed: L(A.speed), life: A.life, quiet: true });
     }
 
     kill() { this.alive = false; this.object.visible = false; }
     reset() {
       this.alive = true; this.object.visible = true; this.alert.visible = false; this.aaCool = 0; this.aaSeen = 0; this.burst = 0;
-      if (this.path) { this.fleeDist = 0; this.placeOnPath(); this.object.position.copy(this.base); }
+      if (this.path) { this.fleeDist = 0; this.placeOnPath(); this.object.position.copy(this.base); this.yaw0 = this.pathYaw; }
+      this.yaw = this.yaw0; this.yawW = 0; this.object.rotation.y = this.yaw; this.prevPos = null; this.hv.set(0, 0, 0); this.ha.set(0, 0, 0);
+      this.tw = 0; this.recT = 9;
     }
   }
 

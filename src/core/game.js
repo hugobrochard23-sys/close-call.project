@@ -205,6 +205,7 @@
       if (this.guideLevel(i, L)) b.guideArrows(L.routes || [L.route], CC.CONFIG.hud.guideArrowStep);
       b.finish();
       this.targets = b.targets; this.grapplePoints = b.grapplePoints; this.entities = b.entities;
+      this.groundVehicles();
       this.applyEnvironment(L.env);
       const la = L.launcher;
       this.launcherEye = new V().fromArray(la.pos);
@@ -217,6 +218,20 @@
         this.scene.add(this.tripod);
       }
       this.renderer.compile(this.scene, this.camera);
+    }
+
+    // Design : véhicules au sol (chars, camions, maisons) posés exactement sur la surface sous eux (sol bosselé, dalle) :
+    // plus de chenilles qui flottent de quelques centimètres ni de roues enfoncées. Écart limité à ±1,5 m (erreur de niveau).
+    groundVehicles() {
+      const down = new V(0, -1, 0);
+      for (const t of this.targets) {
+        if (t.type !== 'tank' && t.type !== 'truck' && t.type !== 'house') continue;
+        const p = t.object.position;
+        const hit = this.world.raycast(new V(p.x, p.y + 1.5, p.z), down, 3.2, (bx) => bx.kind === 'solid' || bx.kind === 'brick');
+        if (!hit || Math.abs(hit.point.y - p.y) > 1.5) continue;
+        p.y = hit.point.y; t.base.y = p.y;
+        t.updateObb();
+      }
     }
 
     startLevel(i) {
@@ -364,7 +379,7 @@
     spawnEnemyMissile(from, rocket, opts) {
       const m = new CC.EnemyMissile(from, rocket, opts);
       this.scene.add(m.object); this.missiles.push(m);
-      this.audio.play('launch');
+      if (!opts || !opts.quiet) this.audio.play('launch');   // design : tirs de char / d'hélicoptère → leur propre son (onFire)
       this.telemetry.event('enemyMissile', {});
     }
 

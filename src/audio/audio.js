@@ -161,6 +161,10 @@
         case 'toggle': this.tone('square', 220, 180, 0.08, 0.06); break;
         case 'ui': this.tone('square', 520, 520, 0.06, 0.05); break;
         case 'target': this.tone('square', 523, 523, 0.1, 0.1); this.tone('square', 784, 784, 0.1, 0.18, 0.1); break;
+        // design : départ de coup de canon de char (claquement, déflagration grave, écho) ; roquette d'hélicoptère (sifflement)
+        case 'tankFire': this.noiseHit(2500, 'highpass', 0.7, 0.35, 0.04); this.tone('sine', 110, 38, 0.55, 0.45); this.sweep(1800, 300, 'lowpass', 0.7, 0.45, 0.5);
+          this.sweep(900, 200, 'bandpass', 1.2, 0.12, 0.8, 0.18); break;
+        case 'heliFire': this.noiseHit(3000, 'highpass', 0.8, 0.2, 0.03); this.sweep(600, 3200, 'bandpass', 1.5, 0.22, 0.35); this.tone('sine', 90, 50, 0.25, 0.2); break;
         case 'warnMissile': this.tone('square', 1320, 1320, 0.07, 0.05); this.tone('square', 1320, 1320, 0.07, 0.05, 0.09); break;   // v026 : bip-bip d'alerte
         case 'warnFuel': this.tone('triangle', 880, 880, 0.12, 0.12); this.tone('triangle', 587, 587, 0.12, 0.2, 0.15); break;     // v026 : deux notes descendantes
       }
