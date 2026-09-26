@@ -130,7 +130,7 @@ Chaque niveau reconstruit une séquence de la vidéo, avec l'interface (HUD) qu'
 | 10 | AUTOMAP | hors vidéo | C | cibles | généré : 2 à 4 cibles selon la difficulté |
 
 **Progression (v023)** : un niveau ne s'ouvre qu'une fois le précédent terminé (AUTOMAP toujours libre) ; le menu pause
-propose NEXT LEVEL quand le suivant est ouvert. Niveaux 1 à 3 : flèches vertes le long du chemin ; ensuite, repère rouge
+propose NEXT LEVEL quand le suivant est ouvert. Niveaux 1 et 3 : flèches vertes le long du chemin ; niveau 2 (v027) et suivants : repère rouge
 permanent sur la cible. Salves anti-aériennes (2 missiles rapprochés, tirs groupés) sur les 3 derniers niveaux et AUTOMAP
 difficile ; les missiles ennemis accélèrent après le tir (on les voit partir). Essence réduite d'environ 15 %.
 

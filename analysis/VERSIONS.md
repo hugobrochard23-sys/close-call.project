@@ -413,3 +413,15 @@ Téléphone simulé (375×812, vibrations interceptées) : toucher → vibrate(8
 relâché → fenêtre de 998 ms ; toucher à 0,3 s → boost immédiat ; toucher après 1,1 s → pas de boost (ni 0,2 s plus tard) ;
 essence à 20 % → « LOW FUEL », deux notes et vibration une seule fois ; missile à 60 m → « MISSILE! », vibration, bip toutes
 les 0,45 s. Pilote automatique : 9 niveaux + AUTOMAP difficile terminés, niveau 1 identique à v025 (14,9 s, STYLE 846).
+
+## v027 — niveau 2 sans flèches vertes, plus de point rouge sur le nez
+
+**Changements (à la demande d'Hugo) :**
+- BRICKWORKS (niveau 2) : flèches vertes retirées (`guide: false` dans la fiche du niveau) ; à la place, les petits repères
+  rouges des autres niveaux : carré rouge sur chaque tank visible, point rouge au bord de l'écran pour ceux hors champ ;
+- fusée : le petit cube rouge au bout des nez pointus (fusée de base) est retiré ; les nez arrondis de la boutique gardent
+  leur embout.
+
+**Vérification :** flèches : CITY 17, BRICKWORKS 0, CANYON 16 ; niveau 2 : 4 repères rouges (ordinateur et téléphone
+375×812), pilote automatique : 4/4 tanks, 22,6 s ; fusée de base vue de côté : nez gris, 0 pièce rouge ; 21 cosmétiques
+construits sans erreur.

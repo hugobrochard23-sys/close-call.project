@@ -33,10 +33,8 @@
     const r = d.r, len = d.len, nl = d.noseLen, nr = d.noseR, fs = len / 0.86;
     const body = cyl(r, r, len, lam(c.body), 10, g); body.rotation.x = Math.PI / 2; body.position.z = 0.0;
     const nose = cyl(nr, r, nl, lam(c.nose), 10, g); nose.rotation.x = Math.PI / 2; nose.position.z = len / 2 + nl / 2;
-    let tip;
-    if (nr > 0.02) { tip = cyl(nr * 0.55, nr, nr * 1.6, basic(c.tip), 8, g); tip.rotation.x = Math.PI / 2; tip.position.z = len / 2 + nl + nr * 0.6; }
-    else { tip = box(0.035, 0.035, 0.035, basic(c.tip), 0, 0.04, len / 2 + nl + 0.02, g); }
-    tip.castShadow = false;
+    // embout des nez arrondis ; v027 (Hugo) : plus de petit cube rouge au bout des nez pointus (fusée de base)
+    if (nr > 0.02) { const tip = cyl(nr * 0.55, nr, nr * 1.6, basic(c.tip), 8, g); tip.rotation.x = Math.PI / 2; tip.position.z = len / 2 + nl + nr * 0.6; tip.castShadow = false; }
     const band = cyl(r * 1.08, r * 1.08, 0.07, basic(c.band), 10, g); band.rotation.x = Math.PI / 2; band.position.z = -len * 0.35;
     const nozzle = cyl(r * 0.75, r * 0.6, 0.1, lam(c.nozzle), 10, g); nozzle.rotation.x = Math.PI / 2; nozzle.position.z = -len / 2 - 0.05;
     for (let i = 0; i < d.fins; i++) {
