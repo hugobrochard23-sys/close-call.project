@@ -40,7 +40,7 @@
       this.scene.add(this.camera);
       this.postfx = new CC.PostFX(this.renderer);
       this.effects = new CC.Effects(this.scene);
-      this.audio = new CC.Audio();
+      this.audio = new CC.Audio(); this.audio.cam = this.camera;   // design : atténuation des sons avec la distance
       if (this.testMode || P.has('mute')) this.audio.enabled = false;
       this.telemetry = new Telemetry();
       this.style = new CC.Style(this);
@@ -492,6 +492,7 @@
       this.rig.update(dt);
       this.trails.update(dt, rk, this.camera);   // après la caméra : effacement près de sa position de cette image
       this.audio.updateRocket(rk, dt);
+      this.audio.updateWorld(this, dt);
       this.flash = Math.max(0, this.flash - dt * 7);
       this.telemetry.t += dt;
     }
