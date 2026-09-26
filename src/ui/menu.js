@@ -106,8 +106,17 @@
       const next = game.nextUnlocked();
       if (next >= 0) rows.push(['NEXT LEVEL', () => { game.resume(); game.startLevel(next); }]);
       if (!touch) rows.push(['SETTINGS (TAB)', () => { this.overlay = 'settings'; }]);
+      if (touch) {   // v024 : intensité des vibrations (OFF / LOW / MEDIUM / HIGH)
+        const names = ['OFF', 'LOW', 'MEDIUM', 'HIGH'], v = s.vibration !== undefined ? s.vibration : 2;
+        rows.splice(3, 0, ['VIBRATION: ' + names[v], () => {
+          s.vibration = (v + 1) % 4;
+          if (CC.Haptics) { CC.Haptics.setLevel(s.vibration); CC.Haptics.tick('fire'); }   // on sent tout de suite la nouvelle force
+          game.applySettings();
+        }]);
+      }
       rows.push(['MAIN MENU', () => game.toMenu()]);
-      rows.forEach((r, i) => this.button(ctx, r[0], W / 2, H * ((touch ? 0.3 : 0.36) + i * step), px, r[1]));
+      const top = touch ? 0.28 : 0.36, gap = Math.min(step, (0.92 - top) / rows.length);   // v024 : 7 lignes tiennent à l'écran
+      rows.forEach((r, i) => this.button(ctx, r[0], W / 2, H * (top + i * gap), px, r[1]));
     }
 
     drawResults(ctx, game, W, H) {
@@ -163,6 +172,7 @@
         if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
           const dir = x < b.x + b.w * 0.35 ? -1 : 1;
           this.game.audio.play('ui');
+          if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('button');   // v024 : chaque bouton vibre (mobile)
           b.action(dir);
           return true;
         }

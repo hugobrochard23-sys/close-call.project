@@ -1,7 +1,8 @@
 /* Commandes tactiles (v022, iPhone / tablette) — aucun bouton à l'écran sauf la pause :
  *  - glisser le doigt n'importe où : dirige la roquette (comme la souris : droite = tourne à droite, haut = monte) ;
  *  - toucher (tap) : tir depuis le lanceur, ou réapparition après un crash ;
- *  - double toucher en vol : allume le moteur, qui reste allumé ; un nouveau double toucher l'éteint ;
+ *  - appui long (doigt immobile ≥ 0,5 s) en vol : boost tant que le doigt reste posé, avec vibration continue (v024) ;
+ *  - doigt dans la bande gauche / droite de l'écran : virage sans fin (v024) ; au lanceur, la vue ne bouge pas (v024) ;
  *  - gros bouton pause en haut à droite : menu pause (reprendre, son, musique, recommencer, menu principal).
  * Plein écran, affichage allégé et rendu moins coûteux (fluidité). Les menus se touchent directement.
  * Actives seulement sur un écran tactile, ou avec #touch / ?touch=1 dans l'adresse (essai sur ordinateur). */
@@ -27,15 +28,21 @@
     const wake = () => { game.audio.init(); game.audio.resume(); };   // iOS : le son ne démarre qu'après un geste
     const playing = () => FLY.includes(game.state) && !game.paused && !game.ui.overlay;
 
+    // --- vibrations (réglage enregistré, 2 = MEDIUM par défaut) ---
+    const Hap = CC.Haptics;
+    if (Hap) Hap.setLevel(game.settings.vibration !== undefined ? game.settings.vibration : 2);
+    const buzz = (k) => { if (Hap) Hap.tick(k); };
+
     // --- bouton pause (le seul bouton) ---
     const pause = document.createElement('div');
     pause.className = 'cc-pause'; pause.setAttribute('role', 'button'); pause.setAttribute('aria-label', 'Pause');
     document.body.appendChild(pause);
-    pause.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); wake(); game.pause(); }, { passive: false });
+    pause.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); wake(); buzz('button'); game.pause(); }, { passive: false });
 
-    // --- glisser / toucher / double toucher ---
-    let finger = null, lastTap = 0;
+    // --- glisser / toucher / appui long ---
+    let finger = null;
     const scale = () => cfg.dragGain / Math.max(1, Math.min(window.innerWidth, window.innerHeight));
+    const boostOff = () => { if (T.thrust) { T.thrust = false; if (Hap) Hap.boostStop(); } };
     document.addEventListener('touchstart', (e) => {
       wake();
       if (!playing() || e.target === pause) return;   // menus, pause : le toucher devient un clic sur le jeu
@@ -49,8 +56,8 @@
       e.preventDefault();
       for (const t of e.changedTouches) {
         if (t.identifier !== finger.id) continue;
-        const k = scale();
-        input.addAim(-(t.clientX - finger.x) * k, -(t.clientY - finger.y) * k);
+        // v024 : au lanceur, la vue ne bouge pas ; en vol, le glissé dirige
+        if (game.state === 'FLIGHT') { const k = scale(); input.addAim(-(t.clientX - finger.x) * k, -(t.clientY - finger.y) * k); }
         finger.x = t.clientX; finger.y = t.clientY;
         if (Math.hypot(t.clientX - finger.x0, t.clientY - finger.y0) > cfg.tapMaxMove) finger.moved = true;
       }
@@ -59,25 +66,34 @@
       if (!finger) return;
       for (const t of e.changedTouches) {
         if (t.identifier !== finger.id) continue;
-        const tap = !finger.moved && performance.now() - finger.t0 < cfg.tapMaxMs;
+        const tap = !finger.moved && !finger.boost && performance.now() - finger.t0 < cfg.tapMaxMs;
         finger = null;
+        boostOff();                                  // v024 : doigt levé → boost coupé
         if (!tap || !playing()) return;
         e.preventDefault();
-        const now = performance.now();
-        if (game.state === 'FLIGHT') {
-          if (now - lastTap < cfg.doubleTapMs) { T.thrust = !T.thrust; lastTap = 0; game.audio.play('toggle'); }
-          else lastTap = now;
-        } else { input.fireEdge = true; lastTap = 0; }    // lanceur : tir ; après un crash : réapparition
+        if (game.state !== 'FLIGHT') { input.fireEdge = true; if (game.state === 'AIM') buzz('fire'); }   // tir (ou réapparition)
       }
     };
     document.addEventListener('touchend', end, { passive: false });
     document.addEventListener('touchcancel', end, { passive: false });
 
-    // à chaque image du jeu : moteur coupé hors vol ; bouton pause visible seulement en partie
+    // à chaque image du jeu : appui long → boost ; doigt dans une bande latérale → virage continu ; pause visible en partie
     const tick = game.tick.bind(game);
     game.tick = (dt) => {
       tick(dt);
-      if (game.state !== 'FLIGHT') T.thrust = false;
+      const flying = game.state === 'FLIGHT' && playing();
+      if (finger && flying) {
+        // v024 : appui long (doigt immobile ≥ longPressMs) → boost, maintenu tant que le doigt reste posé (il peut alors bouger)
+        if (!finger.boost && !finger.moved && performance.now() - finger.t0 >= cfg.longPressMs) {
+          finger.boost = true; T.thrust = true; game.audio.play('toggle'); if (Hap) Hap.boostStart();
+        }
+        // v024 : virage sans fin quand le doigt est dans la bande de gauche ou de droite (plus vite près du bord) ;
+        // haut / bas : inchangés (glissé relatif)
+        const x = finger.x / Math.max(1, window.innerWidth), b = cfg.edgeBand;
+        const push = x < b ? -(b - x) / b : x > 1 - b ? (x - (1 - b)) / b : 0;
+        if (push) input.addAim(-push * cfg.edgeTurnRate * dt, 0);
+      }
+      if (!flying) boostOff();
       pause.hidden = !playing();
     };
     game.resize();   // plein écran

@@ -83,7 +83,7 @@
       }
       this.drawFuel(game);
       // réticule "x" (MESURÉ 50 % / 40,2 %)
-      let cross = game.state === 'AIM' || game.state === 'FLIGHT';
+      let cross = (game.state === 'AIM' || game.state === 'FLIGHT') && !lite;   // v024 : pas de curseur sur mobile
       let cx = C.crosshair.x * W, cy = C.crosshair.y * H;
       if (game.state === 'FLIGHT' && rk.active) {
         // v010 : la caméra suit la trajectoire, le réticule indique où la roquette est dirigée
@@ -99,8 +99,8 @@
       if (v !== 'B' && !lite) this.drawPopups(game);   // OBSERVÉ : aucune annonce de style dans les séquences au HUD B
       this.drawIndicators(game);
       this.drawMissileWarning(game);
-      const msg = game.centerMsg || (lite && game.state === 'AIM' ? 'TAP TO FIRE    DOUBLE TAP: ENGINE' : null);
-      if (msg) this.text(msg, 0.5 * W, C.center.y * H, C.center.px, '#101010', { align: 'center', outline: '#f0f0f0' });
+      const msg = game.centerMsg || (lite && game.state === 'AIM' ? 'TAP TO FIRE    HOLD: BOOST' : null);
+      if (msg && !game.paused) this.text(msg, 0.5 * W, C.center.y * H, C.center.px, '#101010', { align: 'center', outline: '#f0f0f0' });   // v024 : pas par-dessus le menu pause
     }
 
     // Jauge d'essence (v009) : longueur du cadre proportionnelle au réservoir du niveau, remplissage = essence restante.

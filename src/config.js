@@ -5,12 +5,13 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v023',
+  version: 'v024',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
     maxPixelRatio: 1.5,
     shadows: true,
+    launchFx: 0.16,              // CHOIX v024 : durée (s) du renflement qui parcourt le tube au tir
     shadowMapSize: 2048,
     shadowRange: 70,             // demi-taille de la zone d'ombre autour de la roquette (m)
   },
@@ -76,7 +77,9 @@ CC.CONFIG = {
     touch: {
       dragGain: 2.2,             // rad de visée pour un glissé de la largeur (ou hauteur, la plus petite) de l'écran
       tapMaxMs: 250, tapMaxMove: 12,   // un toucher court (ms) et presque immobile (px) = tap
-      doubleTapMs: 320,          // deux taps rapprochés = double toucher (moteur allumé / éteint)
+      longPressMs: 500,          // v024 : appui long (doigt immobile) qui déclenche le boost, maintenu tant que le doigt est posé
+      edgeBand: 0.22,            // v024 : bande latérale (fraction de la largeur) où le doigt fait tourner sans fin
+      edgeTurnRate: 1.8,         // v024 : virage (rad/s) quand le doigt est tout au bord
       pixelRatio: 1,             // fluidité : rendu à 1 pixel par point d'écran (au lieu de 1,5)
       shadowMapSize: 1024,       // fluidité : ombres 1024 au lieu de 2048
       fovMinH: 62,               // debout : angle de vue horizontal minimal (°), la vue verticale s'élargit en conséquence

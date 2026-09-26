@@ -71,8 +71,17 @@
     box(0.025, 0.025, 0.025, basic('#e0802a'), 0, 0.24, -0.08, g);
     box(0.08, 0.22, 0.1, lam('#1c1d1f'), 0, -0.16, -0.05, g);
     const muzzle = cyl(0.14, 0.14, 0.06, lam('#4a4b50'), 12, g); muzzle.rotation.x = Math.PI / 2; muzzle.position.z = -1.0;
+    g.userData.bore = boreRing(g, 0.13, 0.25, '#3c3d41', 0.3, -1.0);
     return g;
   };
+
+  /* v024 : anneau de renflement pour l'animation de tir : le tube gonfle sur les côtés, de l'arrière (z0) vers la bouche
+   * (z1), comme si le missile le traversait. Caché au repos ; animé par Game.updateLaunchFx. */
+  function boreRing(parent, r, len, color, z0, z1) {
+    const ring = cyl(r, r, len, lam(color), 12, parent);
+    ring.rotation.x = Math.PI / 2; ring.visible = false; ring.castShadow = false;
+    return { ring, z0, z1 };
+  }
 
   // Lanceur sur trépied (OBSERVÉ séq. 1 : tube noir, fente rouge à l'arrière).
   M.tripodLauncher = function () {
@@ -89,6 +98,7 @@
       leg.rotation.set(Math.cos(a) * 0.35, 0, -Math.sin(a) * 0.35);
     }
     g.userData.head = head;
+    g.userData.bore = boreRing(head, 0.2, 0.35, '#1e1f22', 0.7, -0.8);
     return g;
   };
 

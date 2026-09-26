@@ -250,6 +250,7 @@
     enterAim(resetAim) {
       const la = this.level.launcher;
       this.state = 'AIM'; this.centerMsg = null; this.centerMsgT = 0; this.paused = false;
+      if (this.launchFx) { this.launchFx.bore.ring.visible = false; this.launchFx = null; }
       this.rocket.reset();
       { this.input.setAim(U.deg(la.yaw), U.deg(la.pitch || 0)); if (this.autopilot) this.autopilot.init(U.deg(la.yaw), U.deg(la.pitch || 0)); }
       this.rig.setAim(U.deg(la.yaw), U.deg(la.pitch || 0));
@@ -261,12 +262,30 @@
       if (this.useAutopilot) { this.autopilot = new CC.Autopilot(this, this.level); this.autopilot.init(U.deg(la.yaw), U.deg(la.pitch || 0)); }
     }
 
+    // v024 : animation du tir. Le renflement parcourt le tube en launchFx s, le lanceur recule puis revient.
+    updateLaunchFx(dt) {
+      const fx = this.launchFx;
+      if (!fx) return;
+      fx.t += dt;
+      const D = CC.CONFIG.render.launchFx, k = Math.min(1, fx.t / D), ring = fx.bore.ring;
+      ring.visible = k < 1;
+      ring.position.z = fx.bore.z0 + (fx.bore.z1 - fx.bore.z0) * k;
+      const swell = 1 + 0.45 * Math.sin(Math.PI * Math.min(1, k * 1.15));      // gonfle puis dégonfle en arrivant à la bouche
+      ring.scale.set(swell, 1, swell);
+      const kick = Math.sin(Math.PI * Math.min(1, fx.t / (D * 1.6))) * (fx.host === this.tripod ? 0.12 : 0.07);
+      if (fx.host === this.shoulder) fx.host.position.set(fx.base.x, fx.base.y, fx.base.z + kick);   // recul vers l'arrière
+      if (k >= 1 && fx.t > D * 1.6) { if (fx.host === this.shoulder) fx.host.position.copy(fx.base); ring.visible = false; this.launchFx = null; }
+    }
+
     fire() {
       const dir = this.rig.aimDir.clone();
       const muzzle = this.launcherEye.clone().addScaledVector(dir, this.level.launcher.type === 'tripod' ? 3.2 : 1.3).addScaledVector(this.rig.up, -0.25);
       this.rocket.launch(muzzle, dir);
       this.effects.launchBurst(muzzle.clone(), dir);
       this.audio.play('launch');
+      // v024 : animation du tube (renflement qui file vers la bouche + recul)
+      const host = this.level.launcher.type === 'tripod' ? this.tripod : this.shoulder;
+      if (host && host.userData.bore) this.launchFx = { t: 0, host, bore: host.userData.bore, base: host.position.clone() };
       this.rig.startFlight();
       this.state = 'FLIGHT'; this.flightTime = 0;
       this.telemetry.event('fire', { runTime: this.runTime });
@@ -407,7 +426,7 @@
           break;
         case 'FLIGHT': {
           this.flightTime += dt;
-          if (this.flightTime > 0.2) this.shoulder.visible = false;
+          if (this.flightTime > 0.28) this.shoulder.visible = false;   // v024 : 0,2 → 0,28 s, le temps de voir l'animation du tube
           if (inp.thrust !== rk.throttle) { rk.throttle = inp.thrust; this.telemetry.event('engine', { on: rk.throttle }); }
           if (inp.grappleEdge) rk.tryGrapple(this.rig.aimDir, this.camera.position);
           const fdt = CC.CONFIG.physics.fixedDt;
@@ -444,6 +463,7 @@
           this.impactT += dt;
           break;
       }
+      this.updateLaunchFx(dt);
       for (const e of this.entities) if (e.update) e.update(dt, this);
       for (const m of this.missiles) m.update(dt, this);
       this.missiles = this.missiles.filter((m) => { if (!m.alive) this.scene.remove(m.object); return m.alive; });

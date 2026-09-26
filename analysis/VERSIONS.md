@@ -369,3 +369,17 @@ SOUND / MUSIC OFF → gains 0 après rechargement, rétablis à 0,9 / 0,28. CITY
 3,4 s, 4 tentatives sans esquive. NIGHT CANYON : 10 tentatives en esquivant, impossible sans esquiver (28 impacts sur 28).
 Réserves les plus serrées : NIGHT FOREST 1,9 s, AUTOMAP moyen 2,3 s. Progression : niveaux 1-2 terminés → 3 ouvert, 4+ verrouillés ;
 NEXT LEVEL en pause au niveau 2, absent au niveau 3.
+
+## v024 — mobile : appui long = boost, vibrations, virage sans fin sur les bords, tir animé
+
+**Changements (à la demande d'Hugo) :** double toucher supprimé ; appui long ≥ 0,5 s (doigt immobile) = boost tant que le
+doigt reste posé, avec vibration continue ; bande latérale (22 %) = virage continu jusqu'à 1,8 rad/s ; au lanceur, la vue ne
+bouge plus (mobile) ; plus de curseur (mobile) ; vibration à chaque bouton et au tir ; réglage VIBRATION dans la pause
+(`settings.vibration`, `src/input/haptics.js`) ; tir : renflement qui file dans le tube + recul (tous supports) ;
+message central masqué pendant la pause.
+
+**Vérification (téléphone simulé, vibrations interceptées) :** glissé au lanceur → 0° ; tap → tir + 40 ms ; doigt immobile
+0,6 s → boost + motif 28/32 ms ; glissé pendant le boost → boost maintenu, visée 10° ; doigt levé → boost coupé + vibrate(0) ;
+glissé immédiat → pas de boost ; bord droit 1 s → 56° à droite, centre → 0° ; VIBRATION : MEDIUM → HIGH → OFF → LOW → MEDIUM.
+Ordinateur : visée au lanceur intacte, animation du tir ; pilote automatique : 12 cartes terminées.
+Limite connue : iPhone — Safari n'a pas l'API Vibration ; repli par interrupteur invisible bloqué par Apple depuis iOS 26.5.

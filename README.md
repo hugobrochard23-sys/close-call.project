@@ -62,11 +62,12 @@ chaque niveau après une modification du vol, de l'essence ou des ennemis).
 | F1 | liste des touches |
 | H | masquer le HUD |
 
-**Sur téléphone ou tablette (v022)** : plein écran, aucun bouton sauf la pause. **Glisser le doigt** n'importe où dirige
-la roquette ; **toucher** tire (ou fait réapparaître après un crash) ; **double toucher** en vol allume le moteur, qui reste
-allumé jusqu'au double toucher suivant. **Bouton pause** (en haut à droite) : reprendre, son, musique, recommencer, menu.
-Affichage réduit à la jauge d'essence, au réticule, aux repères de cibles et à l'alerte missile ; rendu à 1 pixel par point
-et ombres 1024 pour la fluidité (`input.touch` dans `src/config.js`). Sur ordinateur, `#touch` dans l'adresse force ce mode.
+**Sur téléphone ou tablette (v024)** : plein écran, aucun bouton sauf la pause. **Toucher** : tir (animation du tube) ou
+réapparition. **Glisser** en vol : diriger ; doigt tenu dans la **bande gauche / droite** de l'écran : virage sans fin
+(haut / bas : glissé seulement). **Appui long** (doigt immobile ≥ 0,5 s) : boost tant que le doigt reste posé (il peut alors
+bouger). Au lanceur, la vue ne bouge pas. Pas de curseur. **Pause** : reprendre, son, musique, vibration (OFF / LOW / MEDIUM /
+HIGH), recommencer, niveau suivant, menu. Vibrations : Android (API Vibration) ; iPhone : petits « tics » seulement jusqu'à
+iOS 26.4 (Apple a bloqué la méthode à partir d'iOS 26.5, Safari n'ayant pas l'API Vibration).
 
 Dans les menus et la boutique, tout se fait à la souris (survol pour sélectionner, clic pour valider) ; **Échap** revient en arrière.
 
