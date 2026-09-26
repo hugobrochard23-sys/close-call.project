@@ -49,6 +49,7 @@
       this.input = new CC.Input(this, this.hudCanvas);
       this.rig = new CC.CameraRig(this.camera, this);
       this.rocket = new CC.Rocket(this);
+      this.trails = new CC.Trails(this);   // v026
       this.world = new CC.World();
       this.targets = []; this.grapplePoints = []; this.entities = []; this.missiles = [];
       this.initEnvironment();
@@ -172,7 +173,8 @@
       // debout, l'écran est étroit : on élargit la vue verticale pour garder un angle horizontal suffisant (v022)
       const fovV = CC.CONFIG.camera.fovV, minH = touch ? CC.CONFIG.input.touch.fovMinH : 0;
       const needV = 2 * Math.atan(Math.tan(U.deg(minH) / 2) / this.camera.aspect) * 180 / Math.PI;
-      this.camera.fov = Math.min(100, Math.max(fovV, needV));
+      this.camera.fov = this.baseFov = Math.min(100, Math.max(fovV, needV));   // baseFov : sans le zoom du boost (v026)
+      if (this.rig) this.rig.zoom = 1;
       this.camera.updateProjectionMatrix();
       this.postfx.setSize(Math.round(cw * pr), Math.round(ch * pr));
     }
@@ -183,7 +185,7 @@
       for (const m of this.missiles) this.scene.remove(m.object);
       this.missiles = []; this.targets = []; this.grapplePoints = []; this.entities = [];
       if (this.tripod) { this.scene.remove(this.tripod); this.tripod = null; }
-      this.effects.clear(); this.rocket.reset();
+      this.effects.clear(); this.rocket.reset(); this.trails.clear();
       this.world = new CC.World();
     }
 
@@ -440,6 +442,7 @@
           }
           if (rk.active) {
             rk.frame(dt, inp);
+            this.updateWarnings(dt, rk);
             this.lastSpeed = rk.speed;
             const killY = this.level.killY !== undefined ? this.level.killY : -60;
             if (rk.pos.y < killY || rk.pos.length() > 4000) this.onRocketCrash('outOfBounds', rk.pos.clone(), null);
@@ -472,9 +475,26 @@
       if (this.state === 'FLIGHT') this.style.update(dt, rk); else this.style.update(dt, null);
       this.effects.update(dt, this.camera);
       this.rig.update(dt);
+      this.trails.update(dt, rk, this.camera);   // après la caméra : effacement près de sa position de cette image
       this.audio.updateRocket(rk, dt);
       this.flash = Math.max(0, this.flash - dt * 7);
       this.telemetry.t += dt;
+    }
+
+    // v026 : alertes « MISSILE! » (bip répété + vibration à l'arrivée) et « LOW FUEL » (deux notes + vibration une fois).
+    // L'affichage est dans le HUD, qui lit this.warn.
+    updateWarnings(dt, rk) {
+      const W = this.warn || (this.warn = { missile: false, lowFuel: false, beepT: 0 });
+      const buzz = () => { if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('warn'); };
+      const missile = this.missiles.some((m) => m.alive && m.pos.distanceTo(rk.pos) < CC.CONFIG.aa.warnDist);
+      if (missile) {
+        if (!W.missile) { buzz(); W.beepT = 0; }
+        if ((W.beepT -= dt) <= 0) { this.audio.play('warnMissile'); W.beepT = CC.CONFIG.aa.warnBeep; }
+      }
+      W.missile = missile;
+      const lowFuel = !rk.freeBoost && rk.fuel > 0 && rk.fuel / rk.fuelMax < CC.CONFIG.rocket.lowFuel;
+      if (lowFuel && !W.lowFuel) { this.audio.play('warnFuel'); buzz(); this.telemetry.event('lowFuel', { fuel: +rk.fuel.toFixed(2) }); }
+      W.lowFuel = lowFuel;
     }
 
     render(time) {

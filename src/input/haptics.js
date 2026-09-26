@@ -24,7 +24,7 @@
   const H = {
     level: 2,
     // impulsions (ms) selon l'intensité : [OFF, LOW, MEDIUM, HIGH]
-    pulses: { button: [0, 8, 15, 25], fire: [0, 20, 40, 70], boost: [0, 25, 45, 80] },
+    pulses: { warn: [0, 30, 60, 90], touch: [0, 4, 8, 12], button: [0, 8, 15, 25], fire: [0, 20, 40, 70], boost: [0, 25, 45, 80] },
     // vibration continue du boost : [durée vibrée, pause] par cycle ; iPhone : intervalle entre deux tics (ms)
     cont: [null, [14, 56], [28, 32], [60, 10]], iosEvery: [0, 220, 130, 75],
     timer: null,

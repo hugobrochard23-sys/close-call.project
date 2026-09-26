@@ -74,6 +74,15 @@
     }
 
     nozzle(out) { return out.copy(this.pos).addScaledVector(this.fwd, -0.55); }
+    // v026 : bouts des ailerons et pointe du nez en coordonnées du monde (départ des traînées)
+    finTips() {
+      this.mesh.updateMatrixWorld();
+      return (this.mesh.userData.finTips || []).map((t) => this.mesh.localToWorld(t.clone()));
+    }
+    noseTip(out) {
+      this.mesh.updateMatrixWorld();
+      return this.mesh.localToWorld(out.set(0, 0, this.mesh.userData.noseZ || 0.6));
+    }
     // OBSERVÉ (séq. 4) : pendant les rétro-fusées la flamme principale est éteinte
     get thrusting() { return this.active && this.ignited && !this.grapple.active && !this.retroActive && (this.freeBoost || (this.throttle && this.fuel > 0)); }
     // v009 : poussée automatique et gratuite pendant les premières secondes après l'allumage

@@ -16,7 +16,7 @@
       this.pos = new V(); this.eye = new V(); this.t = 0;
       this.roll = 0; this.focus = new V();
       this.aimDir = new V(0, 0, -1); this.right = new V(1, 0, 0); this.up = new V(0, 1, 0);
-      this.shake = 0;
+      this.shake = 0; this.zoom = 1;
       this.offset = new V(0, 0.5, 2);
       this.camDir = new V(0, 0, -1); this.camRight = new V(1, 0, 0); this.camUp = new V(0, 1, 0);
       this.upRef = new V(0, 1, 0); this.prevCamDir = new V(0, 0, -1); this.camNose = new V(0, 0, -1);
@@ -126,6 +126,11 @@
         cam.position.set(this.focus.x + Math.sin(a) * this.orbitR, this.focus.y + this.orbitH, this.focus.z + Math.cos(a) * this.orbitR);
         cam.lookAt(this.focus);
       }
+      // v026 : léger zoom avant pendant le boost, retour progressif ensuite
+      const boosting = (this.mode === 'chase' || this.mode === 'transition') && rk.active && rk.thrusting;
+      this.zoom += ((boosting ? c.boostZoom : 1) - this.zoom) * U.damp(boosting ? c.zoomIn : c.zoomOut, dt);
+      const fov = (this.game.baseFov || c.fovV) * this.zoom;
+      if (Math.abs(cam.fov - fov) > 1e-3) { cam.fov = fov; cam.updateProjectionMatrix(); }
       if (this.shake > 0) {
         this.shake = Math.max(0, this.shake - dt * 2.5);
         cam.position.x += (U.rng() - 0.5) * this.shake * 0.4; cam.position.y += (U.rng() - 0.5) * this.shake * 0.4;

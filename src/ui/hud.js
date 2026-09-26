@@ -122,6 +122,9 @@
       ctx.fillStyle = '#7d7d7d'; ctx.fillRect(x0, y0, w, h);
       ctx.fillStyle = color; ctx.fillRect(x0, y0, w * frac, h);
       if (rk.active && rk.thrusting && !rk.freeBoost) { ctx.fillStyle = col.white; ctx.fillRect(x0 + w * frac - 2, y0, 2, h); }   // curseur blanc : l'essence brûle
+      // v026 (tactile) : fine barre qui se vide pendant la seconde où reposer le doigt relance le boost aussitôt
+      const T = game.input.touch, left = T && T.reboostUntil ? (T.reboostUntil - performance.now()) / CC.CONFIG.input.touch.reboostMs : 0;
+      if (rk.active && left > 0) { ctx.fillStyle = col.yellow; ctx.fillRect(x0, y0 + h + 4, w * Math.min(1, left), Math.max(2, h * 0.35)); }
     }
 
     drawPopups(game) {
@@ -136,14 +139,14 @@
       }
     }
 
-    // v020 : « MISSILE! » clignotant quand un missile ennemi approche, pour laisser au joueur le temps de manœuvrer
+    // v020 : « MISSILE! » clignotant quand un missile ennemi approche, pour laisser au joueur le temps de manœuvrer ;
+    // v026 : « LOW FUEL » clignotant sous le seuil d'essence (état calculé par game.updateWarnings)
     drawMissileWarning(game) {
-      const rk = game.rocket;
-      if (game.state !== 'FLIGHT' || !rk.active) return;
-      const near = game.missiles.some((m) => m.alive && m.pos.distanceTo(rk.pos) < CC.CONFIG.aa.warnDist);
-      if (!near || Math.floor(performance.now() / 180) % 2) return;
-      const W = this.canvas.width, H = this.canvas.height;
-      this.text('MISSILE!', 0.5 * W, 0.2 * H, 0.0042, CC.CONFIG.hud.colors.red, { align: 'center', outline: CC.CONFIG.hud.colors.outline });
+      const rk = game.rocket, w = game.warn;
+      if (game.state !== 'FLIGHT' || !rk.active || !w || game.paused) return;
+      const W = this.canvas.width, H = this.canvas.height, col = CC.CONFIG.hud.colors;
+      if (w.missile && !(Math.floor(performance.now() / 180) % 2)) this.text('MISSILE!', 0.5 * W, 0.2 * H, 0.0058, col.red, { align: 'center', outline: col.outline });
+      if (w.lowFuel && !(Math.floor(performance.now() / 300) % 2)) this.text('LOW FUEL', 0.5 * W, 0.2 * H + 0.075 * this.refH, 0.0046, col.orange, { align: 'center', outline: col.outline });
     }
 
     // Point rouge au bord de l'écran vers les cibles hors champ (ESTIMATION, vu séq. 3/4).

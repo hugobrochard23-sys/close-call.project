@@ -5,7 +5,7 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v025',
+  version: 'v026',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
@@ -43,6 +43,7 @@ CC.CONFIG = {
     // consomme 1 s d'essence. Réservoir par niveau (`fuel` dans la fiche du niveau), plein à chaque tir.
     freeBoost: 0.5,              // v010 : 3 → 0,5 s
     fuelDefault: 12,             // s de poussée si le niveau ne précise pas `fuel`
+    lowFuel: 0.25,               // v026 : alerte « LOW FUEL » (texte, deux notes, vibration) sous 25 % du réservoir
     fuelBarMax: 24,              // réservoir qui remplit toute la largeur de la jauge : un petit réservoir donne une jauge plus courte
   },
 
@@ -66,6 +67,8 @@ CC.CONFIG = {
     offsetLag: 7,                // lissage du décalage caméra (1/s) : dérive de la roquette à l'écran quand la visée tourne (ESTIMATION)
     rollFromYawRate: 0,          // v019 : 0,16 → 0 (Hugo) : l'horizon ne penche plus en virage
     rollLag: 5,
+    boostZoom: 0.88,             // CHOIX v026 (Hugo) : pendant le boost, angle de vue × 0,88 (léger zoom avant)
+    zoomIn: 3, zoomOut: 2,       // 1/s : vitesse du zoom au boost, puis du retour quand le boost s'arrête
     launchBlend: 0.45,           // MESURÉ : la caméra rattrape la roquette en ≈ 0,5 s
     near: 0.05, far: 1400,
     eyeHeight: 1.6,
@@ -77,7 +80,8 @@ CC.CONFIG = {
     touch: {
       dragGain: 2.2,             // rad de visée pour un glissé de la largeur (ou hauteur, la plus petite) de l'écran
       tapMaxMs: 250, tapMaxMove: 12,   // un toucher court (ms) et presque immobile (px) = tap
-      longPressMs: 500,          // v024 : appui long (doigt immobile) qui déclenche le boost, maintenu tant que le doigt est posé
+      longPressMs: 400,          // v026 : 500 → 400 ms (Hugo) ; v024 : appui long (doigt immobile) qui déclenche le boost, maintenu tant que le doigt est posé
+      reboostMs: 1000,           // v026 : après un boost, fenêtre (ms) où reposer le doigt relance le boost sans appui long
       edgeBand: 0.22,            // v024 : bande latérale (fraction de la largeur) où le doigt fait tourner sans fin
       edgeTurnRate: 1.8,         // v024 : virage (rad/s) quand le doigt est tout au bord
       pixelRatio: 1,             // fluidité : rendu à 1 pixel par point d'écran (au lieu de 1,5)
@@ -131,6 +135,24 @@ CC.CONFIG = {
     },
   },
 
+  // Traînées de la roquette (CHOIX v026, Hugo) : src/rendering/trails.js
+  trails: {
+    life: 0.45,                  // s : durée de vie d'un point de traînée des ailerons
+    minStep: 0.35, minDt: 0.05,  // un point tous les 0,35 m (ou 0,05 s)
+    maxPoints: 40,
+    alpha: 0.5,                  // opacité de la traînée blanche (sans boost) : discrète mais visible sur les murs clairs
+    alphaBoost: 0.75,            // opacité de la traînée jaune/rouge pendant le boost
+    width: 0.004, widthBoost: 0.007,   // épaisseur en fraction de la hauteur d'écran (≈ 3 et 5 px sur un écran de 800 px)
+    camFadeNear: 0.7, camFadeFar: 1.8,   // m : invisible à moins de 0,7 m de la caméra, pleine à 1,8 m (la vue reste dégagée)
+    boostIn: 8, boostOut: 4,     // 1/s : apparition / disparition des filets d'air
+    streaks: 16,                 // filets d'air au nez pendant le boost
+    airSpeed: 3.2,               // parcours par seconde (1 = de la pointe jusqu'à airTravel m derrière)
+    airTravel: 1.3,              // m : longueur parcourue par un filet avant de s'effacer
+    airLen: 0.35,                // m : longueur d'un filet
+    airR0: 0.05, airSpread: 0.22,   // m, m/m : écart à l'axe à la pointe, puis évasement (cône autour du nez)
+    airAlpha: 0.7, airWidth: 0.0035,
+  },
+
   postfx: {
     enabled: true,
     vignette: 0.55, vignetteRadius: 0.78, vignetteSoftness: 0.55,
@@ -170,7 +192,8 @@ CC.CONFIG = {
     // repos = cooldown × salvoRest ; un tireur à moins de volleyJoin s de sa recharge se joint au tir d'un autre
     salvoCount: 2, salvoGap: 0.45, salvoRest: 1.5, volleyJoin: 1.2, maxAliveSalvo: 5,   // 3 par salve : injouable au canyon (v023)
     fuse: 1.6,                   // m : détonation de proximité
-    warnDist: 90,                // m : avertissement « MISSILE! » à l'écran
+    warnDist: 90,                // m : avertissement « MISSILE! » à l'écran (v026 : + bip répété et vibration)
+    warnBeep: 0.45,              // v026 : s entre deux bips tant qu'un missile est à moins de warnDist
   },
   aaByDifficulty: { easy: 0.3, medium: 0.6, hard: 0.95 },
 

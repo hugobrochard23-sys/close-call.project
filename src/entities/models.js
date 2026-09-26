@@ -43,6 +43,13 @@
       const f = new THREE.Group(); f.rotation.z = i * Math.PI * 2 / d.fins + Math.PI / 4; g.add(f);
       box(d.finW, d.finH, d.finH * 1.1, lam(c.fin), 0, r + d.finH * 0.35, d.finPos * fs, f);
     }
+    // v026 : points de départ des traînées (coin arrière extérieur de chaque aileron) et pointe du nez, repère local
+    g.userData.finTips = [];
+    for (let i = 0; i < d.fins; i++) {
+      const a = i * Math.PI * 2 / d.fins + Math.PI / 4, y = r + d.finH * 0.85;
+      g.userData.finTips.push(new THREE.Vector3(-y * Math.sin(a), y * Math.cos(a), d.finPos * fs - d.finH * 0.55));
+    }
+    g.userData.noseZ = len / 2 + nl;
     // pièces rapportées propres au cosmétique (anneaux, oreilles, miettes de croissant…)
     for (const p of (skin && skin.parts) || []) {
       const mat = p.basic ? basic(p.c) : lam(p.c);

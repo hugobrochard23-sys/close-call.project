@@ -64,8 +64,9 @@ chaque niveau après une modification du vol, de l'essence ou des ennemis).
 
 **Sur téléphone ou tablette (v024)** : plein écran, aucun bouton sauf la pause. **Toucher** : tir (animation du tube) ou
 réapparition. **Glisser** en vol : diriger ; doigt tenu dans la **bande gauche / droite** de l'écran : virage sans fin
-(haut / bas : glissé seulement). **Appui long** (doigt immobile ≥ 0,5 s) : boost tant que le doigt reste posé (il peut alors
-bouger). Au lanceur, la vue ne bouge pas. Pas de curseur. **Pause** : reprendre, son, musique, vibration (OFF / LOW / MEDIUM /
+(haut / bas : glissé seulement). **Appui long** (doigt immobile ≥ 0,4 s) : boost tant que le doigt reste posé (il peut alors
+bouger). Boost relâché : pendant **1 s** (fine barre jaune sous l'essence), reposer le doigt relance le boost aussitôt.
+Mini vibration à chaque toucher en partie. Au lanceur, la vue ne bouge pas. Pas de curseur. **Pause** : reprendre, son, musique, vibration (OFF / LOW / MEDIUM /
 HIGH), recommencer, niveau suivant, menu. Vibrations : Android (API Vibration) ; iPhone : petits « tics » seulement jusqu'à
 iOS 26.4 (Apple a bloqué la méthode à partir d'iOS 26.5, Safari n'ayant pas l'API Vibration).
 
@@ -94,7 +95,12 @@ de garde (ils tirent et se détruisent, mais ne comptent pas dans l'objectif : l
 Avec elle : tirs plus rapprochés (5 s → 1,6 s), visée plus juste (erreur 6 m → 0,3 m), anticipation de la trajectoire,
 missiles plus rapides (50 → 68 m/s). Ils restent moins maniables que la roquette (virage 0,5 → 1,1 rad/s contre 1,5 à 1,8)
 et plus lents qu'elle à pleine poussée : on les sème en virant franchement, et ils explosent sur les murs.
-« MISSILE! » clignote en rouge quand l'un d'eux approche (moins de 90 m). Réglages : `aa` dans `src/config.js`.
+« MISSILE! » clignote en rouge quand l'un d'eux approche (moins de 90 m), avec un bip répété et une vibration (v026) ;
+« LOW FUEL » clignote sous 25 % d'essence (deux notes, vibration). Réglages : `aa` et `rocket.lowFuel` dans `src/config.js`.
+
+**Traînées et boost (v026).** Une fine traînée part du bout de chaque aileron : blanche, jaune puis rouge pendant le boost ;
+des filets d'air glissent du nez vers l'arrière pendant le boost ; la caméra zoome légèrement pendant le boost
+(`camera.boostZoom`) et revient ensuite. Traînées effacées près de la caméra pour garder la vue dégagée (`trails`).
 
 Un contact rasant avec le sol ou un toit fait **glisser** la roquette. Un choc de face la fait **exploser**.
 Les vitres, les murs de briques fins et les caisses se brisent.

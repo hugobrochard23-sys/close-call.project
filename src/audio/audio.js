@@ -161,6 +161,8 @@
         case 'toggle': this.tone('square', 220, 180, 0.08, 0.06); break;
         case 'ui': this.tone('square', 520, 520, 0.06, 0.05); break;
         case 'target': this.tone('square', 523, 523, 0.1, 0.1); this.tone('square', 784, 784, 0.1, 0.18, 0.1); break;
+        case 'warnMissile': this.tone('square', 1320, 1320, 0.07, 0.05); this.tone('square', 1320, 1320, 0.07, 0.05, 0.09); break;   // v026 : bip-bip d'alerte
+        case 'warnFuel': this.tone('triangle', 880, 880, 0.12, 0.12); this.tone('triangle', 587, 587, 0.12, 0.2, 0.15); break;     // v026 : deux notes descendantes
       }
     }
   }

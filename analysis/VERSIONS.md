@@ -395,3 +395,21 @@ que personne ne perde sa progression (seule mention restante de l'ancien nom dan
 **Vérification :** titre de la page et du menu (ordinateur et téléphone 375×812) ; ancienne sauvegarde de test
 (4 242 centimes, records niveaux 1-2, musique coupée) reprise à l'identique ; pilote automatique niveau 1 terminé
 (14,9 s, STYLE 846) avec le bonus « COLD IMPACT! » ; panneau publicitaire rendu sans débordement.
+
+## v026 — zoom au boost, traînées, filets d'air, alertes, relance du boost
+
+**Changements (à la demande d'Hugo) :**
+- caméra : angle de vue × 0,88 pendant le boost (zoom avant en ≈ 0,5 s), retour progressif ensuite (`camera.boostZoom`) ;
+- traînées (`src/rendering/trails.js`, réglages `trails`) : un ruban fin par aileron, parti du bout de l'aileron, blanc,
+  jaune puis rouge pendant le boost ; filets d'air qui naissent au nez et glissent vers l'arrière pendant le boost.
+  Épaisseur constante à l'écran (≈ 3 px, 5 px en boost), effacés à moins de 0,7-1,8 m de la caméra ;
+- mobile : mini vibration à chaque toucher en partie ; appui long pour le boost 0,5 → 0,4 s ; boost relâché → fenêtre
+  d'1 s (fine barre jaune sous l'essence) où reposer le doigt relance le boost sans attendre ;
+- alertes : « MISSILE! » plus grand, avec bip répété et vibration ; « LOW FUEL » clignotant sous 25 % (deux notes, vibration).
+
+**Vérification :** banc de test : angle de vue 70° → 61,6° en boost, retour à 69-70° sans boost ; 4 traînées de 15 points ;
+rendu vu de côté (4 traînées jaunes depuis les ailerons) et vue du joueur (traînées fines, vue dégagée).
+Téléphone simulé (375×812, vibrations interceptées) : toucher → vibrate(8) ; boost absent à 0,3 s, présent à 0,46 s ;
+relâché → fenêtre de 998 ms ; toucher à 0,3 s → boost immédiat ; toucher après 1,1 s → pas de boost (ni 0,2 s plus tard) ;
+essence à 20 % → « LOW FUEL », deux notes et vibration une seule fois ; missile à 60 m → « MISSILE! », vibration, bip toutes
+les 0,45 s. Pilote automatique : 9 niveaux + AUTOMAP difficile terminés, niveau 1 identique à v025 (14,9 s, STYLE 846).

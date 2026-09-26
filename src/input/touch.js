@@ -1,7 +1,8 @@
 /* Commandes tactiles (v022, iPhone / tablette) — aucun bouton à l'écran sauf la pause :
  *  - glisser le doigt n'importe où : dirige la roquette (comme la souris : droite = tourne à droite, haut = monte) ;
  *  - toucher (tap) : tir depuis le lanceur, ou réapparition après un crash ;
- *  - appui long (doigt immobile ≥ 0,5 s) en vol : boost tant que le doigt reste posé, avec vibration continue (v024) ;
+ *  - appui long (doigt immobile ≥ 0,4 s) en vol : boost tant que le doigt reste posé, avec vibration continue (v024) ;
+ *    boost relâché → pendant 1 s, reposer le doigt relance le boost aussitôt (v026) ; mini vibration à chaque toucher (v026) ;
  *  - doigt dans la bande gauche / droite de l'écran : virage sans fin (v024) ; au lanceur, la vue ne bouge pas (v024) ;
  *  - gros bouton pause en haut à droite : menu pause (reprendre, son, musique, recommencer, menu principal).
  * Plein écran, affichage allégé et rendu moins coûteux (fluidité). Les menus se touchent directement.
@@ -17,7 +18,7 @@
   function attach(game) {
     if (!wanted()) return null;
     const input = game.input, cfg = CC.CONFIG.input.touch;
-    const T = input.touch = { thrust: false };
+    const T = input.touch = { thrust: false, reboostUntil: 0 };   // reboostUntil : fin de la fenêtre de relance du boost (v026)
     CC.Touch.active = true;
     document.body.classList.add('cc-touch');
 
@@ -43,13 +44,17 @@
     let finger = null;
     const scale = () => cfg.dragGain / Math.max(1, Math.min(window.innerWidth, window.innerHeight));
     const boostOff = () => { if (T.thrust) { T.thrust = false; if (Hap) Hap.boostStop(); } };
+    const boostOn = () => { T.thrust = true; game.audio.play('toggle'); if (Hap) Hap.boostStart(); };
     document.addEventListener('touchstart', (e) => {
       wake();
       if (!playing() || e.target === pause) return;   // menus, pause : le toucher devient un clic sur le jeu
       e.preventDefault();
+      buzz('touch');                                 // v026 : mini vibration dès que le doigt touche l'écran en partie
       if (finger) return;                            // un seul doigt pilote
       const t = e.changedTouches[0];
       finger = { id: t.identifier, x: t.clientX, y: t.clientY, x0: t.clientX, y0: t.clientY, t0: performance.now(), moved: false };
+      // v026 : dans la seconde qui suit la fin d'un boost, reposer le doigt relance le boost tout de suite (sans appui long)
+      if (game.state === 'FLIGHT' && performance.now() < T.reboostUntil) { finger.boost = true; T.reboostUntil = 0; boostOn(); }
     }, { passive: false });
     document.addEventListener('touchmove', (e) => {
       if (!finger) return;
@@ -67,6 +72,7 @@
       for (const t of e.changedTouches) {
         if (t.identifier !== finger.id) continue;
         const tap = !finger.moved && !finger.boost && performance.now() - finger.t0 < cfg.tapMaxMs;
+        if (finger.boost && game.state === 'FLIGHT') T.reboostUntil = performance.now() + cfg.reboostMs;   // v026
         finger = null;
         boostOff();                                  // v024 : doigt levé → boost coupé
         if (!tap || !playing()) return;
@@ -85,7 +91,7 @@
       if (finger && flying) {
         // v024 : appui long (doigt immobile ≥ longPressMs) → boost, maintenu tant que le doigt reste posé (il peut alors bouger)
         if (!finger.boost && !finger.moved && performance.now() - finger.t0 >= cfg.longPressMs) {
-          finger.boost = true; T.thrust = true; game.audio.play('toggle'); if (Hap) Hap.boostStart();
+          finger.boost = true; boostOn();
         }
         // v024 : virage sans fin quand le doigt est dans la bande de gauche ou de droite (plus vite près du bord) ;
         // haut / bas : inchangés (glissé relatif)
@@ -93,7 +99,7 @@
         const push = x < b ? -(b - x) / b : x > 1 - b ? (x - (1 - b)) / b : 0;
         if (push) input.addAim(-push * cfg.edgeTurnRate * dt, 0);
       }
-      if (!flying) boostOff();
+      if (!flying) { boostOff(); if (game.state !== 'FLIGHT') T.reboostUntil = 0; }   // pause : la fenêtre reste ouverte
       pause.hidden = !playing();
     };
     game.resize();   // plein écran
