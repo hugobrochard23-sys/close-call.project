@@ -6,7 +6,7 @@
   class Audio {
     constructor() {
       this.ctx = null; this.enabled = true; this.muted = false;
-      this.cfg = CC.CONFIG.audio;
+      this.cfg = Object.assign({}, CC.CONFIG.audio);   // v023 : copie — couper le son ne doit pas écraser les volumes par défaut
       this.engineLevel = 0; this.windLevel = 0;
     }
 
@@ -15,7 +15,11 @@
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
       const ctx = this.ctx = new AC();
-      this.master = ctx.createGain(); this.master.gain.value = this.cfg.master; this.master.connect(ctx.destination);
+      this.master = ctx.createGain(); this.master.gain.value = this.cfg.master;
+      // v023 : limiteur en sortie : explosions et moteur ensemble ne saturent jamais les haut-parleurs (téléphone)
+      const lim = ctx.createDynamicsCompressor();
+      lim.threshold.value = -8; lim.knee.value = 6; lim.ratio.value = 12; lim.attack.value = 0.003; lim.release.value = 0.25;
+      this.master.connect(lim); lim.connect(ctx.destination);
       this.sfx = ctx.createGain(); this.sfx.gain.value = this.cfg.sfx; this.sfx.connect(this.master);
       this.musicBus = ctx.createGain(); this.musicBus.gain.value = this.cfg.music; this.musicBus.connect(this.master);
       // bruit blanc partagé
@@ -23,15 +27,27 @@
       this.noise = ctx.createBuffer(1, len, ctx.sampleRate);
       const d = this.noise.getChannelData(0);
       for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-      // moteur : bruit passe-bande + dent de scie grave
+      // v023 : réacteur = souffle grave (bruit passe-bas) + sifflement de tuyère (passe-bande aigu) + crépitement
+      // (bruit brun modulé par des impulsions aléatoires). Plus de dent de scie : le bourdonnement faisait « électronique ».
       const src = ctx.createBufferSource(); src.buffer = this.noise; src.loop = true;
-      this.engFilter = ctx.createBiquadFilter(); this.engFilter.type = 'lowpass'; this.engFilter.frequency.value = 900; this.engFilter.Q.value = 1.2;
+      this.engFilter = ctx.createBiquadFilter(); this.engFilter.type = 'lowpass'; this.engFilter.frequency.value = 420; this.engFilter.Q.value = 0.7;
       this.engGain = ctx.createGain(); this.engGain.gain.value = 0;
       src.connect(this.engFilter); this.engFilter.connect(this.engGain); this.engGain.connect(this.sfx); src.start();
-      this.rumble = ctx.createOscillator(); this.rumble.type = 'sawtooth'; this.rumble.frequency.value = 48;
-      const rf = ctx.createBiquadFilter(); rf.type = 'lowpass'; rf.frequency.value = 160;
+      const hs = ctx.createBufferSource(); hs.buffer = this.noise; hs.loop = true; hs.playbackRate.value = 1.3;
+      this.hissFilter = ctx.createBiquadFilter(); this.hissFilter.type = 'bandpass'; this.hissFilter.frequency.value = 3200; this.hissFilter.Q.value = 0.9;
+      this.hissGain = ctx.createGain(); this.hissGain.gain.value = 0;
+      hs.connect(this.hissFilter); this.hissFilter.connect(this.hissGain); this.hissGain.connect(this.sfx); hs.start();
+      const cl = ctx.sampleRate * 2, cb = ctx.createBuffer(1, cl, ctx.sampleRate), cd = cb.getChannelData(0);
+      let brown = 0;
+      for (let i = 0; i < cl; i++) {
+        brown = (brown + 0.02 * (Math.random() * 2 - 1)) / 1.02;
+        const pop = Math.random() < 0.0009 ? 1 : 0;                  // ≈ 40 crépitements par seconde
+        cd[i] = brown * 3.2 + (pop ? (Math.random() * 2 - 1) : 0) * 0.9;
+      }
+      const cs = ctx.createBufferSource(); cs.buffer = cb; cs.loop = true;
+      const cf = ctx.createBiquadFilter(); cf.type = 'lowpass'; cf.frequency.value = 1400;
       this.rumbleGain = ctx.createGain(); this.rumbleGain.gain.value = 0;
-      this.rumble.connect(rf); rf.connect(this.rumbleGain); this.rumbleGain.connect(this.sfx); this.rumble.start();
+      cs.connect(cf); cf.connect(this.rumbleGain); this.rumbleGain.connect(this.sfx); cs.start();
       // vent
       const ws = ctx.createBufferSource(); ws.buffer = this.noise; ws.loop = true; ws.playbackRate.value = 0.7;
       this.windFilter = ctx.createBiquadFilter(); this.windFilter.type = 'bandpass'; this.windFilter.frequency.value = 700; this.windFilter.Q.value = 0.6;
@@ -59,10 +75,11 @@
       const on = rocket && rocket.active;
       const thrust = on && rocket.thrusting ? 1 : 0;
       const sp = on ? rocket.speed : 0;
-      this.engGain.gain.setTargetAtTime(thrust * 0.35, t, 0.05);
-      this.rumbleGain.gain.setTargetAtTime(thrust * 0.18, t, 0.05);
-      this.engFilter.frequency.setTargetAtTime(500 + sp * 14, t, 0.1);
-      this.rumble.frequency.setTargetAtTime(40 + sp * 0.35, t, 0.1);
+      this.engGain.gain.setTargetAtTime(thrust * 0.55, t, 0.06);
+      this.hissGain.gain.setTargetAtTime(thrust * (0.05 + sp * 0.0012), t, 0.06);
+      this.rumbleGain.gain.setTargetAtTime(thrust * 0.32, t, 0.06);
+      this.engFilter.frequency.setTargetAtTime(320 + sp * 6, t, 0.12);
+      this.hissFilter.frequency.setTargetAtTime(2600 + sp * 18, t, 0.12);
       this.windGain.gain.setTargetAtTime(on ? U.clamp((sp - 10) / 90, 0, 1) * 0.22 : 0, t, 0.1);
       this.windFilter.frequency.setTargetAtTime(400 + sp * 12, t, 0.1);
       this.retroGain.gain.setTargetAtTime(on && rocket.retroActive ? 0.25 : 0, t, 0.03);
@@ -92,17 +109,50 @@
       o.start(t); o.stop(t + dec + 0.05);
     }
 
+    // Bruit filtré dont la fréquence glisse de f0 à f1 (souffles, whoosh).
+    sweep(f0, f1, type, q, peak, dec, delay) {
+      const ctx = this.ctx, t = ctx.currentTime + (delay || 0);
+      const s = ctx.createBufferSource(); s.buffer = this.noise;
+      const f = ctx.createBiquadFilter(); f.type = type; f.Q.value = q;
+      f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + dec);
+      const g = ctx.createGain(); s.connect(f); f.connect(g); g.connect(this.sfx);
+      this.env(g, t, Math.min(0.08, dec * 0.3), peak, dec);
+      s.start(t, Math.random()); s.stop(t + dec + 0.15);
+    }
+    /* v023 : explosion plus crédible sans être réaliste à l'excès : claquement initial, déflagration dont l'aigu s'éteint vite,
+     * coup de grave, débris qui crépitent, queue grave qui roule. `size` : 1 = roquette / cible, 0,45 = petit missile. */
+    explosion(size) {
+      const ctx = this.ctx, t = ctx.currentTime, k = size;
+      this.noiseHit(4000, 'highpass', 0.7, 0.6 * k, 0.05);                       // claquement
+      const s = ctx.createBufferSource(); s.buffer = this.noise; s.playbackRate.value = 0.8;
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.Q.value = 0.6;
+      f.frequency.setValueAtTime(5000, t); f.frequency.exponentialRampToValueAtTime(900, t + 0.15); f.frequency.exponentialRampToValueAtTime(140, t + 1.2 * k + 0.4);
+      const sh = ctx.createWaveShaper(); const curve = new Float32Array(256);
+      for (let i = 0; i < 256; i++) { const x = i / 128 - 1; curve[i] = Math.tanh(2.2 * x); }   // légère saturation : plus de corps
+      sh.curve = curve;
+      const g = ctx.createGain(); s.connect(f); f.connect(sh); sh.connect(g); g.connect(this.sfx);
+      this.env(g, t, 0.004, 0.75 * k, 1.1 * k + 0.5);
+      s.start(t, Math.random()); s.stop(t + 1.8 * k + 0.8);
+      this.tone('sine', 75, 26, 0.7 * k, 0.9 * k + 0.25);                          // coup de grave
+      const tail = this.noiseHit(260, 'lowpass', 0.5, 0.55 * k, 2.8 * k + 0.4, 0.5);   // queue qui roule
+      tail.frequency.setValueAtTime(320, t); tail.frequency.exponentialRampToValueAtTime(90, t + 2.8 * k + 0.4);
+      const n = Math.round(5 + 9 * k);
+      for (let i = 0; i < n; i++) {                                                 // débris
+        const d = 0.06 + Math.random() * (0.7 * k + 0.2);
+        setTimeout(() => { if (this.ctx) this.noiseHit(900 + Math.random() * 2600, 'bandpass', 2.5, (0.08 + Math.random() * 0.14) * k, 0.03 + Math.random() * 0.06); }, d * 1000);
+      }
+    }
+
     play(name, pos, param) {
       if (!this.ctx || this.muted) return;
       switch (name) {
-        case 'launch': this.noiseHit(1200, 'lowpass', 0.7, 0.9, 0.5); this.tone('sine', 120, 40, 0.8, 0.35); break;
-        case 'ignite': this.noiseHit(2500, 'bandpass', 0.8, 0.4, 0.25); break;
-        case 'boom': {
-          const f = this.noiseHit(1800, 'lowpass', 0.8, 1.0, 1.6, 0.6);
-          f.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 1.4);
-          this.tone('sine', 90, 28, 0.9, 1.2); break;
-        }
-        case 'boomSmall': this.noiseHit(1400, 'lowpass', 0.8, 0.5, 0.6, 0.8); this.tone('sine', 110, 40, 0.4, 0.4); break;
+        case 'launch':   // v023 : « chunk » pneumatique du tube, puis souffle qui s'éloigne
+          this.tone('sine', 140, 45, 0.9, 0.18); this.noiseHit(700, 'lowpass', 0.8, 0.7, 0.12);
+          this.sweep(900, 2600, 'bandpass', 0.7, 0.35, 0.45, 0.04); break;
+        case 'ignite':   // v023 : « whoosh » qui monte + coup sourd à l'allumage
+          this.sweep(300, 1800, 'bandpass', 0.9, 0.5, 0.4); this.tone('sine', 70, 38, 0.6, 0.25); break;
+        case 'boom': this.explosion(1); break;
+        case 'boomSmall': this.explosion(0.45); break;
         case 'glass': for (let i = 0; i < 5; i++) setTimeout(() => this.noiseHit(5000 + Math.random() * 3000, 'bandpass', 8, 0.35, 0.12), i * 28); break;
         case 'brick': this.noiseHit(600, 'lowpass', 1, 0.7, 0.35, 0.7); this.tone('square', 90, 50, 0.15, 0.15); break;
         case 'grapple': this.tone('square', 300, 1400, 0.12, 0.12); this.noiseHit(3000, 'highpass', 1, 0.2, 0.1); break;

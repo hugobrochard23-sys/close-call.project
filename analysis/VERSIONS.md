@@ -337,3 +337,18 @@ SOUND et MUSIC ON/OFF. Fluidité : 1 pixel par point, ombres 1024. Police Google
 tap → tir ; tap simple en vol → rien ; double tap → moteur allumé, essence 22,97 → 21,97 en 1 s ; double tap → éteint ;
 taps espacés de 500 ms → rien ; pause → menu, SOUND / MUSIC → 0 puis rétablis, RESUME ; crash → « TAP TO RESPAWN » → tap → lanceur.
 Rendu (Mac) 2,9 → 2,4 ms / image, surface 563×1218 → 375×812. Ordinateur inchangé ; pilote automatique : 10 cartes, 0 impact.
+
+## v023 — progression, flèches vertes, repères rouges permanents, nouveaux sons, SOUND / MUSIC réparés
+
+**Changements (à la demande d'Hugo) :**
+- progression : un niveau s'ouvre quand le précédent est terminé (`game.isUnlocked`) ; menu : niveaux verrouillés grisés
+  « LOCKED » ; menu pause : NEXT LEVEL si le niveau suivant est ouvert ; AUTOMAP toujours libre ;
+- niveaux 1 à 3 : flèches vertes 3D le long du parcours (`b.guideArrows`, une tous les 45 m), sans points rouges ;
+  à partir du niveau 4 et sur AUTOMAP : repère rouge permanent sur la cible, même à l'écran ;
+- sons : réacteur = souffle grave + sifflement + crépitement (plus de dent de scie) ; allumage « whoosh » ; tir pneumatique ;
+  explosion : claquement, déflagration saturée, coup de grave, débris, queue qui roule ; limiteur en sortie ;
+- correction : SOUND / MUSIC sur OFF n'étaient pas réappliqués au démarrage (le son revenait après un rechargement) et
+  couper le son écrasait le volume par défaut.
+
+**Vérification :** rendu audio hors ligne : crête max 0,56 (moteur + explosion, plus de saturation ; 1,18 avant le limiteur) ;
+SOUND / MUSIC OFF → gains 0 après rechargement, rétablis à 0,9 / 0,28. CITY : 17 flèches. Pilote automatique : 10 cartes, 0 crash.

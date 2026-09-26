@@ -247,4 +247,32 @@
   P.laser = function (a, b) { return this.entity(new CC.Laser(this, a, b)); };
   P.grapplePoint = function (pos, normal, radius) { const g = new CC.GrapplePoint(pos, normal, radius); this.grapplePoints.push(g); this.world.addBox({ center: pos, size: [radius * 2 || 3.2, 0.3, radius * 2 || 3.2], quat: g.object.quaternion, kind: 'solid' }); return this.entity(g); };
   P.arrow = function (pos, yaw) { return this.entity(new CC.Arrow(pos, yaw)); };
+  /* v023 : flèches vertes le long d'un parcours (niveaux 1 à 3), une tous les `step` m, orientées vers la suite du chemin,
+   * légèrement sous la trajectoire et inclinées vers la caméra (lisibles de derrière). Décor : pas de collision. */
+  P.guideArrows = function (routes, step) {
+    const V = THREE.Vector3, placed = [];
+    for (const route of routes) {
+      const start = new V().fromArray(route[0]);
+      let since = step * 0.6;                        // distance parcourue depuis la dernière flèche
+      for (let i = 0; i + 1 < route.length; i++) {
+        const a = new V().fromArray(route[i]), seg = new V().fromArray(route[i + 1]).sub(a), len = seg.length();
+        if (len < 1e-3) continue;
+        seg.divideScalar(len);
+        let d = 0;
+        while (d + (step - since) <= len) {
+          d += step - since; since = 0;
+          const p = a.clone().addScaledVector(seg, d).add(new V(0, -2.2, 0));
+          if (p.distanceTo(start) < 18 || placed.some((q) => q.distanceTo(p) < step * 0.5)) continue;
+          placed.push(p);
+          const o = CC.Models.guideArrow();
+          o.position.copy(p);
+          o.lookAt(p.clone().add(seg));             // lookAt oriente +Z (la pointe) vers la suite du chemin
+          o.rotateX(0.6);                           // pointe abaissée, talon relevé : face à la caméra qui suit derrière
+          this.entity({ object: o, t: Math.random() * 6, base: p.y, update(dt) { this.t += dt; this.object.position.y = this.base + Math.sin(this.t * 3) * 0.3; } });
+        }
+        since += len - d;
+      }
+    }
+  };
+
 })();

@@ -46,9 +46,11 @@
       const best = game.save.best, px = H * 0.0036;
       CC.Levels.forEach((lv, i) => {
         const y = H * (0.275 + i * 0.068);
-        this.button(ctx, (i + 1) + '  ' + lv.name, W * (P ? 0.07 : 0.3), y, px, () => game.startLevel(i), { align: 'left' });
+        const open = game.isUnlocked(i);   // v023 : niveau verrouillé tant que le précédent n'est pas terminé
+        if (open) this.button(ctx, (i + 1) + '  ' + lv.name, W * (P ? 0.07 : 0.3), y, px, () => game.startLevel(i), { align: 'left' });
+        else this.text(ctx, (i + 1) + '  ' + lv.name, W * (P ? 0.07 : 0.3), y, px, '#5a5a5a');
         const b = best[lv.id];
-        const info = b ? U.formatTime(b.time) + '   STYLE ' + U.formatInt(b.style) : '--:--,--';
+        const info = b ? U.formatTime(b.time) + '   STYLE ' + U.formatInt(b.style) : open ? '--:--,--' : 'LOCKED';
         // colonne assez à droite : un temps enregistré ("0:12,27   STYLE 1.234") ne doit pas toucher le nom du niveau
         this.text(ctx, info, W * (P ? 0.97 : 0.88), y + px * 1.2, H * 0.0026, b ? '#cfcfcf' : '#7a7a7a', { align: 'right' });
       });
@@ -99,6 +101,9 @@
         ['MUSIC: ' + (s.music > 0 ? 'ON' : 'OFF'), () => this.toggleVolume(game, 'music')],
         [touch ? 'RESTART' : 'RESTART (R)', () => { game.resume(); game.restartLevel(); }],
       ];
+      // v023 : niveau suivant, seulement s'il est débloqué (niveau en cours déjà terminé une fois)
+      const next = game.nextUnlocked();
+      if (next >= 0) rows.push(['NEXT LEVEL', () => { game.resume(); game.startLevel(next); }]);
       if (!touch) rows.push(['SETTINGS (TAB)', () => { this.overlay = 'settings'; }]);
       rows.push(['MAIN MENU', () => game.toMenu()]);
       rows.forEach((r, i) => this.button(ctx, r[0], W / 2, H * ((touch ? 0.3 : 0.36) + i * step), px, r[1]));

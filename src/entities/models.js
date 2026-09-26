@@ -205,6 +205,19 @@
     return g;
   };
 
+  // v023 : flèche de chemin (niveaux 1 à 3) : flèche plate verte, pointe vers +Z, lumineuse (visible de nuit comme de jour)
+  M.guideArrow = function () {
+    const g = new THREE.Group();
+    const mat = new THREE.MeshBasicMaterial({ color: '#35ff4a', transparent: true, opacity: 0.85, depthWrite: false });
+    const shape = new THREE.Shape();
+    shape.moveTo(-0.5, 1.6); shape.lineTo(0.5, 1.6); shape.lineTo(0.5, 0); shape.lineTo(1.5, 0); shape.lineTo(0, -1.8); shape.lineTo(-1.5, 0); shape.lineTo(-0.5, 0); shape.lineTo(-0.5, 1.6);
+    const m = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: 0.25, bevelEnabled: false }), mat);
+    m.rotation.x = -Math.PI / 2;   // à plat : la pointe (−Y de la forme) passe vers +Z
+    g.add(m);
+    g.traverse((o) => { o.castShadow = false; o.receiveShadow = false; });
+    return g;
+  };
+
   // Sprites : "!" rouge au-dessus des ennemis et point rouge de cible.
   let alertTex = null, dotTex = null;
   M.alertSprite = function () {

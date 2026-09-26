@@ -53,6 +53,8 @@
       this.targets = []; this.grapplePoints = []; this.entities = []; this.missiles = [];
       this.initEnvironment();
       this.loadSave();
+      // v023 : volumes enregistrés (SOUND / MUSIC sur OFF) appliqués dès le démarrage, avant même que le son soit créé
+      this.audio.setVolumes(CC.CONFIG.audio.master, this.settings.music, this.settings.sfx);
       this.applyCosmetic();
       this.state = 'BOOT'; this.paused = false;
       this.runTime = 0; this.lastSpeed = 0; this.acc = 0; this.fps = 60; this.flash = 0;
@@ -196,6 +198,8 @@
       const b = new CC.LevelBuilder(this.scene, this.world, L);
       this.builder = b;
       L.build(b, this);
+      // v023 : niveaux 1 à 3 → flèches vertes le long du chemin (à partir du 4e, les points rouges suffisent)
+      if (this.guideLevel(i, L)) b.guideArrows(L.routes || [L.route], CC.CONFIG.hud.guideArrowStep);
       b.finish();
       this.targets = b.targets; this.grapplePoints = b.grapplePoints; this.entities = b.entities;
       this.applyEnvironment(L.env);
@@ -307,6 +311,15 @@
       this.rig.startImpact(pos); this.rig.shake = 0.8;
       this.state = 'CRASHED'; this.impactT = 0;
       this.telemetry.event('crash', { kind, pos: pos.toArray().map((v) => +v.toFixed(2)), runTime: +this.runTime.toFixed(3) });
+    }
+
+    guideLevel(i, L) { return i >= 0 && i < CC.CONFIG.hud.guideArrowLevels && !!(L.routes || L.route); }
+
+    // v023 : progression — un niveau est ouvert si c'est le premier ou si le précédent a déjà été terminé (record enregistré)
+    isUnlocked(i) { return i <= 0 || !!(CC.Levels[i - 1] && this.save.best[CC.Levels[i - 1].id]); }
+    nextUnlocked() {
+      const n = this.levelIndex + 1;
+      return !this.generated && this.levelIndex >= 0 && n < CC.Levels.length && this.isUnlocked(n) ? n : -1;
     }
 
     respawnMsg() { return CC.Touch && CC.Touch.active ? 'TAP TO RESPAWN' : 'PRESS FIRE TO RESPAWN AT LAUNCHER'; }

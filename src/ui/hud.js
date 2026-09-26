@@ -149,12 +149,21 @@
     // Point rouge au bord de l'écran vers les cibles hors champ (ESTIMATION, vu séq. 3/4).
     drawIndicators(game) {
       if (game.state !== 'FLIGHT' && game.state !== 'AIM') return;
+      if (game.guideLevel(game.levelIndex, game.level)) return;   // v023 : niveaux 1 à 3 → flèches vertes à la place
       const W = this.canvas.width, H = this.canvas.height, ctx = this.ctx, cam = game.camera;
       for (const t of game.targets) {
         if (!t.alive || t.guard) continue;   // v021 : pas de repère vers les tanks de garde
         const p = this._v.copy(t.obb.c).project(cam);
         const behind = p.z > 1;
-        if (!behind && Math.abs(p.x) < 1 && Math.abs(p.y) < 1) continue;
+        if (!behind && Math.abs(p.x) < 1 && Math.abs(p.y) < 1) {
+          // v023 : cible à l'écran → repère rouge permanent sur elle (il ne disparaît plus quand on fonce dessus)
+          const sx = (p.x * 0.5 + 0.5) * W, sy = (-p.y * 0.5 + 0.5) * H, r = Math.max(5, H * 0.012);
+          ctx.lineWidth = Math.max(2, H / 360);
+          ctx.strokeStyle = '#1a1a1a'; ctx.strokeRect(sx - r - 1, sy - r - 1, 2 * r + 2, 2 * r + 2);
+          ctx.strokeStyle = '#ff1e1e'; ctx.strokeRect(sx - r, sy - r, 2 * r, 2 * r);
+          ctx.fillStyle = '#ff1e1e'; ctx.fillRect(sx - 2, sy - 2, 4, 4);
+          continue;
+        }
         let x = p.x, y = p.y;
         if (behind) { x = -x; y = -y; }
         const m = Math.max(Math.abs(x), Math.abs(y)) || 1;
