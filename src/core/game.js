@@ -183,6 +183,7 @@
     unloadLevel() {
       if (this.builder) { this.builder.dispose(); this.builder = null; }
       for (const m of this.missiles) this.scene.remove(m.object);
+      for (const t of this.targets) if (t.clearWreck) t.clearWreck(this);   // design : épaves ajoutées à la scène
       this.missiles = []; this.targets = []; this.grapplePoints = []; this.entities = [];
       if (this.tripod) { this.scene.remove(this.tripod); this.tripod = null; }
       this.effects.clear(); this.rocket.reset(); this.trails.clear();
@@ -316,7 +317,7 @@
 
     onTargetHit(t, rocket) {
       const c = t.obb.c.clone();
-      t.kill();
+      t.kill(this);
       if (!t.guard) this.targetsDone++;   // v021 : un tank de garde détruit ne compte pas dans l'objectif
       const speed = rocket.vel.length();
       this.lastSpeed = 4;                                            // MESURÉ : "SPEED:4" après l'impact

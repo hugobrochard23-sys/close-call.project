@@ -57,7 +57,7 @@
 
     update(dt, game) {
       this.t += dt;
-      if (!this.alive) return;
+      if (!this.alive) { if (this.wreck) this.updateWreck(dt, game); return; }
       const rk = game.rocket && game.rocket.active ? game.rocket : null;
       if (this.path && game.state === 'FLIGHT' && rk && this.fleeDist < this.pathLen) { this.fleeDist += this.fleeSpeed * dt; this.placeOnPath(); }
       if (this.type === 'heli' || this.type === 'heliCamo') this.updateHeli(dt, game, rk);
@@ -234,8 +234,92 @@
       game.spawnEnemyMissile(from.clone(), rk, { miss, lead: L(A.lead), turn: L(A.turn), speed: L(A.speed), life: A.life, quiet: true });
     }
 
-    kill() { this.alive = false; this.object.visible = false; }
+    kill(game) {
+      this.alive = false; this.object.visible = false;
+      if (game) this.makeWreck(game);
+    }
+
+    /* Design : épave. Copie calcinée du modèle (un seul matériau sombre partagé), qui brûle et fume ; char : tourelle
+     * arrachée, projetée et retombant à côté ; hélicoptère : chute en vrille avec traînée de fumée, explosion secondaire
+     * au sol, puis épave qui brûle. Aucune collision : purement visuel (la cible est déjà détruite). */
+    makeWreck(game) {
+      const charred = Target.charred || (Target.charred = new THREE.MeshLambertMaterial({ color: '#221f1c' }));
+      const obj = this.model.clone(true);
+      obj.traverse((o) => { if (o.isMesh) { o.material = o.material.transparent ? o.material : charred; if (o.material.transparent) o.visible = false; } if (o.isSprite) o.visible = false; });
+      const root = new THREE.Group();
+      root.position.copy(this.object.position); root.quaternion.copy(this.object.quaternion); root.add(obj);
+      game.scene.add(root);
+      const r = U.fx, W = { root, obj, t: 0, fire: 0, parts: [], kind: this.type, landed: false, vel: new V(), spin: new V() };
+      if (this.type === 'tank') {
+        const tur = obj.getObjectByName('turret');
+        if (tur) {
+          tur.updateWorldMatrix(true, false);
+          const wp = tur.getWorldPosition(new V()), wq = tur.getWorldQuaternion(new THREE.Quaternion());
+          tur.parent.remove(tur);
+          const tg = new THREE.Group(); tg.position.copy(wp); tg.quaternion.copy(wq); tg.add(tur); tur.position.set(0, 0, 0); tur.rotation.set(0, tur.rotation.y, 0);
+          game.scene.add(tg);
+          W.parts.push({ o: tg, vel: new V(r.range(-3, 3), r.range(10, 14), r.range(-3, 3)), spin: new V(r.range(-4, 4), r.range(-3, 3), r.range(-4, 4)), floor: this.object.position.y + 0.35, done: false });
+        }
+        obj.rotation.set(r.range(-0.04, 0.04), 0, r.range(-0.05, 0.05)); obj.position.y = -0.12;   // caisse affaissée
+      } else if (this.type === 'heli' || this.type === 'heliCamo') {
+        W.vel.set(r.range(-3, 3), r.range(1, 3), r.range(-3, 3)); W.spin.set(r.range(-0.6, 0.6), r.range(2.5, 4) * (r() < 0.5 ? -1 : 1), r.range(-0.8, 0.8));
+        const hit = game.world.raycast(this.object.position, new V(0, -1, 0), 400);
+        W.ground = hit ? hit.point.y : this.object.position.y - 30;
+      } else {
+        obj.position.y = -0.1;
+      }
+      this.wreck = W;
+    }
+    updateWreck(dt, game) {
+      const W = this.wreck, fx = game.effects, r = U.fx;
+      W.t += dt;
+      for (const P of W.parts) {                                     // pièces projetées (tourelle)
+        if (P.done) continue;
+        P.vel.y -= 14 * dt; P.o.position.addScaledVector(P.vel, dt);
+        P.o.rotation.x += P.spin.x * dt; P.o.rotation.y += P.spin.y * dt; P.o.rotation.z += P.spin.z * dt;
+        if (r() < dt * 40) fx.darkSmoke.emit({ pos: P.o.position, vel: new V(0, 0.8, 0), life: r.range(0.8, 1.4), s0: 0.2, s1: 0.7, s2: 1, peak: 0.3, cols: fx.pal.blackSmoke, drag: 1.5, a: 0.5, fin: 0.1, fout: 0.3, wind: 1, turb: 2 });
+        if (P.o.position.y <= P.floor && P.vel.y < 0) {
+          P.o.position.y = P.floor; P.done = true;
+          P.o.rotation.x = r.range(-0.6, 0.6); P.o.rotation.z = r.range(-0.9, 0.9);
+          fx.dustKick(P.o.position.clone(), null, 0.8);
+          game.audio.play('brick', P.o.position);
+        }
+      }
+      if ((this.type === 'heli' || this.type === 'heliCamo') && !W.landed) {   // chute en vrille
+        W.vel.y -= 11 * dt;
+        W.root.position.addScaledVector(W.vel, dt);
+        W.obj.rotation.x += W.spin.x * dt; W.obj.rotation.y += W.spin.y * dt; W.obj.rotation.z += W.spin.z * dt;
+        const p = W.root.position;
+        for (let i = 0; i < 2; i++) fx.darkSmoke.emit({ pos: p, vel: new V(r.range(-0.5, 0.5), r.range(0.5, 1.5), r.range(-0.5, 0.5)), life: r.range(1.2, 2.2), s0: 0.4, s1: r.range(1.2, 1.8), s2: 2.4, peak: 0.3, cols: fx.pal.blackSmoke, drag: 1, a: 0.55, fin: 0.05, fout: 0.3, wind: 1.2, turb: 2, spin: 1 });
+        fx.flame.emit({ pos: p, vel: new V(r.range(-1, 1), r.range(0, 2), r.range(-1, 1)), life: r.range(0.15, 0.3), s0: 0.4, s1: 1.1, s2: 0.2, peak: 0.3, cols: fx.pal.fireball, a: 0.8, fout: 0.3, spin: 4 });
+        if (p.y <= W.ground + 1.2 || W.t > 6) {
+          p.y = Math.max(p.y, W.ground + 0.9); W.landed = true;
+          W.obj.rotation.x = r.range(-0.3, 0.3); W.obj.rotation.z = r.range(-1.3, 1.3);
+          fx.explosion(p.clone(), new V(0, 1, 0), false, 'orange');
+          game.audio.play('boomSmall', p);
+        }
+        return;
+      }
+      // épave qui brûle : flammes basses et fumée noire, de moins en moins fortes (≈ 10 s)
+      const k = Math.max(0, 1 - W.t / 10);
+      if (k <= 0) return;
+      const base = W.root.position;
+      W.fire += dt * 26 * k;
+      while (W.fire > 1) {
+        W.fire -= 1;
+        const p = new V(base.x + r.range(-1.2, 1.2), base.y + r.range(0.8, 1.8), base.z + r.range(-1.6, 1.6));
+        fx.flame.emit({ pos: p, vel: new V(r.range(-0.4, 0.4), r.range(1.5, 3), r.range(-0.4, 0.4)), life: r.range(0.25, 0.5), s0: 0.25, s1: r.range(0.5, 0.9) * (0.5 + k), s2: 0.1, peak: 0.3, cols: fx.pal.fireball, a: 0.75, fout: 0.3, spin: 3 });
+        if (r() < 0.5) fx.darkSmoke.emit({ pos: p.clone().setY(p.y + 1), vel: new V(r.range(-0.3, 0.3), r.range(1.5, 2.8), r.range(-0.3, 0.3)), life: r.range(2, 3.4), s0: 0.4, s1: r.range(1.2, 2), s2: 2.6, peak: 0.35, cols: fx.pal.blackSmoke, drag: 0.6, a: 0.45 * (0.4 + k), fin: 0.1, fout: 0.35, wind: 1.3, turb: 1.5, spin: 0.6 });
+      }
+    }
+    clearWreck(game) {
+      if (!this.wreck) return;
+      game.scene.remove(this.wreck.root);
+      for (const P of this.wreck.parts) game.scene.remove(P.o);
+      this.wreck = null;
+    }
     reset() {
+      if (this.wreck && CC.game) this.clearWreck(CC.game);
       this.alive = true; this.object.visible = true; this.alert.visible = false; this.aaCool = 0; this.aaSeen = 0; this.burst = 0;
       if (this.path) { this.fleeDist = 0; this.placeOnPath(); this.object.position.copy(this.base); this.yaw0 = this.pathYaw; }
       this.yaw = this.yaw0; this.yawW = 0; this.object.rotation.y = this.yaw; this.prevPos = null; this.hv.set(0, 0, 0); this.ha.set(0, 0, 0);

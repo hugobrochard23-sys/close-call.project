@@ -21,6 +21,64 @@
 
   const M = {};
 
+  /* Design (performance mobile) : fusionne les pièces fixes d'un modèle par matériau. Les sous-groupes animés (`keep` :
+   * tourelle, canon, rotor…) sont fusionnés séparément, chacun dans son propre repère, et restent animables.
+   * Un char passe de ~80 appels de dessin à ~15, un hélicoptère de ~60 à ~12. */
+  let vcMaterial = null;
+  const vcMat = () => vcMaterial || (vcMaterial = new THREE.MeshLambertMaterial({ color: '#ffffff', vertexColors: true }));
+  function bake(root, keep) {
+    const keepSet = new Set(keep || []);
+    const groups = [root, ...(keep || [])];
+    for (const G of groups) {
+      G.updateMatrixWorld(true);
+      const inv = new THREE.Matrix4().copy(G.matrixWorld).invert();
+      const byMat = new Map(), victims = [];
+      const visit = (o) => {
+        for (const c of o.children) {
+          if (keepSet.has(c) && c !== G) continue;           // sous-groupe animé : traité à part
+          if (c.isMesh && !c.isInstancedMesh && !c.material.transparent && !c.userData.noBake && c.visible) {
+            const m = new THREE.Matrix4().multiplyMatrices(inv, c.matrixWorld);
+            let g = c.geometry.index ? c.geometry.toNonIndexed() : c.geometry.clone();
+            g.applyMatrix4(m);
+            // Lambert uni → un seul matériau partagé à couleurs par sommet (la couleur de la pièce passe dans les sommets)
+            const plain = c.material.isMeshLambertMaterial && !c.material.map && !c.material.emissiveMap;
+            const k = plain ? 'vc' : c.material.uuid;
+            if (!byMat.has(k)) byMat.set(k, { mat: plain ? vcMat() : c.material, geos: [], cast: false, vc: plain });
+            const e = byMat.get(k); e.geos.push(g); e.cast = e.cast || c.castShadow;
+            g.userData.col = c.material.color;
+            victims.push(c);
+          }
+          visit(c);
+        }
+      };
+      visit(G);
+      for (const v of victims) { v.parent.remove(v); }
+      for (const { mat, geos, cast, vc } of byMat.values()) {
+        let n = 0; for (const g of geos) n += g.attributes.position.count;
+        const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), uv = new Float32Array(n * 2), col = vc ? new Float32Array(n * 3) : null;
+        let o = 0;
+        for (const g of geos) {
+          const c = g.attributes.position.count;
+          pos.set(g.attributes.position.array, o * 3);
+          if (g.attributes.normal) nor.set(g.attributes.normal.array, o * 3);
+          if (g.attributes.uv) uv.set(g.attributes.uv.array, o * 2);
+          if (col) { const k = g.userData.col; for (let i = 0; i < c; i++) { col[(o + i) * 3] = k.r; col[(o + i) * 3 + 1] = k.g; col[(o + i) * 3 + 2] = k.b; } }
+          o += c; g.dispose();
+        }
+        const mg = new THREE.BufferGeometry();
+        mg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        mg.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+        mg.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+        if (col) mg.setAttribute('color', new THREE.BufferAttribute(col, 3));
+        mg.computeBoundingSphere();
+        const mesh = new THREE.Mesh(mg, mat); mesh.castShadow = cast; mesh.receiveShadow = true;
+        G.add(mesh);
+      }
+    }
+    return root;
+  }
+  M.bake = bake;
+
   /* Roquette : axe +Z = nez. Longueur ≈ 1,25 m (ESTIMATION), corps gris, nez à point rouge, collier jaune, 4 ailerons (OBSERVÉ).
    * v007 : le modèle est piloté par une fiche cosmétique (CC.Skins) — couleurs, dimensions, nombre d'ailerons et
    * pièces rapportées. Sans argument, on retombe exactement sur la roquette d'origine (`STOCK`). */
@@ -83,7 +141,7 @@
     if (d.scale !== 1) g.scale.setScalar(d.scale);
     // petites buses de rétro-fusées (visuelles)
     g.userData.nozzleZ = -0.53;
-    return g;
+    return bake(g, [jet]);   // design : ~30 pièces → quelques appels de dessin
   };
 
   // Lanceur à l'épaule vu à la 1re personne (OBSERVÉ séq. 2–7 : tube sombre en bas au centre).
@@ -200,7 +258,7 @@
     box(2.5, 0.5, 0.12, dark, 0, 1.12, 2.44, body);                           // plaque arrière
     box(0.5, 0.12, 0.2, metal, -0.7, 0.7, -2.82, body); box(0.5, 0.12, 0.2, metal, 0.7, 0.7, -2.82, body);   // crochets de remorquage
     // --- tourelle ---
-    const turret = new THREE.Group(); turret.position.set(0, 1.41, 0.1); body.add(turret);
+    const turret = new THREE.Group(); turret.name = 'turret'; turret.position.set(0, 1.41, 0.1); body.add(turret);
     cyl(1.08, 1.12, 0.12, metal, 16, turret).position.y = 0.06;                                    // couronne
     plateY([[-0.62, -1.42], [0.62, -1.42], [1.18, -0.55], [1.2, 0.95], [0.9, 1.4], [-0.9, 1.4], [-1.2, 0.95], [-1.18, -0.55]], 0.62, hull, 0.07, turret).position.y = 0.1;
     box(1.9, 0.02, 1.2, camo, 0.2, 0.73, 0.35, turret);                                            // tache de camouflage (toit)
@@ -233,7 +291,7 @@
     g.userData.turret = turret; g.userData.gun = gunPivot; g.userData.slide = slide; g.userData.muzzle = muzzle; g.userData.body = body;
     g.userData.exhausts = [new V(-0.85, 0.88, 3.12), new V(0.85, 0.88, 3.12)];
     g.userData.size = [3.9, 2.9, 6.2]; g.userData.center = [0, 1.3, 0];
-    return g;
+    return bake(g, [body, turret, gunPivot, slide]);
   };
 
   /* Hélicoptère (séq. 1 : noir ; séq. 6 : camouflé). Axe −Z = avant. Design : fuselage profilé (nez, verrière, dos, soute),
@@ -301,7 +359,8 @@
     g.userData.rotor = rotor; g.userData.tailRotor = tail; g.userData.blur = blur; g.userData.tailBlur = tailBlur;
     g.userData.lights = lights; g.userData.beacon = beacon; g.userData.firePoints = firePoints;
     g.userData.size = [3.0, 3.2, 12.5]; g.userData.center = [0, 0.1, 2.0];
-    return g;
+    for (const l of lights.concat([beacon])) l.userData.noBake = true;   // feux clignotants : restent des objets à part
+    return bake(g, [rotor, tail]);
   };
 
   // Camion / générateur (séq. 4). Design : cabine vitrée à capot, châssis, roues à moyeux dans des passages de roue,
@@ -334,7 +393,7 @@
       const h = cyl(0.2, 0.2, 0.34, hubM, 8, g); h.rotation.z = Math.PI / 2; h.position.set(sx * 1.12, 0.44, sz);
     }
     g.userData.size = [2.8, 2.9, 5]; g.userData.center = [0, 1.4, 0];
-    return g;
+    return bake(g);
   };
 
   // Maison (séq. 7). Design : murs, pignons fermés, toit à deux pans avec débord et faîtage, cheminée à chapeau, fenêtres à
@@ -364,7 +423,7 @@
     box(1.25, 2.15, 0.1, trimM, 0, 1.2, 3.78, g); box(1.0, 1.95, 0.12, lam('#3a3030'), 0, 1.15, 3.8, g);   // porte
     box(1.6, 0.18, 0.7, base, 0, 0.55, 4.1, g);                                                 // marche
     g.userData.size = [6.4, 7, 8]; g.userData.center = [0, 3, 0];
-    return g;
+    return bake(g);
   };
 
   // Soldat avec lance-missile (séq. 3). Design : casque, gilet, sac, bottes, bras qui tiennent le tube, visée.
@@ -384,7 +443,7 @@
     cylZ(0.13, 0.13, 0.2, lam('#2a2b2e'), 8, 0.3, 1.62, -0.72, g);                              // bouche du tube
     box(0.06, 0.12, 0.2, lam('#2a2b2e'), 0.3, 1.75, -0.25, g);                                  // viseur
     g.userData.size = [0.9, 2.0, 0.8]; g.userData.center = [0, 1.0, 0];
-    return g;
+    return bake(g);
   };
 
   // Missile ennemi. Design : corps clair, bande rouge, ogive sombre, 4 ailettes arrière + 4 canards, tuyère lumineuse.
