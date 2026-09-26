@@ -29,6 +29,7 @@
 
     setAim(yaw, pitch) { this.setAimQ(new THREE.Quaternion().setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'))); }
     setAimQ(q) {
+      this.aimQ = (this.aimQ || new THREE.Quaternion()).copy(q);
       this.aimDir.set(0, 0, -1).applyQuaternion(q);
       this.right.set(1, 0, 0).applyQuaternion(q);
       this.up.set(0, 1, 0).applyQuaternion(q);

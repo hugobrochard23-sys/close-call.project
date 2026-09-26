@@ -1,10 +1,12 @@
 /* Roquette du joueur : modèle de vol + capacités + effets visuels.
- * Modèle (ESTIMATION calée sur les mesures) : le nez s'oriente vers la direction visée (vitesse de rotation bornée),
- * la vitesse suit le nez avec une "adhérence", poussée constante, traînée quadratique, traînée induite en virage, gravité. */
+ * Modèle v013 (CHOIX d'Hugo) : la roquette pivote sur son centre, la tête suit directement la visée (W,A,S,D / souris).
+ * INERTIE : pivoter ne courbe pas la trajectoire ; seules la poussée (dans l'axe du nez), la gravité et la traînée de l'air
+ * changent la vitesse. Pour tourner : pivoter puis pousser. Plus de rotation continue sur l'axe long. */
 (function () {
   const V = THREE.Vector3;
   const U = CC.U;
-  const _a = new V(), _b = new V(), _c = new V(), _axis = new V(), _q = new THREE.Quaternion();
+  const _a = new V(), _b = new V(), _c = new V(), _axis = new V();
+  const _qFlip = new THREE.Quaternion().setFromAxisAngle(new V(0, 1, 0), Math.PI);
 
   function rotateToward(vec, target, maxAngle) {
     const ang = vec.angleTo(target);
@@ -45,7 +47,7 @@
       this.fuelMax = (L && L.fuel) || this.cfg.fuelDefault; this.fuel = this.fuelMax;
       this.gauge = 1; this.gaugeShowT = 0; this.retroActive = false;
       this.grapple = { active: false, anchor: new V(), length: 0, t: 0, shootT: 0, point: null };
-      this.sliding = 0; this.gForce = 0; this.aLat = 0; this.roll = 0; this.speed = 0;
+      this.sliding = 0; this.gForce = 0; this.aLat = 0; this.speed = 0;
       this.flightDist = 0;
     }
 
@@ -87,30 +89,23 @@
       let speed = this.vel.length();
       const velDir = _a.copy(this.vel).divideScalar(Math.max(speed, 1e-4));
 
-      // --- orientation du nez ---
-      const desired = this.grapple.active && this.grapple.t >= this.grapple.shootT ? velDir : input.aimDir;
-      const ang = this.fwd.angleTo(desired);
-      const rate = Math.min(cfg.maxTurnRate, cfg.steerGain * ang);
-      rotateToward(this.fwd, desired, rate * dt);
+      // --- orientation du nez : pivot sur le centre, la tête suit la visée sans délai (grappin : le nez suit la corde) ---
+      if (this.grapple.active && this.grapple.t >= this.grapple.shootT) {
+        const ang = this.fwd.angleTo(velDir);
+        rotateToward(this.fwd, velDir, Math.min(cfg.maxTurnRate, cfg.steerGain * ang) * dt);
+      } else this.fwd.copy(input.aimDir);
 
-      // --- la trajectoire suit le nez (adhérence) ---
-      let turned = 0;
-      if (!this.grapple.active && this.sliding <= 0 && speed > 1) {
-        const grip = this.thrusting ? cfg.grip : cfg.gripEngineOff;
-        const newDir = _b.copy(velDir);
-        const a = newDir.angleTo(this.fwd);
-        turned = rotateToward(newDir, this.fwd, a * U.damp(grip, dt));
-        this.vel.copy(newDir).multiplyScalar(speed);
-      }
-      const aLat = speed * turned / dt;
-      // --- forces ---
+      // --- forces (inertie : aucune adhérence, la trajectoire ne suit pas le nez d'elle-même) ---
+      let aLat = 0;
       if (this.thrusting) {
         this.vel.addScaledVector(this.fwd, cfg.thrust * dt);
+        const along = this.fwd.dot(velDir);
+        aLat = cfg.thrust * Math.sqrt(Math.max(0, 1 - along * along));   // part de la poussée qui courbe la trajectoire (affichage des G)
         if (!this.freeBoost) this.fuel = Math.max(0, this.fuel - dt);
       }
       speed = this.vel.length();
       if (speed > 1e-4) {
-        let loss = cfg.dragK * speed * speed * dt + cfg.inducedDrag * aLat * dt;
+        let loss = cfg.dragK * speed * speed * dt;
         if (this.retroActive) loss += this.acfg.retro.decel * dt;
         if (this.sliding > 0) loss += cfg.slideFriction * dt;
         this.vel.multiplyScalar(Math.max(0, speed - loss) / speed);
@@ -157,7 +152,7 @@
       }
       if (this.sliding > 0) this.sliding -= dt;
       this.speed = this.vel.length();
-      const gRaw = (Math.max(aLat, aRope)) / CC.CONFIG.physics.gravity;
+      const gRaw = (Math.max(aLat, aRope)) / 9.81;   // G terrestres, quelle que soit la gravité du jeu
       this.gForce += (gRaw * cfg.gDisplayScale - this.gForce) * U.damp(10, dt);
     }
 
@@ -253,9 +248,11 @@
     }
 
     updateMesh(dt) {
-      this.roll += dt * 2.2;
-      _q.setFromUnitVectors(new V(0, 0, 1), this.fwd);
-      this.mesh.quaternion.copy(_q).multiply(new THREE.Quaternion().setFromAxisAngle(new V(0, 0, 1), this.roll));
+      // v013 : plus de rotation continue sur l'axe long. Orientation prise sur la visée (repère complet : pas de
+      // basculement des ailerons quand la roquette pointe vers la caméra) ; le modèle a son nez vers +Z, la visée vers −Z.
+      const rig = this.game.rig;
+      if (!this.grapple.active && rig && rig.aimQ) this.mesh.quaternion.copy(rig.aimQ).multiply(_qFlip);
+      else this.mesh.quaternion.setFromUnitVectors(new V(0, 0, 1), this.fwd);
       this.mesh.position.copy(this.pos);
       // corde
       const G = this.grapple;

@@ -4,7 +4,7 @@
  * impact cyan + "PRESS FIRE TO RESPAWN AT LAUNCHER".
  * ESTIMATION : plan des pièces (v002 : bâtiment allongé pour retrouver la durée mesurée), position des 3 autres chars. */
 CC.Levels.push({
-  id: 'brick', fuel: 20, name: 'BRICKWORKS', hud: 'B', mode: 'targets', impactVariant: 'cyan', seed: 22,
+  id: 'brick', fuel: 26, name: 'BRICKWORKS', hud: 'B', mode: 'targets', impactVariant: 'cyan', seed: 22,
   refSegment: { start: 15.4, end: 23.6, fire: 15.45 },
   launcher: { type: 'shoulder', pos: [0, 15.7, 5], yaw: 0, pitch: -6 },
   menuView: { center: [0, 6, -140], radius: 110, height: 40 },

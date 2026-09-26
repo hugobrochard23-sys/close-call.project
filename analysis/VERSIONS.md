@@ -225,3 +225,18 @@ Limite : pendant un looping continu la queue de la roquette sort légèrement pa
 **Vérification :** rotation de la caméra mesurée = 0° pendant un looping (5 s), un demi-tour (D) et un vol mixte (W+A) ;
 distance caméra–roquette 1,92–1,93 m (0,95 m quand un mur s'interpose) ; la roquette se dirige vers la caméra dans les trois cas.
 Pilote automatique : 10 cartes terminées, chiffres identiques à v011.
+
+## v013 — pivot sur le centre, vol à inertie, gravité Terre / Lune
+
+**Changements (CHOIX d'Hugo) :**
+- la tête de la roquette suit directement la visée (pivot sur le centre, sans vitesse de rotation bornée) ;
+- inertie : plus d'adhérence ni de traînée induite ; la trajectoire ne change que par la poussée (axe du nez), la gravité et l'air ;
+- gravité 9,81 → 5,715 m/s² (moyenne Terre 9,81 / Lune 1,62), roquette seulement ; G affichés toujours en G terrestres ;
+- plus de rotation continue sur l'axe long ; orientation du modèle prise sur la visée (pas de basculement des ailerons) ;
+- pilote automatique : oriente la poussée pour corriger l'écart vitesse voulue / vitesse réelle, compense la gravité,
+  ralentit avant les virages ; ignore les consignes « moteur coupé » / « rétro » de la vidéo (`test.apLegacyActions`) ;
+- réservoirs redimensionnés (besoin mesuré + réserve v012) : 29 → 16 s ; AUTOMAP 18 / 19 / 23 s ; `fuelBarMax` 30.
+
+**Vérification :** pivot D 0,5 s moteur coupé : cap de la trajectoire 0,0° → 0,0° (seule la tête bouge) ; puis 1 s de poussée
+nez à droite : cap 0° → 38,8° ; gravité mesurée 5,72 m/s² (traînée retirée) ; ailerons immobiles entre deux images à 0,5 s d'écart.
+Pilote automatique : 10 cartes terminées sans crash, réserve minimale 4,2 s (NIGHT FOREST).

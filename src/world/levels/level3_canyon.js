@@ -3,7 +3,7 @@
  * de danger, graffiti "NO MISSILES", lasers rouges, viaduc à arches, immeuble sombre, soldat qui tire un missile,
  * fosse à bords néon sur un toit avec un char au fond (cible). ESTIMATION : distances, hauteurs, tracé. */
 CC.Levels.push({
-  id: 'canyon', fuel: 18, name: 'CANYON', hud: 'C', mode: 'style', impactVariant: 'orange', seed: 33, parTime: 14,
+  id: 'canyon', fuel: 23, name: 'CANYON', hud: 'C', mode: 'style', impactVariant: 'orange', seed: 33, parTime: 14,
   refSegment: { start: 23.6, end: 36.03, fire: 23.67 },
   launcher: { type: 'shoulder', pos: [0, 31.8, 10], yaw: 0, pitch: -1 },
   menuView: { center: [0, 40, -250], radius: 160, height: 60 },
