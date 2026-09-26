@@ -22,6 +22,29 @@ node tools/serve.js
 
 Compatible Chrome, Edge, Firefox et Safari récents (WebGL requis).
 
+## Travailler à plusieurs
+
+Le dépôt GitHub `hugobrochard23-sys/close-call.project` (privé) est la version de référence : **la version GitHub
+prime toujours sur celle d'un ordinateur**. Pour y accéder, il faut être invité comme collaborateur par Hugo.
+
+```bash
+git clone https://github.com/hugobrochard23-sys/close-call.project.git
+cd close-call.project
+node tools/serve.js 8123
+```
+
+Puis ouvrir `http://localhost:8123`. À chaque séance :
+
+1. **Avant de modifier** : `git pull` (récupère le travail des autres).
+2. Faire une modification à la fois, la tester dans le navigateur.
+3. **Juste après** : `git add -A`, `git commit -m "ce qui a changé"`, `git pull` puis `git push`.
+4. En cas de conflit, garder la version GitHub et refaire son changement par-dessus ; jamais de `git push --force`.
+
+Tous les réglages sont dans `src/config.js` (chaque valeur est commentée) ; l'historique des changements est dans
+`analysis/VERSIONS.md` (à compléter à chaque version). Sur ordinateur, `#touch` à la fin de l'adresse affiche les
+commandes tactiles. Banc de test sans affichage : `?test=1&autopilot=1&level=N` (le pilote automatique doit finir
+chaque niveau après une modification du vol, de l'essence ou des ennemis).
+
 ## Contrôles
 
 | Touche | Action |
@@ -62,8 +85,9 @@ Réglages : `rocket.freeBoost`, `rocket.fuelDefault` dans `src/config.js`, `fuel
 (`camera.followLag`, plus petit = caméra plus libre). En pilotant, on voit donc la roquette tourner à l'écran ; le réticule
 indique la direction visée.
 
-**Missiles anti-aériens (v020).** Les tanks et les hélicoptères tirent sur la roquette quand ils la voient (jamais à travers
-un bâtiment), entre 45 m et 90 à 140 m. La menace monte de CITY (0) à NIGHT FOREST (1) ; AUTOMAP : 0,3 / 0,6 / 0,95.
+**Missiles anti-aériens (v020, v021).** Les tanks et les hélicoptères tirent sur la roquette quand ils la voient (jamais à travers
+un bâtiment), entre 45 m et 90 à 140 m, et seulement s'ils sont devant elle (jamais de tir dans le dos). NIGHT FOREST a 2 tanks
+de garde (ils tirent et se détruisent, mais ne comptent pas dans l'objectif : la cible reste la maison). La menace monte de CITY (0) à NIGHT FOREST (1) ; AUTOMAP : 0,3 / 0,6 / 0,95.
 Avec elle : tirs plus rapprochés (5 s → 1,6 s), visée plus juste (erreur 6 m → 0,3 m), anticipation de la trajectoire,
 missiles plus rapides (50 → 68 m/s). Ils restent moins maniables que la roquette (virage 0,5 → 1,1 rad/s contre 1,5 à 1,8)
 et plus lents qu'elle à pleine poussée : on les sème en virant franchement, et ils explosent sur les murs.

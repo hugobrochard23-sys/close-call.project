@@ -312,3 +312,14 @@ HUD : « MISSILE! » clignotant. Pilote automatique : esquive (virage franc) si 
 3/6 de 0,5 à 0,83, 6/6 à 1 ; en virant tant que l'alerte clignote : 0/6 à la menace 1. Sans esquive, CONSTRUCTION :
 8 tirs, 8 impacts. Avec l'esquive : 10 cartes + 2 graines AUTOMAP terminées, aucun impact, essence minimale 3,3 s.
 Tireurs présents dans BRICKWORKS, CANYON, WOODS, CONSTRUCTION et AUTOMAP (CITY : menace 0, CAVE et NIGHT FOREST : aucun tireur).
+
+## v021 — tanks de garde dans NIGHT FOREST, tirs seulement de face
+
+**Changements (à la demande d'Hugo) :** `b.guard()` : ennemi qui tire et se détruit mais ne compte pas dans l'objectif ;
+NIGHT FOREST : 2 tanks de garde en clairière (4 au bord du couloir : un tir toutes les 0,4 s, 27 impacts sur 27 tirs même
+en esquivant). Les tireurs ne tirent plus que s'ils sont devant la roquette (`aa.frontCos`, 75°) : un tir dans le dos était
+invisible (caméra tournée vers l'avant). Pilote automatique : ne coupe plus le moteur sous 40 m/s (planer à 18 m/s = cible
+immobile). README : section « Travailler à plusieurs ».
+
+**Vérification :** NIGHT FOREST sans esquive : 23 tirs, 23 impacts ; avec esquive : fini, 0 impact, essence minimale 2,7 s.
+Pilote automatique : 10 cartes terminées sans impact.

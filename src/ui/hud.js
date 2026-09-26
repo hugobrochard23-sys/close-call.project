@@ -53,7 +53,7 @@
         const st = C.style[v];
         this.text('STYLE ' + U.formatInt(game.style.total), 0.5 * W, st.y * H, st.px, col.white, { align: 'center' });
       } else if (game.level.mode === 'targets') {
-        this.text('TARGETS ' + game.targetsDone + '/' + game.targets.length, 0.5 * W, C.targets.y * H, C.targets.px, col.white, { align: 'center' });
+        this.text('TARGETS ' + game.targetsDone + '/' + game.targets.filter((t) => !t.guard).length, 0.5 * W, C.targets.y * H, C.targets.px, col.white, { align: 'center' });
       }
       if (v === 'A') {
         this.text('THRUST:' + Math.round(CC.CONFIG.rocket.thrustHud), R.x(C.topRight), C.topRight.y * H, C.topRight.px, col.white, R.o);
@@ -140,7 +140,7 @@
       if (game.state !== 'FLIGHT' && game.state !== 'AIM') return;
       const W = this.canvas.width, H = this.canvas.height, ctx = this.ctx, cam = game.camera;
       for (const t of game.targets) {
-        if (!t.alive) continue;
+        if (!t.alive || t.guard) continue;   // v021 : pas de repère vers les tanks de garde
         const p = this._v.copy(t.obb.c).project(cam);
         const behind = p.z > 1;
         if (!behind && Math.abs(p.x) < 1 && Math.abs(p.y) < 1) continue;

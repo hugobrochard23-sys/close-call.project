@@ -265,7 +265,7 @@
     onTargetHit(t, rocket) {
       const c = t.obb.c.clone();
       t.kill();
-      this.targetsDone++;
+      if (!t.guard) this.targetsDone++;   // v021 : un tank de garde détruit ne compte pas dans l'objectif
       const speed = rocket.vel.length();
       this.lastSpeed = 4;                                            // MESURÉ : "SPEED:4" après l'impact
       const variant = this.level.impactVariant || 'orange';
@@ -276,7 +276,7 @@
       this.style.bombSmash(speed);
       rocket.active = false; rocket.mesh.visible = false; rocket.light.intensity = 0; rocket.rope.visible = false;
       this.telemetry.event('targetHit', { target: t.type, speed: +speed.toFixed(2), runTime: +this.runTime.toFixed(3) });
-      const all = this.targets.every((x) => !x.alive);
+      const all = this.targets.every((x) => !x.alive || x.guard);
       if (all) {
         if (this.level.parTime && this.runTime < this.level.parTime && this.level.hud !== 'B') this.style.speedBonus(this.level.parTime - this.runTime);
         this.state = 'IMPACT'; this.impactT = 0; this.complete = true;

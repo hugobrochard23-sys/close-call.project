@@ -5,7 +5,7 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v020',
+  version: 'v021',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
@@ -143,6 +143,7 @@ CC.CONFIG = {
   // menace du niveau : 0 (CITY) → 1 (NIGHT FOREST) ; AUTOMAP : aaByDifficulty. Toujours moins maniables que la roquette.
   aa: {
     range: [90, 140],            // m : portée de tir (le tireur doit voir la roquette : pas à travers un bâtiment)
+    frontCos: 0.26,              // cos 75° : le tireur doit être devant la roquette (jamais de tir dans le dos)
     minRange: 45,                // m : trop près, il ne tire plus (sinon la cible visée tire à bout portant pendant l'approche finale)
     firstDelay: [1.5, 0.6],      // s : temps de réaction après avoir repéré la roquette
     cooldown: [5.0, 1.6],        // s : délai entre deux tirs d'un même tireur

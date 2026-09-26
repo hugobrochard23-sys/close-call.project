@@ -157,7 +157,7 @@
         // phase finale : viser directement la cible vivante la plus proche si elle est devant (cibles mobiles)
         // (uniquement la cible visée par cette route : la plus proche de son dernier point)
         let goal = null, gd = 18;
-        for (const t of g.targets) { if (!t.alive) continue; const d = t.obb.c.distanceTo(R[R.length - 1]); if (d < gd) { gd = d; goal = t; } }
+        for (const t of g.targets) { if (!t.alive || t.guard) continue; const d = t.obb.c.distanceTo(R[R.length - 1]); if (d < gd) { gd = d; goal = t; } }
         if (goal) {
           const to = new V().subVectors(goal.obb.c, rk.pos);
           if (to.length() < (this.level.terminalRange || 40) && to.angleTo(rk.vel) < 1.0 && this.idx >= R.length - 3) target = goal.obb.c.clone();
@@ -191,7 +191,7 @@
         for (const a of this.actions) {
           if (a.from !== undefined && this.idx >= a.from && this.idx < a.to) {
             if (a.retro) { if (a._r0 === undefined) a._r0 = this.t; if (!a.hold || this.t - a._r0 < a.hold) st.retro = true; }
-            if (a.engineOff) wantOff = true;
+            if (a.engineOff && rk.speed > 40) wantOff = true;   // v021 : jamais sous 40 m/s (planer au ralenti = cible immobile pour les tirs anti-aériens)
             if (a.grapple) {
               if (!a._fired) { st.grappleEdge = true; a._fired = true; a._t0 = this.t; }
               if (!a.hold || this.t - a._t0 < a.hold) st.grappleHeld = true;

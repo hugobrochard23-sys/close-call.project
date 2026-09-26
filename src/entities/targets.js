@@ -79,6 +79,10 @@
       const dist = to.length();
       if (dist > L(A.range) || dist < A.minRange) { this.aaSeen = 0; return; }
       to.divideScalar(dist);
+      // v021 : ne tire que s'il est devant la roquette (≤ 75° de sa direction) : les missiles arrivent toujours dans le champ
+      // de vision du joueur, jamais dans son dos (la caméra regarde devant, un tir par l'arrière serait invisible)
+      const sp = rk.vel.length();
+      if (sp > 1 && -to.dot(rk.vel) / sp < CC.CONFIG.aa.frontCos) { this.aaSeen = 0; return; }
       if (game.world.raycast(from, to, dist - 1, (b) => b.kind === 'solid' || b.kind === 'brick')) { this.aaSeen = 0; return; }
       this.aaSeen = (this.aaSeen || 0) + dt;
       if (this.aaSeen < L(A.firstDelay) || this.aaCool > 0) return;
@@ -230,6 +234,13 @@
   const P = CC.LevelBuilder.prototype;
   P.target = function (type, pos, yaw, opts) { const t = new CC.Target(type, pos, yaw, opts); this.targets.push(t); return this.entity(t); };
   P.soldier = function (pos, yaw) { return this.entity(new CC.Soldier(pos, yaw)); };
+  // v021 : ennemi de garde (tank, hélicoptère) : tire et se détruit comme une cible, mais ne compte pas dans l'objectif du niveau
+  P.guard = function (type, pos, yaw, opts) {
+    const t = new CC.Target(type, pos, yaw, opts);
+    t.guard = true; t.dot.visible = false;
+    this.targets.push(t);
+    return this.entity(t);
+  };
   P.glass = function (p, s, r, warm) { const d = new CC.Destructible(this, { p, s, r, kind: warm ? 'glassWarm' : 'glass' }); this.destructibles.push(d); return this.entity(d); };
   P.brickWall = function (p, s, r) { const d = new CC.Destructible(this, { p, s, r, kind: 'brick' }); this.destructibles.push(d); return this.entity(d); };
   P.crate = function (p, s, r) { const d = new CC.Destructible(this, { p, s, r, kind: 'planks' }); this.destructibles.push(d); return this.entity(d); };
