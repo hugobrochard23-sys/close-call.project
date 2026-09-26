@@ -151,7 +151,12 @@
       const touch = !!(CC.Touch && CC.Touch.active);
       this.portrait = touch && h > w;
       let cw = w, ch = Math.round(w / ar);
-      if (touch) ch = h;
+      if (touch) {
+        // la page peut réserver des marges pour l'encoche et la barre d'accueil (padding du document) : on les déduit,
+        // sinon le bas du jeu (jauge d'essence) passe sous le bord de l'écran
+        const cs = getComputedStyle(document.documentElement);
+        ch = Math.max(1, h - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0));
+      }
       else if (ch > h) { ch = h; cw = Math.round(h * ar); }
       this.root.style.width = cw + 'px'; this.root.style.height = ch + 'px';
       const pr = this.testMode ? 1 : Math.min(window.devicePixelRatio || 1, CC.CONFIG.render.maxPixelRatio);
