@@ -1,0 +1,140 @@
+/* CLOSE CALL — paramètres centralisés.
+ * Chaque valeur porte son origine : MESURÉ (vidéo), ESTIMATION (déduit), CHOIX (décision de conception).
+ * Voir analysis/ANALYSE_REFERENCE.md pour les mesures. */
+window.CC = {};
+CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
+
+CC.CONFIG = {
+  version: 'v010',
+
+  render: {
+    aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
+    maxPixelRatio: 1.5,
+    shadows: true,
+    shadowMapSize: 2048,
+    shadowRange: 70,             // demi-taille de la zone d'ombre autour de la roquette (m)
+  },
+
+  physics: {
+    fixedDt: 1 / 240,
+    gravity: 9.81,               // ESTIMATION
+  },
+
+  rocket: {
+    radius: 0.22,                // ESTIMATION (collision)
+    length: 1.25,                // ESTIMATION
+    ejectSpeed: 31,              // MESURÉ : SPEED 31 pendant 0,3 s après le tir
+    ignitionDelay: 0.28,         // MESURÉ : le compteur SPEED passe 31→35 entre 0,23 et 0,33 s (séq. 3) ; la flamme n'est visible qu'à 0,63 s (séq. 7, masquée par la fumée)
+    thrust: 50,                  // MESURÉ (v003) puis CHOIX v007 : 55 → 50 (la vitesse de pointe était un peu trop élevée)
+    thrustHud: 45,               // valeur affichée par le HUD A ("THRUST:45", OBSERVÉ)
+    dragK: 0.0100,               // MESURÉ (v003) puis CHOIX v007 : 0,0086 → 0,0100 (vitesse de pointe 80 → 71 m/s)
+    inducedDrag: 0.070,          // ESTIMATION : perte de vitesse en virage serré (v007 : 0,085 → 0,070, virage moins coûteux)
+    steerGain: 9.0,              // ESTIMATION : réponse de l'orientation au réticule (v007 : 7,5 → 9)
+    maxTurnRate: 3.5,            // rad/s, ESTIMATION (v007 : 3,0 → 3,5)
+    grip: 11.0,                  // alignement de la vitesse sur le nez (1/s) (v007 : 9 → 11)
+    gripEngineOff: 4.6,          // v007 : 3,5 → 4,6
+    slideMaxAngleDeg: 27,        // CHOIX : contact rasant → glissade, sinon crash (v007 : 24 → 27, plus tolérant)
+    slideFriction: 5.0,          // m/s² de perte en glissade
+    breakSpeedFactor: 0.88,      // perte de vitesse en traversant vitre/mur de briques (ESTIMATION)
+    gDisplayScale: 0.26,         // ESTIMATION : ramène les G affichés dans la plage observée (3,9 à 4,7 G)
+    // Moteur à la demande (CHOIX v009) : G maintenue = poussée, relâchée = moteur coupé.
+    // Après l'allumage, freeBoost secondes de poussée automatique et gratuite ; ensuite chaque seconde de poussée
+    // consomme 1 s d'essence. Réservoir par niveau (`fuel` dans la fiche du niveau), plein à chaque tir.
+    freeBoost: 0.5,              // v010 : 3 → 0,5 s
+    fuelDefault: 12,             // s de poussée si le niveau ne précise pas `fuel`
+    fuelBarMax: 24,              // réservoir qui remplit toute la largeur de la jauge : un petit réservoir donne une jauge plus courte
+  },
+
+  abilities: {
+    gaugeRegen: 0.10,            // ESTIMATION : recharge par seconde
+    gaugeHideDelay: 1.6,         // MESURÉ : la jauge disparaît ≈ 1,5 s après usage
+    retro: { decel: 25, drain: 0.62 },   // MESURÉ : 75→27 m/s en 1,75 s (≈ −27 m/s² moyen, traînée comprise), jauge vidée en ≈ 1,6 s
+    grapple: {
+      range: 80, assistAngleDeg: 30, useCost: 0.12, drainPerSec: 0.16,
+      reelSpeed: 4, maxTime: 3.0, shootSpeed: 320, releaseBoost: 1.02,
+    },
+  },
+
+  camera: {
+    fovV: 70,                    // ESTIMATION
+    distance: 1.85,              // MESURÉ (indirect) : nez à 55 % et tuyère à 67,8 % de la hauteur ⇒ ≈ 1,5 longueur de roquette
+    height: 0.52,                // MESURÉ (indirect), même calcul
+    crosshairY: 0.402,           // MESURÉ : réticule à 40,2 % de la hauteur
+    followLag: 2.2,              // CHOIX v010 : vitesse (1/s) à laquelle la caméra se réaligne derrière la trajectoire (plus petit = caméra plus libre)
+    offsetLag: 7,                // lissage du décalage caméra (1/s) : dérive de la roquette à l'écran quand la visée tourne (ESTIMATION)
+    rollFromYawRate: 0.16,       // ESTIMATION : inclinaison de l'horizon en virage
+    rollLag: 5,
+    launchBlend: 0.45,           // MESURÉ : la caméra rattrape la roquette en ≈ 0,5 s
+    near: 0.05, far: 1400,
+    eyeHeight: 1.6,
+  },
+
+  input: { sensitivity: 0.0021, invertY: false, maxPitchDeg: 88 },
+
+  style: {
+    proximityDist: 4.0,          // ESTIMATION : distance "PROXIMITY FLIGHT"
+    proximityRate: 11,           // points/s de base
+    groundSkimDist: 2.2,
+    groundSkimRate: 16,
+    comboGrowth: 0.10,           // multiplicateur +0,1/s (MESURÉ : x1,1 après ~1 s)
+    endGrace: 0.35,              // s hors zone avant de finaliser
+    closeCallDist: 1.2,          // ESTIMATION
+    closeCallBase: 100,          // MESURÉ : x2,9 → +290 ; x1,4 → +142
+    closeCallCooldown: 0.6,
+    manoeuvreG: 3.6,             // ESTIMATION : seuil de G affiché
+    manoeuvreMinTime: 0.35,
+    manoeuvrePointsPerG: 80,     // ESTIMATION : ≈ 80 × (G − 2,95)
+    bombSmashPerMs: 7.5,         // MESURÉ : 67 m/s → +504
+    speedBonusPerSec: 100,
+    popupHold: 1.9,              // MESURÉ : 1,3 à 2,6 s
+    popupFade: 0.32,
+    popupRise: 0.07,             // fraction de hauteur d'écran
+  },
+
+  hud: {
+    // Positions MESURÉES en fraction de la zone de jeu (voir ANALYSE §8). px = taille d'un pixel de police en fraction de H.
+    cellAspect: 1.2,
+    advance: 7,
+    binds:   { A: { x: 0.0141, y: 0.0236, px: 0.00177, pitch: 0.0298 }, C: { x: 0.0124, y: 0.0204, px: 0.00150, pitch: 0.0259 } },
+    timer:   { y: 0.0700, px: 0.00322, A: { px: 0.00276, cw: 1.22 }, B: { px: 0.00312, cw: 1.1 } },   // MESURÉ : A 101×12 px, B 103×14 px (+ virgule descendante)
+    style:   { A: { y: 0.1170, px: 0.00444 }, C: { y: 0.1240, px: 0.00400 } },
+    targets: { y: 0.1300, px: 0.00300 },
+    topRight:{ x: 0.8260, y: 0.0700, px: 0.00330 },
+    cooldown:{ x: 0.8216, y: 0.1270, px: 0.00300 },
+    score:   { x: 0.8570, y: 0.0675, px: 0.00330 },
+    time:    { x: 0.8270, y: 0.0690, px: 0.00380 },
+    speed:   { x: 0.8198, y: 0.9090, px: 0.00380 },
+    gauge:   { x0: 0.4150, x1: 0.5870, y0: 0.8950, y1: 0.9120 },
+    fuel:    { x0: 0.0300, w: 0.2200, y0: 0.9000, y1: 0.9180, labelY: 0.8600, px: 0.00300 },   // CHOIX v009 : jauge d'essence en bas à gauche
+    crosshair: { x: 0.5, y: 0.402, size: 0.0110 },
+    popups:  { cx: 0.785, jitter: 0.045, y0: 0.52, pitch: 0.029, yMin: 0.37, px: 0.00315, skew: -0.26 },
+    center:  { y: 0.575, px: 0.00300 },
+    colors: {
+      white: '#f4f4f4', outline: '#1a1a1a', yellow: '#fdfd02', orange: '#ff7c1f', red: '#ff3b2e',
+      green: '#56ff5a', blue: '#4ab0ff', grey: '#8a8a8a', crosshair: 'rgba(215,215,215,0.85)',
+    },
+  },
+
+  postfx: {
+    enabled: true,
+    vignette: 0.55, vignetteRadius: 0.78, vignetteSoftness: 0.55,
+    chromatic: 0.0045,
+    halftone: 0.35, halftoneCell: 3.0,
+    bloomThreshold: 0.72, bloomStrength: 0.55,
+    grain: 0.025,
+    lift: '#000000',             // relèvement des ombres : valeurs par niveau calibrées par tools/calibrate_color.js (v006)
+    saturation: 1.0,
+  },
+
+  // Boutique de cosmétiques (CHOIX v007). Montants en centimes d'euro, pour éviter les arrondis flottants.
+  economy: {
+    startCash: 500,              // solde offert au premier lancement (pour pouvoir tester la boutique tout de suite)
+    levelBase: 60,               // gain fixe par niveau terminé
+    perStylePoint: 0.05,         // gain proportionnel aux points de STYLE
+    recordBonus: 100,            // bonus pour un nouveau record de temps
+  },
+
+  audio: { master: 0.7, music: 0.28, sfx: 0.9 },
+
+  test: { fps: 30 },
+};

@@ -1,0 +1,51 @@
+{
+ "city": {
+  "level": 1,
+  "sansCorrection": 0.5981,
+  "meilleur": 0.6151,
+  "saturation": 0.8,
+  "lift": "#100000"
+ },
+ "brick": {
+  "level": 2,
+  "sansCorrection": 0.5607,
+  "meilleur": 0.5834,
+  "saturation": 1.08,
+  "lift": "#080008"
+ },
+ "canyon": {
+  "level": 3,
+  "sansCorrection": 0.786,
+  "meilleur": 0.8037,
+  "saturation": 0.8,
+  "lift": "#040004"
+ },
+ "cave": {
+  "level": 4,
+  "sansCorrection": 0.8855,
+  "meilleur": 0.8945,
+  "saturation": 1.08,
+  "lift": "#040408"
+ },
+ "woods": {
+  "level": 5,
+  "sansCorrection": 0.5141,
+  "meilleur": 0.5571,
+  "saturation": 0.8,
+  "lift": "#100008"
+ },
+ "construction": {
+  "level": 6,
+  "sansCorrection": 0.7717,
+  "meilleur": 0.7854,
+  "saturation": 1.08,
+  "lift": "#040810"
+ },
+ "night": {
+  "level": 7,
+  "sansCorrection": 0.8032,
+  "meilleur": 0.8355,
+  "saturation": 1.08,
+  "lift": "#100810"
+ }
+}

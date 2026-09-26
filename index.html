@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>CLOSE CALL</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game"></div>
+  <noscript>CLOSE CALL nécessite JavaScript et WebGL.</noscript>
+
+  <!-- Moteur 3D (three.js r149, copie locale : fonctionne hors ligne et en double-cliquant sur index.html) -->
+  <script src="assets/lib/three.min.js"></script>
+
+  <!-- Paramètres et utilitaires -->
+  <script src="src/config.js"></script>
+  <script src="src/core/util.js"></script>
+  <script src="src/ui/font.js"></script>
+
+  <!-- Rendu -->
+  <script src="src/rendering/textures.js"></script>
+  <script src="src/rendering/postfx.js"></script>
+  <script src="src/rendering/particles.js"></script>
+
+  <!-- Physique, monde, entités -->
+  <script src="src/physics/collision.js"></script>
+  <script src="src/world/builder.js"></script>
+  <script src="src/entities/skins.js"></script>
+  <script src="src/entities/models.js"></script>
+  <script src="src/entities/targets.js"></script>
+  <script src="src/entities/rocket.js"></script>
+
+  <!-- Systèmes -->
+  <script src="src/systems/camera.js"></script>
+  <script src="src/systems/style.js"></script>
+  <script src="src/audio/audio.js"></script>
+  <script src="src/ui/hud.js"></script>
+  <script src="src/ui/menu.js"></script>
+  <script src="src/ui/shop.js"></script>
+  <script src="src/input/input.js"></script>
+
+  <!-- Niveaux (reconstruits d'après les 7 séquences de la vidéo) -->
+  <script src="src/world/levels/level1_city.js"></script>
+  <script src="src/world/levels/level2_brick.js"></script>
+  <script src="src/world/levels/level3_canyon.js"></script>
+  <script src="src/world/levels/level4_cave.js"></script>
+  <script src="src/world/levels/level5_woods.js"></script>
+  <script src="src/world/levels/level6_construction.js"></script>
+  <script src="src/world/levels/level7_night.js"></script>
+  <script src="src/world/levels/generated.js"></script>
+
+  <!-- Boucle de jeu -->
+  <script src="src/core/game.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

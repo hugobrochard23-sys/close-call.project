@@ -1,0 +1,23 @@
+{
+  "name": "close-call",
+  "version": "0.1.0",
+  "description": "CLOSE CALL — prototype jouable reconstruit à partir de la vidéo de référence (outils de test et de comparaison)",
+  "main": "tools/serve.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "serve": "node tools/serve.js 8123",
+    "record": "node tools/record.js",
+    "compare": "node tools/compare.js"
+  },
+  "type": "commonjs",
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@ffprobe-installer/ffprobe": "^2.1.2",
+    "pngjs": "^7.0.0",
+    "puppeteer-core": "^22.15.0",
+    "three": "^0.149.0"
+  },
+  "private": true
+}

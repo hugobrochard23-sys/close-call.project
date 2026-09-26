@@ -1,0 +1,203 @@
+/* Cibles, ennemis, objets destructibles, points d'accroche, lasers.
+ * IA OBSERVÉE : tourelle du char qui suit la roquette + "!" rouge ; soldat qui tire un missile ; hélicoptère stationnaire. */
+(function () {
+  const V = THREE.Vector3;
+  const U = CC.U;
+  const _v = new V(), _v2 = new V();
+
+  function obbFrom(obj, size, center) {
+    const q = obj.getWorldQuaternion(new THREE.Quaternion());
+    const c = new V().fromArray(center).applyQuaternion(q).add(obj.getWorldPosition(new V()));
+    return { c, hx: size[0] / 2, hy: size[1] / 2, hz: size[2] / 2, ux: new V(1, 0, 0).applyQuaternion(q), uy: new V(0, 1, 0).applyQuaternion(q), uz: new V(0, 0, 1).applyQuaternion(q) };
+  }
+
+  class Target {
+    constructor(type, pos, yawDeg, opts) {
+      opts = opts || {};
+      this.type = type; this.alive = true; this.t = U.rng() * 10;
+      this.object = new THREE.Group();
+      this.model = type === 'tank' ? CC.Models.tank() : type === 'heli' ? CC.Models.helicopter(false) : type === 'heliCamo' ? CC.Models.helicopter(true)
+        : type === 'truck' ? CC.Models.truck() : CC.Models.house();
+      this.object.add(this.model);
+      this.object.position.fromArray(pos);
+      this.object.rotation.y = U.deg(yawDeg || 0);
+      this.base = new V().fromArray(pos);
+      this.size = this.model.userData.size; this.center = this.model.userData.center;
+      this.detectRange = opts.detectRange || 45;       // ESTIMATION
+      this.drift = opts.drift || 0; this.driftSpeed = opts.driftSpeed || 0.35;
+      this.alert = CC.Models.alertSprite(); this.alert.visible = false;
+      this.alert.position.set(0, this.size[1] + 1.2, 0); this.object.add(this.alert);
+      this.dot = CC.Models.targetDot(); this.dot.position.fromArray(this.center); this.object.add(this.dot);
+      this.obb = null;
+      this.updateObb();
+    }
+    updateObb() { this.object.updateMatrixWorld(true); this.obb = obbFrom(this.object, this.size, this.center); }
+
+    update(dt, game) {
+      this.t += dt;
+      if (!this.alive) return;
+      const rk = game.rocket && game.rocket.active ? game.rocket : null;
+      if (this.type === 'heli' || this.type === 'heliCamo') {
+        const ud = this.model.userData;
+        ud.rotor.rotation.y += dt * 24; ud.tailRotor.rotation.x += dt * 40;
+        const side = new V(1, 0, 0).applyAxisAngle(new V(0, 1, 0), this.object.rotation.y);
+        this.object.position.copy(this.base).addScaledVector(side, Math.sin(this.t * this.driftSpeed) * this.drift);
+        this.object.position.y += Math.sin(this.t * 1.3) * 0.35;
+        this.model.rotation.z = Math.sin(this.t * this.driftSpeed) * 0.05;
+        this.model.rotation.x = Math.sin(this.t * 0.9) * 0.03;
+      }
+      if (this.type === 'tank' && rk) {
+        const d = _v.copy(rk.pos).sub(this.obb.c);
+        const dist = d.length();
+        const detected = dist < this.detectRange;
+        this.alert.visible = detected;
+        if (detected) {
+          // tourelle : lacet vers la roquette (repère local du char)
+          const local = this.object.worldToLocal(_v2.copy(rk.pos));
+          const turret = this.model.userData.turret;
+          const want = Math.atan2(-(local.x - turret.position.x), -(local.z - turret.position.z));
+          let diff = want - turret.rotation.y; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+          turret.rotation.y += U.clamp(diff, -2.2 * dt, 2.2 * dt);
+          const horiz = Math.hypot(local.x, local.z);
+          const pitch = U.clamp(Math.atan2(local.y - 2.3, horiz), -0.1, 0.6);
+          this.model.userData.gun.rotation.x += (pitch - this.model.userData.gun.rotation.x) * U.damp(4, dt);
+        }
+      }
+      if (this.type === 'heli' || this.type === 'heliCamo') this.updateObb();
+      if (this.alert.visible) this.alert.position.y = this.size[1] + 1.2 + Math.sin(this.t * 6) * 0.1;
+    }
+
+    kill() { this.alive = false; this.object.visible = false; }
+    reset() { this.alive = true; this.object.visible = true; this.alert.visible = false; }
+  }
+
+  class Soldier {
+    constructor(pos, yawDeg) {
+      this.object = CC.Models.soldier();
+      this.object.position.fromArray(pos); this.object.rotation.y = U.deg(yawDeg || 0);
+      this.alert = CC.Models.alertSprite(); this.alert.position.set(0, 2.8, 0); this.alert.visible = false; this.object.add(this.alert);
+      this.range = 120; this.cool = 0; this.seen = 0; this.shots = 0; this.t = 0;
+    }
+    update(dt, game) {
+      this.t += dt;
+      const rk = game.rocket && game.rocket.active ? game.rocket : null;
+      if (!rk) { this.alert.visible = false; this.seen = 0; return; }
+      const d = rk.pos.distanceTo(this.object.position);
+      const visible = d < this.range;
+      this.alert.visible = visible;
+      if (visible) {
+        const dx = rk.pos.x - this.object.position.x, dz = rk.pos.z - this.object.position.z;
+        this.object.rotation.y = Math.atan2(-dx, -dz);
+        this.seen += dt;
+        this.cool -= dt;
+        if (this.seen > 0.7 && this.cool <= 0 && this.shots < 3) {    // ESTIMATION : délai de réaction 0,7 s, recharge 3,5 s
+          this.cool = 3.5; this.shots++;
+          const from = this.object.localToWorld(new V(0.3, 1.65, -0.8));
+          game.spawnEnemyMissile(from, rk);
+        }
+      } else this.seen = 0;
+      this.alert.position.y = 2.8 + Math.sin(this.t * 6) * 0.1;
+    }
+    reset() { this.cool = 0; this.seen = 0; this.shots = 0; this.alert.visible = false; }
+  }
+
+  class EnemyMissile {
+    constructor(from, target) {
+      this.object = CC.Models.enemyMissile();
+      this.pos = from.clone();
+      // ESTIMATION : visée imprécise (OBSERVÉ séq. 3 : le missile frôle la roquette sans la toucher)
+      this.miss = new V(U.rng() - 0.5, U.rng() * 0.6, U.rng() - 0.5).normalize().multiplyScalar(5 + U.rng() * 3);
+      this.dir = new V().subVectors(target.pos, from).add(this.miss).normalize();
+      this.speed = 48; this.turn = 0.8; this.life = 5; this.alive = true; this.puff = 0;
+      this.object.position.copy(this.pos);
+    }
+    update(dt, game) {
+      if (!this.alive) return;
+      this.life -= dt;
+      const rk = game.rocket && game.rocket.active ? game.rocket : null;
+      if (rk) {
+        const want = _v.subVectors(rk.pos, this.pos).add(this.miss).normalize();
+        const ang = this.dir.angleTo(want);
+        if (ang > 1e-4) this.dir.lerp(want, Math.min(1, this.turn * dt / ang)).normalize();
+      }
+      const p0 = this.pos.clone();
+      this.pos.addScaledVector(this.dir, this.speed * dt);
+      this.object.position.copy(this.pos);
+      this.object.quaternion.setFromUnitVectors(new V(0, 0, 1), this.dir);
+      this.puff -= dt;
+      if (this.puff <= 0) { this.puff = 0.018; game.effects.trailPuff(this.pos.clone().addScaledVector(this.dir, -0.4)); }
+      if (rk && rk.pos.distanceTo(this.pos) < 1.0) { this.alive = false; game.onRocketCrash('missile', this.pos.clone(), this.dir.clone().negate()); return; }
+      const hit = game.world.sweep(p0, this.pos, 0.08);
+      if (hit || this.life <= 0) { this.alive = false; game.effects.explosion(this.pos.clone(), null, false); game.audio.play('boomSmall', this.pos); }
+    }
+  }
+
+  class Destructible {
+    constructor(builder, o) {
+      // o = { p, s, r, kind:'glass'|'glassWarm'|'brick'|'planks' }
+      this.kind = o.kind;
+      const matKey = o.kind === 'brick' ? 'brick' : o.kind === 'planks' ? 'planks' : o.kind === 'glassWarm' ? 'glassWarm' : 'glass';
+      const q = builder.quatFrom(o.r);
+      this.object = new THREE.Mesh(builder.soloBoxGeometry(o.s, matKey), builder.mat(matKey));
+      this.object.position.fromArray(o.p); this.object.quaternion.copy(q);
+      this.object.castShadow = matKey === 'brick' || matKey === 'planks'; this.object.receiveShadow = true;
+      this.collider = builder.world.addBox({ center: o.p, size: o.s, quat: q, kind: o.kind === 'planks' ? 'brick' : o.kind === 'glassWarm' ? 'glass' : o.kind, ref: this });
+      this.size = new V().fromArray(o.s).applyQuaternion(q); this.size.set(Math.abs(this.size.x), Math.abs(this.size.y), Math.abs(this.size.z));
+      this.center = new V().fromArray(o.p);
+      this.broken = false;
+    }
+    breakApart(game, vel) {
+      if (this.broken) return;
+      this.broken = true; this.object.visible = false; this.collider.active = false;
+      game.effects.shatter(this.center, this.size, vel, this.kind);
+      game.audio.play(this.kind === 'brick' || this.kind === 'planks' ? 'brick' : 'glass', this.center);
+    }
+    reset() { this.broken = false; this.object.visible = true; this.collider.active = true; }
+  }
+
+  class Laser {
+    constructor(builder, a, b) {
+      const pa = new V().fromArray(a), pb = new V().fromArray(b);
+      const mid = pa.clone().add(pb).multiplyScalar(0.5), dir = pb.clone().sub(pa), len = dir.length();
+      dir.normalize();
+      const q = new THREE.Quaternion().setFromUnitVectors(new V(0, 0, 1), dir);
+      this.object = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, len), new THREE.MeshBasicMaterial({ color: '#ff2a1a' }));
+      this.object.position.copy(mid); this.object.quaternion.copy(q);
+      this.glow = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, len), new THREE.MeshBasicMaterial({ color: '#ff3a1a', transparent: true, opacity: 0.25, depthWrite: false }));
+      this.object.add(this.glow);
+      builder.world.addBox({ center: mid, size: [0.5, 0.5, len], quat: q, kind: 'hazard' });   // ESTIMATION : laser mortel
+      this.t = U.rng() * 5;
+    }
+    update(dt) { this.t += dt; this.glow.material.opacity = 0.18 + 0.1 * Math.sin(this.t * 20); }
+  }
+
+  class GrapplePoint {
+    constructor(pos, normal, radius) {
+      this.pos = new V().fromArray(pos); this.normal = new V().fromArray(normal).normalize();
+      this.object = CC.Models.bullseye(radius || 1.6);
+      this.object.position.copy(this.pos);
+      this.object.quaternion.setFromUnitVectors(new V(0, 1, 0), this.normal);
+    }
+  }
+
+  class Arrow {
+    constructor(pos, yawDeg) { this.object = CC.Models.arrow(); this.base = new V().fromArray(pos); this.object.position.copy(this.base); this.object.rotation.y = U.deg(yawDeg || 0); this.t = 0; }
+    update(dt) { this.t += dt; this.object.position.y = this.base.y + Math.sin(this.t * 3) * 0.4; }
+  }
+
+  CC.Target = Target; CC.Soldier = Soldier; CC.EnemyMissile = EnemyMissile; CC.Destructible = Destructible;
+  CC.Laser = Laser; CC.GrapplePoint = GrapplePoint; CC.Arrow = Arrow;
+})();
+
+/* Raccourcis de construction de niveau (ajoutés au LevelBuilder). */
+(function () {
+  const P = CC.LevelBuilder.prototype;
+  P.target = function (type, pos, yaw, opts) { const t = new CC.Target(type, pos, yaw, opts); this.targets.push(t); return this.entity(t); };
+  P.soldier = function (pos, yaw) { return this.entity(new CC.Soldier(pos, yaw)); };
+  P.glass = function (p, s, r, warm) { const d = new CC.Destructible(this, { p, s, r, kind: warm ? 'glassWarm' : 'glass' }); this.destructibles.push(d); return this.entity(d); };
+  P.brickWall = function (p, s, r) { const d = new CC.Destructible(this, { p, s, r, kind: 'brick' }); this.destructibles.push(d); return this.entity(d); };
+  P.crate = function (p, s, r) { const d = new CC.Destructible(this, { p, s, r, kind: 'planks' }); this.destructibles.push(d); return this.entity(d); };
+  P.laser = function (a, b) { return this.entity(new CC.Laser(this, a, b)); };
+  P.grapplePoint = function (pos, normal, radius) { const g = new CC.GrapplePoint(pos, normal, radius); this.grapplePoints.push(g); this.world.addBox({ center: pos, size: [radius * 2 || 3.2, 0.3, radius * 2 || 3.2], quat: g.object.quaternion, kind: 'solid' }); return this.entity(g); };
+  P.arrow = function (pos, yaw) { return this.entity(new CC.Arrow(pos, yaw)); };
+})();

@@ -1,0 +1,11 @@
+node_modules/
+
+# Sorties régénérables par tools/record.js et tools/compare.js
+recordings/
+analysis/iterations/*/*.png
+
+# Images extraites de la bande-annonce d'origine : contenu d'un tiers, jamais publié
+analysis/reference_frames/
+
+# macOS
+.DS_Store
