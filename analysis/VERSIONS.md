@@ -437,3 +437,10 @@ collisions des niveaux inchangées (les équipements de toit évitent tout toit 
 **Vérification :** pilote automatique : 9 niveaux + AUTOMAP facile / moyen / difficile terminés, aucune erreur ; taux de
 touche des tirs ennemis sur 32 cartes AUTOMAP 26 % contre 23 % en v027 (dans le bruit : 16–25 % selon les séries) ;
 appels de dessin égaux ou inférieurs à v027 (TRENCH RUN 105 contre 140), temps par image égal ou inférieur.
+
+## v029 — relance du boost en 0,6 s
+
+**Changement (à la demande d'Hugo) :** fenêtre de relance du boost au doigt 1 s → 0,6 s (`input.touch.reboostMs`).
+Vibrations dans l'application Android : le jeu appelle bien `navigator.vibrate` (elles marchent dans Chrome via GitHub Pages) ;
+dans une application qui affiche le jeu par une WebView, Android ne vibre que si l'application déclare la permission
+`android.permission.VIBRATE` dans son AndroidManifest.xml — correction à faire côté application.

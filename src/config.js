@@ -5,7 +5,7 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v028',
+  version: 'v029',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
@@ -81,7 +81,7 @@ CC.CONFIG = {
       dragGain: 2.2,             // rad de visée pour un glissé de la largeur (ou hauteur, la plus petite) de l'écran
       tapMaxMs: 250, tapMaxMove: 12,   // un toucher court (ms) et presque immobile (px) = tap
       longPressMs: 400,          // v026 : 500 → 400 ms (Hugo) ; v024 : appui long (doigt immobile) qui déclenche le boost, maintenu tant que le doigt est posé
-      reboostMs: 1000,           // v026 : après un boost, fenêtre (ms) où reposer le doigt relance le boost sans appui long
+      reboostMs: 600,            // v029 : 1000 → 600 ms (Hugo) ; v026 : après un boost, fenêtre (ms) où reposer le doigt relance le boost sans appui long
       edgeBand: 0.22,            // v024 : bande latérale (fraction de la largeur) où le doigt fait tourner sans fin
       edgeTurnRate: 1.8,         // v024 : virage (rad/s) quand le doigt est tout au bord
       pixelRatio: 1,             // fluidité : rendu à 1 pixel par point d'écran (au lieu de 1,5)

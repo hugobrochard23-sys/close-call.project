@@ -72,7 +72,7 @@ chaque niveau après une modification du vol, de l'essence ou des ennemis).
 **Sur téléphone ou tablette (v024)** : plein écran, aucun bouton sauf la pause. **Toucher** : tir (animation du tube) ou
 réapparition. **Glisser** en vol : diriger ; doigt tenu dans la **bande gauche / droite** de l'écran : virage sans fin
 (haut / bas : glissé seulement). **Appui long** (doigt immobile ≥ 0,4 s) : boost tant que le doigt reste posé (il peut alors
-bouger). Boost relâché : pendant **1 s** (fine barre jaune sous l'essence), reposer le doigt relance le boost aussitôt.
+bouger). Boost relâché : pendant **0,6 s** (fine barre jaune sous l'essence), reposer le doigt relance le boost aussitôt.
 Mini vibration à chaque toucher en partie. Au lanceur, la vue ne bouge pas. Pas de curseur. **Pause** : reprendre, son, musique, vibration (OFF / LOW / MEDIUM /
 HIGH), recommencer, niveau suivant, menu. Vibrations : Android (API Vibration) ; iPhone : petits « tics » seulement jusqu'à
 iOS 26.4 (Apple a bloqué la méthode à partir d'iOS 26.5, Safari n'ayant pas l'API Vibration).

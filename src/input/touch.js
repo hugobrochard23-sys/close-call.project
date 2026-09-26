@@ -2,7 +2,7 @@
  *  - glisser le doigt n'importe où : dirige la roquette (comme la souris : droite = tourne à droite, haut = monte) ;
  *  - toucher (tap) : tir depuis le lanceur, ou réapparition après un crash ;
  *  - appui long (doigt immobile ≥ 0,4 s) en vol : boost tant que le doigt reste posé, avec vibration continue (v024) ;
- *    boost relâché → pendant 1 s, reposer le doigt relance le boost aussitôt (v026) ; mini vibration à chaque toucher (v026) ;
+ *    boost relâché → pendant 0,6 s (v029), reposer le doigt relance le boost aussitôt (v026) ; mini vibration à chaque toucher (v026) ;
  *  - doigt dans la bande gauche / droite de l'écran : virage sans fin (v024) ; au lanceur, la vue ne bouge pas (v024) ;
  *  - gros bouton pause en haut à droite : menu pause (reprendre, son, musique, recommencer, menu principal).
  * Plein écran, affichage allégé et rendu moins coûteux (fluidité). Les menus se touchent directement.
