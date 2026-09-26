@@ -22,9 +22,7 @@
     CC.Touch.active = true;
     document.body.classList.add('cc-touch');
 
-    // fluidité : rendu à la définition de l'écran (pas de sur-échantillonnage) et ombres plus légères
-    CC.CONFIG.render.maxPixelRatio = cfg.pixelRatio;
-    game.sun.shadow.mapSize.set(cfg.shadowMapSize, cfg.shadowMapSize);
+    // fluidité : définition, ombres et effets réglés par le niveau de qualité (src/core/quality.js, v030)
 
     const wake = () => { game.audio.init(); game.audio.resume(); };   // iOS : le son ne démarre qu'après un geste
     const playing = () => FLY.includes(game.state) && !game.paused && !game.ui.overlay;

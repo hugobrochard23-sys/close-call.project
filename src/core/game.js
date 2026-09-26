@@ -46,6 +46,7 @@
       this.style = new CC.Style(this);
       this.hud = new CC.HUD(this.hudCanvas);
       this.ui = new CC.UI(this);
+      this.ads = new CC.Ads(this);   // v030 : publicités d'exemple (src/ui/ads.js)
       this.input = new CC.Input(this, this.hudCanvas);
       this.rig = new CC.CameraRig(this.camera, this);
       this.rocket = new CC.Rocket(this);
@@ -104,7 +105,7 @@
       this.ambient.color.set(env.ambient.color); this.ambient.intensity = env.ambient.intensity;
       this.sun.color.set(env.sun.color); this.sun.intensity = env.sun.intensity;
       this.sunDir = new V().fromArray(env.sun.dir).normalize();
-      this.sun.castShadow = CC.CONFIG.render.shadows && env.sun.shadow !== false;
+      this.sun.castShadow = CC.CONFIG.render.shadows && env.sun.shadow !== false && this.shadowsAllowed !== false;
       this.postParams = Object.assign({}, CC.CONFIG.postfx, env.postfx || {});
     }
 
@@ -120,7 +121,7 @@
       this.save.owned = this.save.owned || {};
       this.save.owned.stock = true;
       if (!this.save.owned[this.save.equipped]) this.save.equipped = 'stock';
-      this.settings = Object.assign({ sensitivity: CC.CONFIG.input.sensitivity, invertY: false, music: CC.CONFIG.audio.music, sfx: CC.CONFIG.audio.sfx, postfx: true }, (s && s.settings) || {});
+      this.settings = Object.assign({ sensitivity: CC.CONFIG.input.sensitivity, invertY: false, music: CC.CONFIG.audio.music, sfx: CC.CONFIG.audio.sfx, postfx: true, graphics: 'auto' }, (s && s.settings) || {});
       if (this.testMode) this.settings.postfx = this.params.get('postfx') !== '0';
     }
     writeSave() {
@@ -307,6 +308,7 @@
       if (host && host.userData.bore) this.launchFx = { t: 0, host, bore: host.userData.bore, base: host.position.clone() };
       this.rig.startFlight();
       this.state = 'FLIGHT'; this.flightTime = 0;
+      if (CC.Touch && CC.Touch.active) this.settings.tutorialFlights = (this.settings.tutorialFlights || 0) + 1;   // v030 : tutoriel limité aux 3 premiers vols
       this.telemetry.event('fire', { runTime: this.runTime });
     }
 
@@ -393,6 +395,8 @@
       r.cash = Math.round(E.levelBase + r.style * E.perStylePoint + (r.newRecord ? E.recordBonus : 0));
       this.save.cash += r.cash;
       this.results = r; this.state = 'RESULTS';
+      if (this.ads) this.ads.onLevelEnd();
+      if (!this.settings.tutorialDone) this.settings.tutorialDone = true;   // v030 : premier niveau terminé → plus de tutoriel
       this.writeSave();
       this.input.exitLock();
       this.telemetry.event('results', { time: r.time, style: r.style });
@@ -530,6 +534,7 @@
     }
 
     tick(dt) {
+      if (this.ads) this.ads.update(dt);
       if (!this.paused && this.state !== 'BOOT') this.update(dt);
       else { this.input.poll(0); this.rig.update(0); }
       this.render(performance.now() / 1000);
@@ -550,15 +555,35 @@
 
     start() {
       if (this.testMode) { this.initTestHarness(); return; }
+      this.quality = new CC.Quality(this);
+      this.quality.apply(this.quality.initial());
+      this.watchVisibility();
       this.toMenu();
+      const Q = CC.CONFIG.quality;
       let last = performance.now(), fpsAcc = 0, fpsN = 0;
       const loop = (now) => {
-        const dt = Math.min(0.05, (now - last) / 1000); last = now;
-        fpsAcc += dt; fpsN++; if (fpsAcc > 0.5) { this.fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; }
-        this.tick(dt);
         requestAnimationFrame(loop);
+        // v030 : cadence plafonnée — 60 images/s en jeu sur écran tactile (écrans 120 Hz), 20 dans les menus et la pause
+        const idle = this.paused || this.state === 'MENU' || this.state === 'RESULTS' || this.hidden;
+        const cap = this.hidden ? 4 : idle ? Q.pausedFps : (CC.Touch && CC.Touch.active ? Q.maxFpsTouch : 0);
+        if (cap && now - last < 1000 / cap - 2) return;
+        const real = (now - last) / 1000, dt = Math.min(0.05, real); last = now;
+        fpsAcc += dt; fpsN++; if (fpsAcc > 0.5) { this.fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; }
+        this.quality.watch(real);
+        this.tick(dt);
       };
       requestAnimationFrame(loop);
+    }
+
+    // v030 : application mise en arrière-plan (autre appli, écran verrouillé, onglet masqué) → partie en pause et son
+    // suspendu (sur Android, une WebView continue sinon de jouer la musique et le moteur) ; au retour, le son reprend,
+    // la partie reste en pause (le joueur reprend quand il est prêt).
+    watchVisibility() {
+      const onHide = () => { this.hidden = true; this.pause(); if (this.audio.ctx && this.audio.ctx.state === 'running') this.audio.ctx.suspend(); if (CC.Haptics) CC.Haptics.boostStop(); };
+      const onShow = () => { this.hidden = false; if (this.audio.ctx) this.audio.resume(); };
+      document.addEventListener('visibilitychange', () => (document.hidden ? onHide() : onShow()));
+      window.addEventListener('pagehide', onHide);
+      window.addEventListener('pageshow', onShow);
     }
 
     // ---------- banc de test (enregistrements déterministes) ----------

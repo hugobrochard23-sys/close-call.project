@@ -3,6 +3,8 @@
  * Grille de hachage XZ pour limiter les candidats. */
 (function () {
   const V = THREE.Vector3;
+  // v030 (mobile) : objets de calcul réutilisés — la physique tourne 240 fois par seconde, chaque allocation compte
+  const _d = new V(), _p = new V(), _n = new V(), _rel = new V();
 
   class World {
     constructor() {
@@ -84,27 +86,24 @@
     }
 
     /* Balayage d'une sphère de rayon r de p0 à p1. Retourne le premier contact {t, normal, box|hf|tube, kind}. */
+    // v030 : le résultat est un objet réutilisé, valable jusqu'au balayage suivant (les appelants le lisent aussitôt)
     sweep(p0, p1, r, filter) {
-      const d = new V().subVectors(p1, p0);
+      const d = _d.subVectors(p1, p0);
       let best = null;
-      const tmp = { t: 0, normal: new V(), inside: false };
+      const tmp = this._tmp || (this._tmp = { t: 0, normal: new V(), inside: false, pen: 0 });
+      const res = this._res || (this._res = { t: 0, normal: new V(), box: null, kind: null, inside: false, pen: 0, hf: null, tube: null, ground: false });
       const cands = this.candidates(Math.min(p0.x, p1.x) - r, Math.min(p0.z, p1.z) - r, Math.max(p0.x, p1.x) + r, Math.max(p0.z, p1.z) + r);
       const minY = Math.min(p0.y, p1.y) - r, maxY = Math.max(p0.y, p1.y) + r;
       for (const b of cands) {
         if (b.max.y < minY || b.min.y > maxY) continue;
         if (filter && !filter(b)) continue;
         if (World.segBox(b, p0, d, r, tmp) && (!best || tmp.t < best.t)) {
-          best = { t: tmp.t, normal: tmp.normal.clone(), box: b, kind: b.kind, inside: tmp.inside, pen: tmp.pen };
+          best = res; res.t = tmp.t; res.normal.copy(tmp.normal); res.box = b; res.kind = b.kind; res.inside = tmp.inside; res.pen = tmp.pen;
+          res.hf = null; res.tube = null; res.ground = undefined;
         }
       }
-      for (const hf of this.heightfields) {
-        const hit = this.sweepHeightfield(hf, p0, d, r);
-        if (hit && (!best || hit.t < best.t)) best = hit;
-      }
-      for (const tb of this.tubes) {
-        const hit = this.sweepTube(tb, p0, d, r);
-        if (hit && (!best || hit.t < best.t)) best = hit;
-      }
+      for (const hf of this.heightfields) if (this.sweepHeightfield(hf, p0, d, r, best ? best.t : Infinity, res)) best = res;
+      for (const tb of this.tubes) if (this.sweepTube(tb, p0, d, r, best ? best.t : Infinity, res)) best = res;
       return best;
     }
 
@@ -121,10 +120,11 @@
       const hl = this.heightAt(hf, x - e, z), hr = this.heightAt(hf, x + e, z), hd = this.heightAt(hf, x, z - e), hu = this.heightAt(hf, x, z + e);
       return out.set(hl - hr, 2 * e, hd - hu).normalize();
     }
-    sweepHeightfield(hf, p0, d, r) {
+    // v030 : écrit le contact dans `out` s'il est plus proche que `bestT` (retourne vrai), sans rien allouer
+    sweepHeightfield(hf, p0, d, r, bestT, out) {
       const len = d.length();
       const steps = Math.max(1, Math.ceil(len / 0.4));
-      const p = new V();
+      const p = _p;
       let prevT = 0;
       for (let i = 0; i <= steps; i++) {
         const t = i / steps;
@@ -138,12 +138,15 @@
             if (p.y - r <= this.heightAt(hf, p.x, p.z)) hi = m; else lo = m;
           }
           p.copy(p0).addScaledVector(d, hi);
-          const n = this.normalAt(hf, p.x, p.z, new V());
-          return { t: i === 0 ? 0 : lo, normal: n, hf, kind: hf.kind, inside: i === 0, pen: i === 0 ? (h - (p.y - r)) : 0, ground: true };
+          const t0 = i === 0 ? 0 : lo;
+          if (t0 >= bestT) return false;
+          this.normalAt(hf, p.x, p.z, out.normal);
+          out.t = t0; out.hf = hf; out.box = null; out.tube = null; out.kind = hf.kind; out.inside = i === 0; out.pen = i === 0 ? (h - (p.y - r)) : 0; out.ground = true;
+          return true;
         }
         prevT = t;
       }
-      return null;
+      return false;
     }
 
     // ---------- Tunnel (grotte) ----------
@@ -154,26 +157,34 @@
       if (bd > 900) { for (let i = 0; i < S.length; i++) { const d2 = S[i].p.distanceToSquared(p); if (d2 < bd) { bd = d2; best = i; } } }
       tb.hint = best;
       const s = S[best];
-      const rel = new V().subVectors(p, s.p);
+      const rel = _rel.subVectors(p, s.p);
       const along = rel.dot(s.t);
       const x = rel.dot(s.n), y = rel.dot(s.b);
       const ang = Math.atan2(y, x);
       const dist = Math.sqrt(x * x + y * y);
       const R = tb.radiusAt(best + along / tb.spacing, ang);
-      return { i: best, along, dist, ang, R, x, y, s };
+      // v030 : objet réutilisé (valable jusqu'à l'appel suivant)
+      const L = this._L || (this._L = {});
+      L.i = best; L.along = along; L.dist = dist; L.ang = ang; L.R = R; L.x = x; L.y = y; L.s = s;
+      return L;
     }
-    sweepTube(tb, p0, d, r) {
-      const p = new V();
-      const inside = (t) => { p.copy(p0).addScaledVector(d, t); const L = this.tubeLocal(tb, p); return { ok: L.dist <= L.R - r || L.i === 0 && L.along < 0 || L.i === tb.samples.length - 1 && L.along > 0, L }; };
-      const e = inside(1);
-      if (e.ok) return null;
-      const s0 = inside(0);
+    tubeInside(tb, p0, d, r, t) {
+      _p.copy(p0).addScaledVector(d, t);
+      const L = this.tubeLocal(tb, _p);
+      return L.dist <= L.R - r || L.i === 0 && L.along < 0 || L.i === tb.samples.length - 1 && L.along > 0;
+    }
+    sweepTube(tb, p0, d, r, bestT, out) {
+      if (this.tubeInside(tb, p0, d, r, 1)) return false;
+      const ok0 = this.tubeInside(tb, p0, d, r, 0);
       let lo = 0, hi = 1;
-      if (!s0.ok) hi = 0;
-      else for (let k = 0; k < 8; k++) { const m = (lo + hi) / 2; if (inside(m).ok) lo = m; else hi = m; }
-      const L = inside(hi).L;
-      const n = new V().addScaledVector(L.s.n, -L.x).addScaledVector(L.s.b, -L.y).normalize();
-      return { t: lo, normal: n, tube: tb, kind: 'solid', inside: !s0.ok, pen: Math.max(0, L.dist - (L.R - r)), ground: n.y > 0.6 };
+      if (!ok0) hi = 0;
+      else for (let k = 0; k < 8; k++) { const m = (lo + hi) / 2; if (this.tubeInside(tb, p0, d, r, m)) lo = m; else hi = m; }
+      if (lo >= bestT) return false;
+      this.tubeInside(tb, p0, d, r, hi);
+      const L = this._L;
+      const n = out.normal.set(0, 0, 0).addScaledVector(L.s.n, -L.x).addScaledVector(L.s.b, -L.y).normalize();
+      out.t = lo; out.tube = tb; out.hf = null; out.box = null; out.kind = 'solid'; out.inside = !ok0; out.pen = Math.max(0, L.dist - (L.R - r)); out.ground = n.y > 0.6;
+      return true;
     }
 
     /* Distance à la surface la plus proche (murs et sol séparés) dans un rayon maxD. */
@@ -191,14 +202,14 @@
         // normale approximative : axe dominant
         let nx = 0, ny = 0, nz = 0;
         if (q1 >= q0 && q1 >= q2) { ny = Math.sign(o1); } else if (q0 >= q2) { nx = Math.sign(o0); } else { nz = Math.sign(o2); }
-        const wn = new V().addScaledVector(b.ux, nx).addScaledVector(b.uy, ny).addScaledVector(b.uz, nz);
+        const wn = _n.set(0, 0, 0).addScaledVector(b.ux, nx).addScaledVector(b.uy, ny).addScaledVector(b.uz, nz);
         if (wn.y > 0.7 || b.ground) { if (dist < out.ground) out.ground = dist; }
         else if (dist < out.wall) { out.wall = dist; out.wallNormal.copy(wn); out.wallBox = b; }
       }
       for (const hf of this.heightfields) {
         const h = this.heightAt(hf, p.x, p.z);
         if (h === -Infinity) continue;
-        const n = this.normalAt(hf, p.x, p.z, new V());
+        const n = this.normalAt(hf, p.x, p.z, _n);
         const dist = (p.y - h) * n.y;
         if (n.y > 0.8) { if (dist < out.ground) out.ground = dist; }
         else if (dist < out.wall) { out.wall = dist; out.wallNormal.copy(n); }
@@ -206,20 +217,24 @@
       for (const tb of this.tubes) {
         const L = this.tubeLocal(tb, p);
         const dist = L.R - L.dist;
-        const n = new V().addScaledVector(L.s.n, -L.x).addScaledVector(L.s.b, -L.y).normalize();
+        const n = _n.set(0, 0, 0).addScaledVector(L.s.n, -L.x).addScaledVector(L.s.b, -L.y).normalize();
         if (n.y > 0.6) { if (dist < out.ground) out.ground = dist; }
         else if (dist < out.wall) { out.wall = dist; out.wallNormal.copy(n); }
       }
       return out;
     }
 
+    // v030 : « la ligne de vue est-elle coupée ? » sans rien allouer (tirs anti-aériens : chaque tireur, chaque image)
+    blocked(o, dir, len, filter) {
+      return !!this.sweep(o, _rel.copy(o).addScaledVector(dir, len), 0.02, filter);
+    }
     raycast(o, dir, len, filter) {
-      const p1 = new V().copy(o).addScaledVector(dir, len);
+      const p1 = _rel.copy(o).addScaledVector(dir, len);
       const hit = this.sweep(o, p1, 0.02, filter);
       if (!hit) return null;
-      hit.dist = hit.t * len;
-      hit.point = new V().copy(o).addScaledVector(dir, hit.dist);
-      return hit;
+      // résultat propre à l'appel (les appelants gardent parfois `point`) ; un rayon sans contact n'alloue rien
+      const dist = hit.t * len;
+      return { t: hit.t, normal: hit.normal.clone(), box: hit.box, kind: hit.kind, inside: hit.inside, pen: hit.pen, hf: hit.hf, tube: hit.tube, ground: hit.ground, dist, point: new V().copy(o).addScaledVector(dir, dist) };
     }
   }
 

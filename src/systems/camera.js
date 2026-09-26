@@ -8,6 +8,9 @@
 (function () {
   const V = THREE.Vector3;
   const U = CC.U;
+  // v030 (mobile) : objets de calcul réutilisés — la caméra est mise à jour à chaque image
+  const _f = new V(), _u = new V(), _o = new V(), _z = new V(0, 0, 1), _y = new V(0, 1, 0), _t1 = new V(), _t2 = new V(), _t3 = new V();
+  const _m = new THREE.Matrix4(), _q = new THREE.Quaternion();
 
   class CameraRig {
     constructor(camera, game) {
@@ -40,10 +43,10 @@
       // oriente la caméra : direction visée abaissée de l'angle du réticule, puis roulis
       right = right || this.right; up = up || this.up;
       const a = this.crossAngle();
-      const f = forward.clone().applyAxisAngle(right, -a);
-      const m = new THREE.Matrix4().lookAt(new V(0, 0, 0), f, up.clone().applyAxisAngle(right, -a));
+      const f = _f.copy(forward).applyAxisAngle(right, -a);
+      const m = _m.lookAt(_o.set(0, 0, 0), f, _u.copy(up).applyAxisAngle(right, -a));
       this.cam.quaternion.setFromRotationMatrix(m);
-      if (rollAngle) this.cam.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new V(0, 0, 1), rollAngle));
+      if (rollAngle) this.cam.quaternion.multiply(_q.setFromAxisAngle(_z, rollAngle));
     }
 
     startLauncher(eyePos) { this.mode = 'launcher'; this.eye.copy(eyePos); this.pos.copy(eyePos); this.roll = 0; }
@@ -55,7 +58,7 @@
 
     // Repère de la caméra de poursuite, construit sur camDir et sur le « haut » de référence (roulis ajouté à part).
     updateCamBasis() {
-      const r = new V().crossVectors(this.camDir, this.upRef);
+      const r = _t3.crossVectors(this.camDir, this.upRef);
       if (r.lengthSq() > 1e-6) this.camRight.copy(r.normalize());   // à la verticale : on garde le repère précédent
       this.camUp.crossVectors(this.camRight, this.camDir).normalize();
     }
@@ -69,7 +72,7 @@
     chaseTarget(rocket, out) {
       out.copy(rocket.pos).add(this.offset);
       // évite de passer derrière un mur (tunnels, puits)
-      const dir = new V().subVectors(out, rocket.pos);
+      const dir = _t3.subVectors(out, rocket.pos);
       const len = dir.length();
       if (len > 0.01) {
         dir.divideScalar(len);
@@ -84,7 +87,7 @@
       this.t += dt;
       // roulis d'après la vitesse de lacet (ESTIMATION : horizon incliné en virage)
       // vitesse de lacet mesurée dans le repère de la caméra (pas autour de la verticale du monde : saut à 180° dans un looping)
-      const yawRate = dt > 0 ? new V().crossVectors(this.prevCamDir, this.camDir).dot(this.camUp) / dt : 0;
+      const yawRate = dt > 0 ? _t1.crossVectors(this.prevCamDir, this.camDir).dot(this.camUp) / dt : 0;
       this.prevCamDir.copy(this.camDir);
       const targetRoll = this.mode === 'chase' || this.mode === 'transition' ? U.clamp(-yawRate * c.rollFromYawRate, -0.35, 0.35) : 0;
       this.roll += (targetRoll - this.roll) * U.damp(c.rollLag, dt);
@@ -99,12 +102,12 @@
           this.camNose.lerp(rk.fwd, U.damp(c.noseLag, dt)).normalize();
           const k = U.damp(c.followLag, dt);
           this.camDir.lerp(this.camNose, k).normalize();
-          const u = this.upRef.clone().lerp(this.up, k);
+          const u = _t1.copy(this.upRef).lerp(this.up, k);
           if (u.lengthSq() > 1e-6) this.upRef.copy(u.normalize());   // haut exactement opposé (rare) : on garde l'ancien
           this.updateCamBasis();
         }
-        this.offset.lerp(this.wantedOffset(new V()), U.damp(c.offsetLag, dt));
-        const want = this.chaseTarget(rk, new V());
+        this.offset.lerp(this.wantedOffset(_t1), U.damp(c.offsetLag, dt));
+        const want = this.chaseTarget(rk, _t2);
         if (this.mode === 'transition') {
           const k = U.smooth(0.08, c.launchBlend + 0.08, this.t);     // MESURÉ : rattrapage ≈ 0,5 s
           this.pos.copy(this.eye).lerp(want, k);
@@ -115,11 +118,11 @@
         cam.position.copy(this.pos);
         this.orient(this.camDir, this.roll, this.camRight, this.camUp);
       } else if (this.mode === 'impact') {
-        const back = new V().subVectors(this.pos, this.focus).normalize();
+        const back = _t1.subVectors(this.pos, this.focus).normalize();
         this.pos.addScaledVector(back, dt * 1.5);
         cam.position.copy(this.pos);
-        const m = new THREE.Matrix4().lookAt(this.pos, this.focus, new V(0, 1, 0));
-        const q = new THREE.Quaternion().setFromRotationMatrix(m);
+        const m = _m.lookAt(this.pos, this.focus, _y);
+        const q = _q.setFromRotationMatrix(m);
         cam.quaternion.slerp(q, U.damp(3, dt));
       } else if (this.mode === 'menu') {
         const a = this.t * 0.06;

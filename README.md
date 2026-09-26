@@ -112,6 +112,11 @@ des filets d'air glissent du nez vers l'arrière pendant le boost ; la caméra z
 Un contact rasant avec le sol ou un toit fait **glisser** la roquette. Un choc de face la fait **exploser**.
 Les vitres, les murs de briques fins et les caisses se brisent.
 
+**Mobile (v030).** Menus tactiles plein écran à gros boutons, tutoriel des premiers vols, qualité graphique AUTO / HIGH /
+MEDIUM / LOW (réglage GRAPHICS), 60 images/s au plus, pause et son coupé quand l'application passe en arrière-plan,
+publicités d'exemple (bannière, interstitielle, récompensée — annonceurs fictifs, réglage SAMPLE ADS). Analyse et mesures :
+[analysis/MOBILE_AUDIT.md](analysis/MOBILE_AUDIT.md).
+
 **Refonte visuelle (v028).** Propulsion en couches attachée à la tuyère, fumée qui dérive, explosions en étapes, épaves
 qui brûlent, chars et hélicoptères détaillés et animés (tourelle à inertie, recul, assiette de vol), façades sans fenêtre
 coupée, toits équipés, forêts de conifères, son du réacteur en couches. Détails et mesures : [analysis/DESIGN_REFONTE.md](analysis/DESIGN_REFONTE.md).

@@ -7,6 +7,7 @@
   const V = THREE.Vector3;
   const _q = new THREE.Quaternion(), _e = new THREE.Euler(0, 0, 0, 'YXZ');
   const AX = new V(1, 0, 0), AY = new V(0, 1, 0), FWD = new V(0, 0, -1);
+  const _f = new V(), _up = new V(), _want = new V(), _x = new V();
 
   class Input {
     constructor(game, el) {
@@ -87,11 +88,11 @@
         this.setAim(_e.y, U.clamp(_e.x, -lim, lim));
         return;
       }
-      const f = FWD.clone().applyQuaternion(this.aimQ);
+      const f = _f.copy(FWD).applyQuaternion(this.aimQ);   // v030 : vecteurs réutilisés (appelé à chaque image)
       if (this.pitchActiveT > 0 || Math.abs(f.y) > 0.9 || dt <= 0) return;
-      const up = AY.clone().applyQuaternion(this.aimQ);
-      const want = AY.clone().addScaledVector(f, -f.y).normalize();
-      const ang = Math.atan2(new V().crossVectors(up, want).dot(f), up.dot(want));
+      const up = _up.copy(AY).applyQuaternion(this.aimQ);
+      const want = _want.copy(AY).addScaledVector(f, -f.y).normalize();
+      const ang = Math.atan2(_x.crossVectors(up, want).dot(f), up.dot(want));
       this.aimQ.premultiply(_q.setFromAxisAngle(f, ang * U.damp(CC.CONFIG.input.autoLevel, dt))).normalize();
     }
 
@@ -110,7 +111,7 @@
       const t = this.touch;   // v022 : écran tactile (src/input/touch.js) : le glissé agit directement via addAim, ici seul le moteur
       this.constrainAim(dt);
       const st = {
-        aimQ: this.aimQ.clone(),
+        aimQ: (this._stQ || (this._stQ = new THREE.Quaternion())).copy(this.aimQ),   // v030 : lu aussitôt par le jeu
         fire: this.fireEdge, grappleHeld: this.grappleHeld, grappleEdge: this.grappleEdge,
         retro: !!(k.ShiftLeft || k.ShiftRight),
         thrust: !!k.Space || !!(t && t.thrust),

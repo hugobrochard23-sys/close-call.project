@@ -3,12 +3,18 @@
 (function () {
   const V = THREE.Vector3;
   const U = CC.U;
-  const _v = new V(), _v2 = new V(), _w = new V(), _w2 = new V();
+  const _v = new V(), _v2 = new V(), _w = new V(), _w2 = new V(), _z = new V(0, 0, 1);
 
-  function obbFrom(obj, size, center) {
-    const q = obj.getWorldQuaternion(new THREE.Quaternion());
-    const c = new V().fromArray(center).applyQuaternion(q).add(obj.getWorldPosition(new V()));
-    return { c, hx: size[0] / 2, hy: size[1] / 2, hz: size[2] / 2, ux: new V(1, 0, 0).applyQuaternion(q), uy: new V(0, 1, 0).applyQuaternion(q), uz: new V(0, 0, 1).applyQuaternion(q) };
+  const _oq = new THREE.Quaternion(), _op = new V();
+  const SOLID = (b) => b.kind === 'solid' || b.kind === 'brick';
+  // v030 : met à jour la boîte en place (les hélicoptères la recalculent à chaque image)
+  function obbFrom(obj, size, center, out) {
+    const q = obj.getWorldQuaternion(_oq);
+    const o = out || { c: new V(), ux: new V(), uy: new V(), uz: new V() };
+    o.c.fromArray(center).applyQuaternion(q).add(obj.getWorldPosition(_op));
+    o.hx = size[0] / 2; o.hy = size[1] / 2; o.hz = size[2] / 2;
+    o.ux.set(1, 0, 0).applyQuaternion(q); o.uy.set(0, 1, 0).applyQuaternion(q); o.uz.set(0, 0, 1).applyQuaternion(q);
+    return o;
   }
 
   class Target {
@@ -53,7 +59,7 @@
       this.base.copy(a).addScaledVector(seg, len > 0 ? Math.min(1, d / len) : 0);
       if (len > 0) this.pathYaw = Math.atan2(-seg.x, -seg.z);   // le nez dans le sens de la fuite (atteint avec inertie)
     }
-    updateObb() { this.object.updateMatrixWorld(true); this.obb = obbFrom(this.object, this.size, this.center); }
+    updateObb() { this.object.updateMatrixWorld(true); this.obb = obbFrom(this.object, this.size, this.center, this.obb); }
 
     update(dt, game) {
       this.t += dt;
@@ -215,7 +221,7 @@
       // de vision du joueur, jamais dans son dos (la caméra regarde devant, un tir par l'arrière serait invisible)
       const sp = rk.vel.length();
       if (sp > 1 && -to.dot(rk.vel) / sp < CC.CONFIG.aa.frontCos) { this.aaSeen = 0; return; }
-      if (game.world.raycast(from, to, dist - 1, (b) => b.kind === 'solid' || b.kind === 'brick')) { this.aaSeen = 0; return; }
+      if (game.world.blocked(from, to, dist - 1, SOLID)) { this.aaSeen = 0; return; }
       this.aaSeen = (this.aaSeen || 0) + dt;
       if (this.aaSeen < L(A.firstDelay)) return;
       // v023 : salves (3 derniers niveaux, AUTOMAP difficile) : plusieurs tirs rapprochés, et un tireur presque rechargé
@@ -395,12 +401,12 @@
         if (ang > 1e-4) this.dir.lerp(want, Math.min(1, this.turn * dt / ang)).normalize();
       }
       if (this.speed < this.vmax) this.speed = Math.min(this.vmax, this.speed + this.vmax * (1 - CC.CONFIG.aa.boostStart) * dt / CC.CONFIG.aa.boostTime);
-      const p0 = this.pos.clone();
+      const p0 = (this._p0 || (this._p0 = new V())).copy(this.pos);   // v030 : vecteurs réutilisés
       this.pos.addScaledVector(this.dir, this.speed * dt);
       this.age += dt;
       this.object.position.copy(this.pos);
       if (this.vis) { const k = 1 - U.smooth(0, 0.25, this.age); if (k > 0) this.object.position.addScaledVector(this.vis, k); else this.vis = null; }
-      this.object.quaternion.setFromUnitVectors(new V(0, 0, 1), this.dir);
+      this.object.quaternion.setFromUnitVectors(_z, this.dir);
       // design : le missile tourne sur lui-même, sa tuyère vacille et grandit pendant la phase d'accélération
       this.spinA = (this.spinA || 0) + dt * 9; this.object.rotateZ(this.spinA);
       const gl = this.object.userData.glow;
@@ -412,7 +418,7 @@
       let closest = Infinity;
       if (rk) {
         const r0 = _v.subVectors(p0, this.lastRk || rk.pos), r1 = _v2.subVectors(this.pos, rk.pos);
-        const dr = new V().subVectors(r1, r0), k = dr.lengthSq() > 1e-9 ? U.clamp(-r0.dot(dr) / dr.lengthSq(), 0, 1) : 1;
+        const dr = _w.subVectors(r1, r0), k = dr.lengthSq() > 1e-9 ? U.clamp(-r0.dot(dr) / dr.lengthSq(), 0, 1) : 1;
         closest = r0.addScaledVector(dr, k).length();
         this.lastRk = (this.lastRk || new V()).copy(rk.pos);
       }

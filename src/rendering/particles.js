@@ -55,6 +55,7 @@
      *       a (opacité max), fin (fraction du temps de vie pour apparaître), fout (début de l'effacement), wind, turb, sx/sy (étirement) } */
     emit(e) {
       if (this.n >= this.max) return null;
+      if (this.density < 1 && U.fx() > this.density) return null;   // v030 : qualité LOW → moins de particules
       const p = this.p[this.n++];
       const r = U.fx;
       p.pos.copy(e.pos); p.vel.copy(e.vel || _p.set(0, 0, 0));
@@ -211,6 +212,9 @@
       this.emitters = [];    // colonnes de fumée résiduelles (quelques secondes après une explosion)
       this.wind = new V(1.6, 0, -0.6);   // vent léger commun : toutes les fumées dérivent dans le même sens
     }
+
+    // v030 : part des particules émises (1 = toutes), selon le niveau de qualité graphique
+    setDensity(k) { for (const p of this.pools) p.density = k; }
 
     update(dt, camera) {
       this.updateSmokers(dt);

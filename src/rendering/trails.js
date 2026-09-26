@@ -114,10 +114,14 @@
       while (f.pts.length && now - f.pts[f.pts.length - 1].t > cfg.life) f.pts.pop();
       const L = f.line;
       L.n = 0;
-      const all = tip ? [{ p: tip, t: now, boost: boosting }].concat(f.pts) : f.pts;   // la ligne part toujours du bout de l'aileron
-      for (let i = 0; i < all.length; i++) {
-        const q = all[i], k = U.clamp((now - q.t) / cfg.life, 0, 1);
-        const pa = all[Math.max(0, i - 1)].p, pb = all[Math.min(all.length - 1, i + 1)].p;
+      // la ligne part toujours du bout de l'aileron ; v030 : parcours sans tableau intermédiaire (aucune allocation)
+      const head = f.head || (f.head = { p: null, t: 0, boost: false });
+      if (tip) { head.p = tip; head.t = now; head.boost = boosting; }
+      const off = tip ? 1 : 0, count = f.pts.length + off;
+      const at = (i) => (i < off ? head : f.pts[i - off]);
+      for (let i = 0; i < count; i++) {
+        const q = at(i), k = U.clamp((now - q.t) / cfg.life, 0, 1);
+        const pa = at(Math.max(0, i - 1)).p, pb = at(Math.min(count - 1, i + 1)).p;
         _d.subVectors(pa, pb); if (_d.lengthSq() < 1e-8) _d.copy(rocketFwd);
         if (q.boost) _c.copy(YELLOW).lerp(RED, Math.min(1, k * 1.6)); else _c.copy(WHITE);
         const alpha = (q.boost ? cfg.alphaBoost : cfg.alpha) * (1 - k) * this.camFade(q.p, camera);

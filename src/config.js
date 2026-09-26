@@ -5,7 +5,7 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v029',
+  version: 'v030',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
@@ -198,6 +198,30 @@ CC.CONFIG = {
   aaByDifficulty: { easy: 0.3, medium: 0.6, hard: 0.95 },
 
   audio: { master: 0.7, music: 0.28, sfx: 0.9 },
+
+  // v030 : niveaux de qualité graphique (src/core/quality.js) — réglage GRAPHICS : AUTO / HIGH / MEDIUM / LOW
+  quality: {
+    tiers: {
+      high:   { pixelRatio: 1.5,  shadowMap: 2048, shadows: true,  msaa: 4, bloom: true,  particles: 1 },
+      medium: { pixelRatio: 1,    shadowMap: 1024, shadows: true,  msaa: 0, bloom: true,  particles: 0.9 },
+      low:    { pixelRatio: 0.75, shadowMap: 512,  shadows: false, msaa: 0, bloom: false, particles: 0.55 },
+    },
+    autoDownFps: 42,             // AUTO : sous 42 images/s en vol pendant autoWindow s → niveau inférieur
+    autoWindow: 3,
+    maxFpsTouch: 60,             // écrans à 120 Hz : le jeu n'en calcule que 60 (batterie, chauffe)
+    pausedFps: 20,               // menus et pause : 20 images/s suffisent
+  },
+
+  // v030 : publicités d'EXEMPLE (src/ui/ads.js) — annonceurs fictifs, aucune régie ; le joueur peut les couper
+  ads: {
+    enabled: true,
+    interstitialEvery: 3,        // une interstitielle au plus tous les 3 niveaux terminés…
+    minGap: 90,                  // … et jamais moins de 90 s après la précédente
+    skipAfter: 5,                // s avant de pouvoir fermer l'interstitielle
+    interstitialTime: 15,        // s : fermeture automatique
+    rewardTime: 8,               // s à regarder pour la récompense (gain du niveau doublé)
+    bannerCycle: 8,              // s : rotation des annonceurs de la bannière du menu
+  },
 
   test: { fps: 30 },
 };

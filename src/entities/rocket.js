@@ -5,6 +5,7 @@
   const V = THREE.Vector3;
   const U = CC.U;
   const _a = new V(), _b = new V(), _c = new V(), _axis = new V(), _q = new THREE.Quaternion();
+  const _d = new V(), _hit = { t: 0, normal: new V() }, _z = new V(0, 0, 1), _rq = new THREE.Quaternion();   // v030 : objets réutilisés
 
   function rotateToward(vec, target, maxAngle) {
     const ang = vec.angleTo(target);
@@ -75,9 +76,13 @@
 
     nozzle(out) { return out.copy(this.pos).addScaledVector(this.fwd, -0.55); }
     // v026 : bouts des ailerons et pointe du nez en coordonnées du monde (départ des traînées)
+    // v030 : tableau et vecteurs réutilisés d'une image à l'autre (valables jusqu'à l'appel suivant)
     finTips() {
       this.mesh.updateMatrixWorld();
-      return (this.mesh.userData.finTips || []).map((t) => this.mesh.localToWorld(t.clone()));
+      const src = this.mesh.userData.finTips || [], out = this._tips || (this._tips = []);
+      out.length = src.length;
+      for (let i = 0; i < src.length; i++) out[i] = this.mesh.localToWorld((out[i] && out[i].isVector3 ? out[i] : new V()).copy(src[i]));
+      return out;
     }
     noseTip(out) {
       this.mesh.updateMatrixWorld();
@@ -152,8 +157,8 @@
       // cibles (OBB mobiles, hors grille)
       for (const t of game.targets) {
         if (!t.alive) continue;
-        const d = new V().subVectors(p1, this.pos);
-        const hit = CC.World.segBox(t.obb, this.pos, d, r + 0.1, { t: 0, normal: new V() });
+        const d = _d.subVectors(p1, this.pos);
+        const hit = CC.World.segBox(t.obb, this.pos, d, r + 0.1, _hit);
         if (hit) { this.pos.addScaledVector(d, hit.t); game.onTargetHit(t, this); return; }
       }
       const hit = world.sweep(this.pos, p1, r);
@@ -273,8 +278,8 @@
         J.core.material.opacity = J.core.userData.op * k; J.outer.material.opacity = J.outer.userData.op * k * (0.8 + 0.4 * f);
         J.disc.material.color.setRGB(1, 0.75 + 0.2 * k, 0.45 + 0.35 * k);
       }
-      _q.setFromUnitVectors(new V(0, 0, 1), this.fwd);
-      this.mesh.quaternion.copy(_q).multiply(new THREE.Quaternion().setFromAxisAngle(new V(0, 0, 1), this.roll));
+      _q.setFromUnitVectors(_z, this.fwd);
+      this.mesh.quaternion.copy(_q).multiply(_rq.setFromAxisAngle(_z, this.roll));
       this.mesh.position.copy(this.pos);
       // design : micro-vibration du corps sous poussée (quelques millimètres, désynchronisée du vacillement de la flamme)
       const vib = (this.thrustK || 0) * 0.006;

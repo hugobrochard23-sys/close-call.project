@@ -76,6 +76,14 @@
       this.w = 0; this.h = 0;
     }
 
+    // v030 : anticrénelage réglable (niveau de qualité) — la cible de rendu est recréée avec le nouveau nombre d'échantillons
+    setSamples(n) {
+      const isGL2 = this.renderer.capabilities.isWebGL2, s = isGL2 ? n : 0;
+      if (this.rtScene.samples === s) return;
+      this.rtScene.dispose();
+      this.rtScene = new THREE.WebGLRenderTarget(Math.max(1, this.w || 4), Math.max(1, this.h || 4), { samples: s });
+    }
+
     setSize(w, h) {
       if (w === this.w && h === this.h) return;
       this.w = w; this.h = h;
@@ -90,18 +98,21 @@
     render(scene, camera, p, time) {
       const r = this.renderer;
       r.setRenderTarget(this.rtScene); r.render(scene, camera);
-      this.bright.uniforms.tSrc.value = this.rtScene.texture; this.bright.uniforms.threshold.value = p.bloomThreshold;
-      this.pass(this.bright, this.rtA);
-      const bw = this.rtA.width, bh = this.rtA.height;
-      for (let i = 0; i < 2; i++) {
-        this.blur.uniforms.tSrc.value = this.rtA.texture; this.blur.uniforms.dir.value.set((1 + i) / bw, 0); this.pass(this.blur, this.rtB);
-        this.blur.uniforms.tSrc.value = this.rtB.texture; this.blur.uniforms.dir.value.set(0, (1 + i) / bh); this.pass(this.blur, this.rtA);
+      const bloom = this.bloom !== false;   // v030 : qualité LOW → pas de halo (5 passes économisées)
+      if (bloom) {
+        this.bright.uniforms.tSrc.value = this.rtScene.texture; this.bright.uniforms.threshold.value = p.bloomThreshold;
+        this.pass(this.bright, this.rtA);
+        const bw = this.rtA.width, bh = this.rtA.height;
+        for (let i = 0; i < 2; i++) {
+          this.blur.uniforms.tSrc.value = this.rtA.texture; this.blur.uniforms.dir.value.set((1 + i) / bw, 0); this.pass(this.blur, this.rtB);
+          this.blur.uniforms.tSrc.value = this.rtB.texture; this.blur.uniforms.dir.value.set(0, (1 + i) / bh); this.pass(this.blur, this.rtA);
+        }
       }
       const u = this.comp.uniforms;
       u.tScene.value = this.rtScene.texture; u.tBloom.value = this.rtA.texture;
       u.vig.value = p.vignette; u.vigR.value = p.vignetteRadius; u.vigS.value = p.vignetteSoftness;
       u.ca.value = p.chromatic; u.halftone.value = p.halftone; u.cell.value = p.halftoneCell * (this.h / 637);
-      u.bloomStr.value = p.bloomStrength; u.grain.value = p.grain; u.time.value = time % 100;
+      u.bloomStr.value = bloom ? p.bloomStrength : 0; u.grain.value = p.grain; u.time.value = time % 100;
       u.vigColor.value.set(p.vignetteColor || '#1a0c0c'); u.tint.value.set(p.tint || '#ffffff');
       u.flash.value = p.flash || 0; u.flashColor.value.set(p.flashColor || '#ffffff');
       u.lift.value.set(p.lift || '#000000'); u.saturation.value = p.saturation === undefined ? 1 : p.saturation;

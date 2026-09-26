@@ -444,3 +444,16 @@ appels de dessin égaux ou inférieurs à v027 (TRENCH RUN 105 contre 140), temp
 Vibrations dans l'application Android : le jeu appelle bien `navigator.vibrate` (elles marchent dans Chrome via GitHub Pages) ;
 dans une application qui affiche le jeu par une WebView, Android ne vibre que si l'application déclare la permission
 `android.permission.VIBRATE` dans son AndroidManifest.xml — correction à faire côté application.
+
+## v030 — optimisation mobile, interface tactile, publicités d'exemple
+
+**Changements (à la demande d'Hugo) :** rétro-analyse complète dans [MOBILE_AUDIT.md](MOBILE_AUDIT.md) —
+objets de calcul réutilisés (physique, caméra, commandes, traînées, missiles : 70–214 → 6–13 objets créés par image),
+qualité graphique AUTO / HIGH / MEDIUM / LOW (`src/core/quality.js`), 60 images/s au plus sur écran tactile et 20 en menu,
+pause + son suspendu en arrière-plan, menus portrait plein écran à boutons encadrés ≥ 44 points, libellés sans touches
+clavier sur mobile, tutoriel des 3 premiers vols, publicités d'exemple (`src/ui/ads.js` : bannière du menu, interstitielle
+tous les 3 niveaux au plus, récompensée « CASH X2 »). Outil de mesure : `tools/alloc.html`.
+
+**Vérification :** 9 niveaux au pilote automatique : temps et STYLE identiques à v029 au centième ; AUTOMAP 3 difficultés
+terminées ; aucune erreur. Téléphone simulé : qualité MEDIUM choisie, menus / pause / résultats sans chevauchement,
+publicités (délais, récompense unique, fermeture) ; ordinateur : HIGH, rendu d'origine.

@@ -99,8 +99,31 @@
       if (v !== 'B' && !lite) this.drawPopups(game);   // OBSERVÉ : aucune annonce de style dans les séquences au HUD B
       this.drawIndicators(game);
       this.drawMissileWarning(game);
+      if (lite) this.drawTutorial(game, W, H);
       const msg = game.centerMsg || (lite && game.state === 'AIM' ? 'TAP TO FIRE    HOLD: BOOST' : null);
       if (msg && !game.paused) this.text(msg, 0.5 * W, C.center.y * H, C.center.px, '#101010', { align: 'center', outline: '#f0f0f0' });   // v024 : pas par-dessus le menu pause
+    }
+
+    /* v030 : tutoriel du premier vol (écran tactile, jusqu'au premier niveau terminé) : trois consignes courtes, une à la
+     * fois, dans un cartouche en haut de l'écran (hors de la trajectoire), avec un pictogramme animé du geste. */
+    drawTutorial(game, W, H) {
+      if (game.settings.tutorialDone || (game.settings.tutorialFlights || 0) > 3 || game.state !== 'FLIGHT' || game.paused) return;
+      const t = game.flightTime || 0, steps = [['DRAG TO STEER', 'drag'], ['HOLD FINGER: BOOST', 'hold'], ['FINGER ON AN EDGE: TURN', 'edge']];
+      const i = Math.floor(t / 3.2);
+      if (i >= steps.length) return;
+      const [label, kind] = steps[i], k = (t % 3.2) / 3.2, a = Math.min(1, k * 6, (1 - k) * 6);
+      const ctx = this.ctx, px = this.refH * 0.0042, w = CC.Font.measure(label, px) + px * 14, h = px * 16, x = W / 2 - w / 2, y = H * 0.23;
+      ctx.globalAlpha = a;
+      ctx.fillStyle = 'rgba(10,10,14,0.72)'; ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = '#fdfd02'; ctx.lineWidth = Math.max(1, px * 0.5); ctx.strokeRect(x, y, w, h);
+      // pictogramme : doigt (rond) qui glisse, reste posé (anneau qui grossit), ou se place au bord
+      const cx = x + px * 6, cy = y + h / 2, r = px * 2.2;
+      ctx.fillStyle = '#f4f4f4';
+      const ox = kind === 'drag' ? Math.sin(k * Math.PI * 4) * px * 2.5 : kind === 'edge' ? px * 2.5 : 0;
+      ctx.beginPath(); ctx.arc(cx + ox, cy, r, 0, Math.PI * 2); ctx.fill();
+      if (kind === 'hold') { ctx.strokeStyle = '#fdfd02'; ctx.beginPath(); ctx.arc(cx, cy, r + px * (1 + 2 * ((k * 3) % 1)), 0, Math.PI * 2); ctx.stroke(); }
+      this.text(label, x + px * 11, y + h / 2 - px * 3.5, 0.0042, '#f4f4f4', {});
+      ctx.globalAlpha = 1;
     }
 
     // Jauge d'essence (v009) : longueur du cadre proportionnelle au réservoir du niveau, remplissage = essence restante.

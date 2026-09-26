@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<!-- Outil de développement (jamais chargé par le jeu) : compte les objets mathématiques créés par image.
+     Ouvrir tools/alloc.html?test=1&autopilot=1&fps=30&level=N, puis dans la console : __allocs(nImages). -->
+<html lang="fr"><head><meta charset="utf-8"><link rel="stylesheet" href="../style.css"></head><body><div id="game"></div>
+<script src="../assets/lib/three.min.js"></script>
+<script>
+  window.__count = {};
+  for (const name of ['Vector3', 'Vector2', 'Quaternion', 'Matrix4', 'Matrix3', 'Euler', 'Color', 'Box3']) {
+    const Base = THREE[name];
+    THREE[name] = class extends Base { constructor(...a) { super(...a); __count[name] = (__count[name] || 0) + 1; } };
+  }
+  window.__allocs = (n) => {
+    const snap = () => Object.assign({}, __count);
+    const a = snap();
+    for (let i = 0; i < n; i++) { CC.harness.step(1); if (CC.harness.state().done) break; }
+    const b = snap(), out = {};
+    let total = 0;
+    for (const k in b) { const d = ((b[k] || 0) - (a[k] || 0)) / n; if (d) { out[k] = +d.toFixed(1); total += d; } }
+    out.total = +total.toFixed(1);
+    return out;
+  };
+</script>
+<script src="../src/config.js"></script>
+<script src="../src/core/util.js"></script>
+<script src="../src/ui/font.js"></script>
+<script src="../src/rendering/textures.js"></script>
+<script src="../src/rendering/postfx.js"></script>
+<script src="../src/rendering/particles.js"></script>
+<script src="../src/rendering/trails.js"></script>
+<script src="../src/physics/collision.js"></script>
+<script src="../src/world/builder.js"></script>
+<script src="../src/entities/skins.js"></script>
+<script src="../src/entities/models.js"></script>
+<script src="../src/entities/targets.js"></script>
+<script src="../src/entities/rocket.js"></script>
+<script src="../src/systems/camera.js"></script>
+<script src="../src/systems/style.js"></script>
+<script src="../src/audio/audio.js"></script>
+<script src="../src/ui/hud.js"></script>
+<script src="../src/ui/menu.js"></script>
+<script src="../src/ui/shop.js"></script>
+<script src="../src/ui/ads.js"></script>
+<script src="../src/input/input.js"></script>
+<script src="../src/input/haptics.js"></script>
+<script src="../src/input/touch.js"></script>
+<script src="../src/world/levels/level1_city.js"></script>
+<script src="../src/world/levels/level2_brick.js"></script>
+<script src="../src/world/levels/level3_canyon.js"></script>
+<script src="../src/world/levels/level4_cave.js"></script>
+<script src="../src/world/levels/level5_woods.js"></script>
+<script src="../src/world/levels/level6_construction.js"></script>
+<script src="../src/world/levels/level7_night.js"></script>
+<script src="../src/world/levels/level8_trench.js"></script>
+<script src="../src/world/levels/level9_nightcanyon.js"></script>
+<script src="../src/world/levels/generated.js"></script>
+<script src="../src/core/quality.js"></script>
+<script src="../src/core/game.js"></script>
+<script src="../game.js"></script>
+</body></html>
