@@ -64,11 +64,32 @@
         }
       }
       if (this.type === 'heli' || this.type === 'heliCamo') this.updateObb();
+      if (rk && game.state === 'FLIGHT' && (this.type === 'tank' || this.type === 'heli' || this.type === 'heliCamo')) this.updateAA(dt, game, rk);
       if (this.alert.visible) this.alert.position.y = this.size[1] + 1.2 + Math.sin(this.t * 6) * 0.1;
     }
 
+    /* v020 : tir anti-aérien. Le tireur doit voir la roquette (pas à travers un bâtiment) et l'avoir suivie un instant ;
+     * précision, anticipation, cadence et vitesse dépendent de la menace du niveau (CC.CONFIG.aa). */
+    updateAA(dt, game, rk) {
+      const A = CC.CONFIG.aa, d = game.aaThreat(), L = (p) => p[0] + (p[1] - p[0]) * d;
+      this.aaCool = (this.aaCool || 0) - dt;
+      const from = _v2.copy(this.obb.c);
+      if (this.type === 'tank') from.addScaledVector(this.obb.uy, this.obb.hy + 0.9); else from.addScaledVector(this.obb.uy, -(this.obb.hy + 0.6));
+      const to = _v.subVectors(rk.pos, from);
+      const dist = to.length();
+      if (dist > L(A.range) || dist < A.minRange) { this.aaSeen = 0; return; }
+      to.divideScalar(dist);
+      if (game.world.raycast(from, to, dist - 1, (b) => b.kind === 'solid' || b.kind === 'brick')) { this.aaSeen = 0; return; }
+      this.aaSeen = (this.aaSeen || 0) + dt;
+      if (this.aaSeen < L(A.firstDelay) || this.aaCool > 0) return;
+      if (game.missiles.filter((m) => m.alive).length >= A.maxAlive) return;
+      this.aaCool = L(A.cooldown);
+      const miss = A.miss[1] + (A.miss[0] - A.miss[1]) * Math.pow(1 - d, A.missCurve);   // la précision progresse dès le milieu du parcours
+      game.spawnEnemyMissile(from.clone(), rk, { miss, lead: L(A.lead), turn: L(A.turn), speed: L(A.speed), life: A.life });
+    }
+
     kill() { this.alive = false; this.object.visible = false; }
-    reset() { this.alive = true; this.object.visible = true; this.alert.visible = false; }
+    reset() { this.alive = true; this.object.visible = true; this.alert.visible = false; this.aaCool = 0; this.aaSeen = 0; }
   }
 
   class Soldier {
@@ -102,13 +123,17 @@
   }
 
   class EnemyMissile {
-    constructor(from, target) {
+    // opts (v020, tirs anti-aériens) : { miss, lead, turn, speed, life } ; sans opts : missile du soldat, inchangé
+    constructor(from, target, opts) {
       this.object = CC.Models.enemyMissile();
       this.pos = from.clone();
       // ESTIMATION : visée imprécise (OBSERVÉ séq. 3 : le missile frôle la roquette sans la toucher)
-      this.miss = new V(U.rng() - 0.5, U.rng() * 0.6, U.rng() - 0.5).normalize().multiplyScalar(5 + U.rng() * 3);
+      const missDist = opts ? opts.miss * (0.7 + U.rng() * 0.6) : 5 + U.rng() * 3;
+      this.miss = new V(U.rng() - 0.5, U.rng() * 0.6, U.rng() - 0.5).normalize().multiplyScalar(missDist);
       this.dir = new V().subVectors(target.pos, from).add(this.miss).normalize();
-      this.speed = 48; this.turn = 0.8; this.life = 5; this.alive = true; this.puff = 0;
+      this.speed = opts ? opts.speed : 48; this.turn = opts ? opts.turn : 0.8; this.life = opts ? opts.life : 5;
+      this.lead = opts ? opts.lead : 0; this.fuse = opts ? CC.CONFIG.aa.fuse : 1.0;
+      this.alive = true; this.puff = 0;
       this.object.position.copy(this.pos);
     }
     update(dt, game) {
@@ -116,7 +141,9 @@
       this.life -= dt;
       const rk = game.rocket && game.rocket.active ? game.rocket : null;
       if (rk) {
-        const want = _v.subVectors(rk.pos, this.pos).add(this.miss).normalize();
+        // anticipation : vise où sera la roquette au moment de l'impact (fraction `lead` du temps de vol restant)
+        const tHit = rk.pos.distanceTo(this.pos) / this.speed;
+        const want = _v.subVectors(rk.pos, this.pos).addScaledVector(rk.vel, tHit * this.lead).add(this.miss).normalize();
         const ang = this.dir.angleTo(want);
         if (ang > 1e-4) this.dir.lerp(want, Math.min(1, this.turn * dt / ang)).normalize();
       }
@@ -126,7 +153,16 @@
       this.object.quaternion.setFromUnitVectors(new V(0, 0, 1), this.dir);
       this.puff -= dt;
       if (this.puff <= 0) { this.puff = 0.018; game.effects.trailPuff(this.pos.clone().addScaledVector(this.dir, -0.4)); }
-      if (rk && rk.pos.distanceTo(this.pos) < 1.0) { this.alive = false; game.onRocketCrash('missile', this.pos.clone(), this.dir.clone().negate()); return; }
+      // v020 : plus courte distance pendant l'image (mouvement relatif), pas seulement en fin d'image :
+      // face à face, les deux engins se rapprochent de plusieurs mètres par image et « sautaient » la détonation
+      let closest = Infinity;
+      if (rk) {
+        const r0 = _v.subVectors(p0, this.lastRk || rk.pos), r1 = _v2.subVectors(this.pos, rk.pos);
+        const dr = new V().subVectors(r1, r0), k = dr.lengthSq() > 1e-9 ? U.clamp(-r0.dot(dr) / dr.lengthSq(), 0, 1) : 1;
+        closest = r0.addScaledVector(dr, k).length();
+        this.lastRk = (this.lastRk || new V()).copy(rk.pos);
+      }
+      if (rk && closest < this.fuse) { this.alive = false; game.onRocketCrash('missile', this.pos.clone(), this.dir.clone().negate()); return; }
       const hit = game.world.sweep(p0, this.pos, 0.08);
       if (hit || this.life <= 0) { this.alive = false; game.effects.explosion(this.pos.clone(), null, false); game.audio.play('boomSmall', this.pos); }
     }

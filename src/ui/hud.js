@@ -88,6 +88,7 @@
       }
       if (v !== 'B') this.drawPopups(game);   // OBSERVÉ : aucune annonce de style dans les séquences au HUD B
       this.drawIndicators(game);
+      this.drawMissileWarning(game);
       if (game.centerMsg) this.text(game.centerMsg, 0.5 * W, C.center.y * H, C.center.px, '#101010', { align: 'center', outline: '#f0f0f0' });
     }
 
@@ -122,6 +123,16 @@
         const x = this.portrait ? 0.5 + (p.x - P.cx) * 0.3 : p.x;   // v017 : en vertical, annonces recentrées (sinon elles débordent à droite)
         this.text(p.segments, x * W, (p.y - rise) * H, P.px, '#ffffff', { align: 'center', skew: P.skew, alpha });
       }
+    }
+
+    // v020 : « MISSILE! » clignotant quand un missile ennemi approche, pour laisser au joueur le temps de manœuvrer
+    drawMissileWarning(game) {
+      const rk = game.rocket;
+      if (game.state !== 'FLIGHT' || !rk.active) return;
+      const near = game.missiles.some((m) => m.alive && m.pos.distanceTo(rk.pos) < CC.CONFIG.aa.warnDist);
+      if (!near || Math.floor(performance.now() / 180) % 2) return;
+      const W = this.canvas.width, H = this.canvas.height;
+      this.text('MISSILE!', 0.5 * W, 0.2 * H, 0.0042, CC.CONFIG.hud.colors.red, { align: 'center', outline: CC.CONFIG.hud.colors.outline });
     }
 
     // Point rouge au bord de l'écran vers les cibles hors champ (ESTIMATION, vu séq. 3/4).

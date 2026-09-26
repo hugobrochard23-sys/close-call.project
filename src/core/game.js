@@ -298,8 +298,16 @@
       this.telemetry.event('crash', { kind, pos: pos.toArray().map((v) => +v.toFixed(2)), runTime: +this.runTime.toFixed(3) });
     }
 
-    spawnEnemyMissile(from, rocket) {
-      const m = new CC.EnemyMissile(from, rocket);
+    // v020 : niveau de menace des tirs anti-aériens, 0 (premier niveau) → 1 (dernier) ; AUTOMAP : selon la difficulté
+    aaThreat() {
+      const L = this.level;
+      if (!L) return 0;
+      if (L.generated) return CC.CONFIG.aaByDifficulty[L.difficulty] !== undefined ? CC.CONFIG.aaByDifficulty[L.difficulty] : 0.5;
+      return CC.Levels.length > 1 ? U.clamp(this.levelIndex / (CC.Levels.length - 1), 0, 1) : 0;
+    }
+
+    spawnEnemyMissile(from, rocket, opts) {
+      const m = new CC.EnemyMissile(from, rocket, opts);
       this.scene.add(m.object); this.missiles.push(m);
       this.audio.play('launch');
       this.telemetry.event('enemyMissile', {});

@@ -5,7 +5,7 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v019',
+  version: 'v020',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
@@ -138,6 +138,25 @@ CC.CONFIG = {
     perStylePoint: 0.05,         // gain proportionnel aux points de STYLE
     recordBonus: 100,            // bonus pour un nouveau record de temps
   },
+
+  // Missiles anti-aériens des tanks et hélicoptères (CHOIX v020, Hugo). Chaque paire [début, fin] est interpolée selon la
+  // menace du niveau : 0 (CITY) → 1 (NIGHT FOREST) ; AUTOMAP : aaByDifficulty. Toujours moins maniables que la roquette.
+  aa: {
+    range: [90, 140],            // m : portée de tir (le tireur doit voir la roquette : pas à travers un bâtiment)
+    minRange: 45,                // m : trop près, il ne tire plus (sinon la cible visée tire à bout portant pendant l'approche finale)
+    firstDelay: [1.5, 0.6],      // s : temps de réaction après avoir repéré la roquette
+    cooldown: [5.0, 1.6],        // s : délai entre deux tirs d'un même tireur
+    miss: [6, 0.3],              // m : erreur de visée, courbe en (1 − menace)^missCurve : ≈ 4 m à 0,17 · 2,4 m à 0,33 · 1,3 m à 0,5 · 0,7 m à 0,67
+    missCurve: 2.5,
+    lead: [0, 0.6],              // anticipation de la trajectoire de la roquette (0 = vise où elle est)
+    turn: [0.5, 1.1],            // rad/s : virage du missile, toujours sous celui du joueur (joystick 1,5 rad/s, clavier 1,8) : on peut le semer
+    speed: [50, 68],             // m/s, juste sous la vitesse de pointe de la roquette (≈ 71 m/s) : à pleine poussée on le distance
+    life: 5,                     // s avant autodestruction
+    maxAlive: 3,                 // missiles ennemis en vol en même temps, au plus
+    fuse: 1.6,                   // m : détonation de proximité
+    warnDist: 90,                // m : avertissement « MISSILE! » à l'écran
+  },
+  aaByDifficulty: { easy: 0.3, medium: 0.6, hard: 0.95 },
 
   audio: { master: 0.7, music: 0.28, sfx: 0.9 },
 

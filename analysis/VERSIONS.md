@@ -298,3 +298,17 @@ Vitesse de rotation de la visée : 138 → 86 °/s à fond, 39 → 16 °/s à mi
 **Vérification (D maintenue 0,5 s, moteur allumé, AUTOMAP facile) :** retard de la trajectoire sur la visée 19,2° → 8,2° ;
 horizon penché max 7,9° → 0° ; à-coup max de la caméra 174 → 92 °/s², rotation max 64 → 42 °/s.
 Looping Espace + W : 508° en 5 s, tuyère sans saut (≤ 1,5 % / image). Pilote automatique : 10 cartes terminées.
+
+## v020 — missiles anti-aériens des tanks et hélicoptères
+
+**Changements (à la demande d'Hugo) :** tanks et hélicoptères (cibles) tirent des missiles guidés sur la roquette ; menace
+0 → 1 selon le niveau (AUTOMAP : `aaByDifficulty`) qui règle cadence, précision (courbe `missCurve`), anticipation, vitesse
+et virage (`CC.CONFIG.aa`) ; tir seulement en vue directe, entre `minRange` (45 m) et la portée ; au plus 3 en vol ;
+détonation de proximité 1,6 m. Correction : la détonation des missiles ennemis (soldats compris) testait la distance
+en fin d'image seulement et ratait les croisements rapides ; elle utilise maintenant la plus courte distance pendant l'image.
+HUD : « MISSILE! » clignotant. Pilote automatique : esquive (virage franc) si un missile est sur trajectoire de collision.
+
+**Vérification :** duels contrôlés (6 tirs par ligne, face et côté) : touché en volant droit 0/6 jusqu'à la menace 0,33,
+3/6 de 0,5 à 0,83, 6/6 à 1 ; en virant tant que l'alerte clignote : 0/6 à la menace 1. Sans esquive, CONSTRUCTION :
+8 tirs, 8 impacts. Avec l'esquive : 10 cartes + 2 graines AUTOMAP terminées, aucun impact, essence minimale 3,3 s.
+Tireurs présents dans BRICKWORKS, CANYON, WOODS, CONSTRUCTION et AUTOMAP (CITY : menace 0, CAVE et NIGHT FOREST : aucun tireur).

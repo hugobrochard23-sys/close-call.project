@@ -168,6 +168,24 @@
         const pn = (this.level.pnGain !== undefined ? this.level.pnGain : 1.3) * Math.pow(11 / CC.CONFIG.rocket.grip, 2);
         const aim = desired.clone().addScaledVector(new V().subVectors(desired, vDir), pn).normalize();
         if (aim.angleTo(desired) > 1.0) aim.copy(desired).lerp(aim, 1.0 / aim.angleTo(desired)).normalize();
+        // v020 : esquive des missiles anti-aériens, comme un joueur : virer franchement perpendiculairement à l'axe
+        // du missile, du côté où l'on s'écarte déjà
+        // seulement si le missile est sur une trajectoire de collision (passage prévu à moins de 3,5 m)
+        const onCourse = (m) => {
+          const r = new V().subVectors(m.pos, rk.pos), vr = new V().copy(m.dir).multiplyScalar(m.speed).sub(rk.vel);
+          const t = -r.dot(vr) / Math.max(vr.lengthSq(), 1e-6);
+          return t > 0 && r.addScaledVector(vr, t).length() < 3.5;
+        };
+        const threat = g.missiles.filter((m) => m.alive && m.pos.distanceTo(rk.pos) < CC.CONFIG.aa.warnDist && onCourse(m))
+          .sort((a, b) => a.pos.distanceTo(rk.pos) - b.pos.distanceTo(rk.pos))[0];
+        if (threat) {
+          const los = new V().subVectors(rk.pos, threat.pos).normalize();
+          let away = new V().crossVectors(los, new V(0, 1, 0));
+          if (away.lengthSq() < 1e-4) away.set(1, 0, 0);
+          away.normalize();
+          if (this.evadeSide === undefined) this.evadeSide = away.dot(rk.vel) >= 0 ? 1 : -1;
+          aim.addScaledVector(away, 1.6 * this.evadeSide).normalize();
+        } else this.evadeSide = undefined;
         this.aimAt(new V().copy(rk.pos).addScaledVector(aim, 20), dt, 14);
         let wantOff = false;
         for (const a of this.actions) {

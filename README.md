@@ -62,6 +62,13 @@ Réglages : `rocket.freeBoost`, `rocket.fuelDefault` dans `src/config.js`, `fuel
 (`camera.followLag`, plus petit = caméra plus libre). En pilotant, on voit donc la roquette tourner à l'écran ; le réticule
 indique la direction visée.
 
+**Missiles anti-aériens (v020).** Les tanks et les hélicoptères tirent sur la roquette quand ils la voient (jamais à travers
+un bâtiment), entre 45 m et 90 à 140 m. La menace monte de CITY (0) à NIGHT FOREST (1) ; AUTOMAP : 0,3 / 0,6 / 0,95.
+Avec elle : tirs plus rapprochés (5 s → 1,6 s), visée plus juste (erreur 6 m → 0,3 m), anticipation de la trajectoire,
+missiles plus rapides (50 → 68 m/s). Ils restent moins maniables que la roquette (virage 0,5 → 1,1 rad/s contre 1,5 à 1,8)
+et plus lents qu'elle à pleine poussée : on les sème en virant franchement, et ils explosent sur les murs.
+« MISSILE! » clignote en rouge quand l'un d'eux approche (moins de 90 m). Réglages : `aa` dans `src/config.js`.
+
 Un contact rasant avec le sol ou un toit fait **glisser** la roquette. Un choc de face la fait **exploser**.
 Les vitres, les murs de briques fins et les caisses se brisent.
 
