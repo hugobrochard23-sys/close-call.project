@@ -24,8 +24,9 @@ Compatible Chrome, Edge, Firefox et Safari récents (WebGL requis).
 
 ## Travailler à plusieurs
 
-Le dépôt GitHub `hugobrochard23-sys/close-call.project` (privé) est la version de référence : **la version GitHub
-prime toujours sur celle d'un ordinateur**. Pour y accéder, il faut être invité comme collaborateur par Hugo.
+Le dépôt GitHub `hugobrochard23-sys/close-call.project` (public) est la version de référence : **la version GitHub
+prime toujours sur celle d'un ordinateur**. Tout le monde peut le lire et le télécharger ; pour y envoyer des
+modifications (`git push`), il faut être invité comme collaborateur par Hugo (Settings → Collaborators).
 
 ```bash
 git clone https://github.com/hugobrochard23-sys/close-call.project.git
