@@ -57,6 +57,8 @@ Réglages : `rocket.freeBoost`, `rocket.fuelDefault` dans `src/config.js`, `fuel
 Elle continue sur sa lancée ; seul le réacteur (Espace, dans l'axe du nez), la gravité (5,72 m/s², moyenne Terre / Lune)
 et l'air la font changer de trajectoire. Pour tourner : pivoter, puis pousser ; pour freiner : retourner le nez et pousser
 (ou rétro-fusées). La roquette ne tourne plus sur son axe long.
+À l'écran : le **x** montre où pointe la tête, le **cercle vert** (v014) montre où va réellement la roquette ; en poussant,
+le cercle glisse vers le x. Le cercle est masqué quand la roquette file vers la caméra.
 
 **Caméra de vol (v012).** Au tir, la caméra garde l'orientation du lanceur et **ne tourne plus jamais** pendant le vol :
 elle suit la roquette en translation, à distance constante, et la regarde donc toujours. La roquette peut pointer vers

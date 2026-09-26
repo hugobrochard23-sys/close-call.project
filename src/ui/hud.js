@@ -74,9 +74,34 @@
         ctx.strokeStyle = col.crosshair; ctx.lineWidth = Math.max(1, H / 540);
         ctx.beginPath(); ctx.moveTo(cx - sz, cy - sz); ctx.lineTo(cx + sz, cy + sz); ctx.moveTo(cx + sz, cy - sz); ctx.lineTo(cx - sz, cy + sz); ctx.stroke();
       }
+      this.drawVelocityMarker(game);
       if (v !== 'B') this.drawPopups(game);   // OBSERVÉ : aucune annonce de style dans les séquences au HUD B
       this.drawIndicators(game);
       if (game.centerMsg) this.text(game.centerMsg, 0.5 * W, C.center.y * H, C.center.px, '#101010', { align: 'center', outline: '#f0f0f0' });
+    }
+
+    // Repère de trajectoire (v014) : cercle vert à trois branches là où va réellement la roquette (sa vitesse),
+    // à distinguer du réticule « x » qui montre où pointe la tête (avec l'inertie, les deux diffèrent).
+    // Caché si la roquette file vers la caméra (point derrière l'écran).
+    drawVelocityMarker(game) {
+      const rk = game.rocket;
+      if (game.state !== 'FLIGHT' || !rk.active || rk.vel.lengthSq() < 4) return;
+      const W = this.canvas.width, H = this.canvas.height, ctx = this.ctx, M = CC.CONFIG.hud.velocityMarker;
+      const p = this._v.copy(rk.vel).normalize().multiplyScalar(60).add(rk.pos).project(game.camera);
+      if (p.z > 1) return;
+      const x = (p.x * 0.5 + 0.5) * W, y = (0.5 - p.y * 0.5) * H;
+      if (x < 0 || x > W || y < 0 || y > H) return;
+      const r = M.size * H / 2, t = r * 0.8;
+      ctx.lineWidth = Math.max(1.5, H / 400);
+      for (const pass of [[CC.CONFIG.hud.colors.outline, ctx.lineWidth + 2], [M.color, ctx.lineWidth]]) {   // contour sombre puis trait vert : lisible sur ciel clair
+        ctx.strokeStyle = pass[0]; ctx.lineWidth = pass[1];
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.moveTo(x - r, y); ctx.lineTo(x - r - t, y);
+        ctx.moveTo(x + r, y); ctx.lineTo(x + r + t, y);
+        ctx.moveTo(x, y - r); ctx.lineTo(x, y - r - t);
+        ctx.stroke();
+      }
     }
 
     // Jauge d'essence (v009) : longueur du cadre proportionnelle au réservoir du niveau, remplissage = essence restante.

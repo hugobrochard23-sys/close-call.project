@@ -5,7 +5,7 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v013',
+  version: 'v014',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
@@ -102,6 +102,7 @@ CC.CONFIG = {
     gauge:   { x0: 0.4150, x1: 0.5870, y0: 0.8950, y1: 0.9120 },
     fuel:    { x0: 0.0300, w: 0.2200, y0: 0.9000, y1: 0.9180, labelY: 0.8600, px: 0.00300 },   // CHOIX v009 : jauge d'essence en bas à gauche
     crosshair: { x: 0.5, y: 0.402, size: 0.0110 },
+    velocityMarker: { size: 0.0225, color: '#56ff5a' },   // CHOIX v014 : repère de trajectoire réelle
     popups:  { cx: 0.785, jitter: 0.045, y0: 0.52, pitch: 0.029, yMin: 0.37, px: 0.00315, skew: -0.26 },
     center:  { y: 0.575, px: 0.00300 },
     colors: {

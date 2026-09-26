@@ -240,3 +240,11 @@ Pilote automatique : 10 cartes terminées, chiffres identiques à v011.
 **Vérification :** pivot D 0,5 s moteur coupé : cap de la trajectoire 0,0° → 0,0° (seule la tête bouge) ; puis 1 s de poussée
 nez à droite : cap 0° → 38,8° ; gravité mesurée 5,72 m/s² (traînée retirée) ; ailerons immobiles entre deux images à 0,5 s d'écart.
 Pilote automatique : 10 cartes terminées sans crash, réserve minimale 4,2 s (NIGHT FOREST).
+
+## v014 — repère de trajectoire réelle
+
+**Changement (CHOIX) :** cercle vert à trois branches (`hud.velocityMarker`) projeté dans la direction de la vitesse, en plus du
+réticule « x » (direction de la tête). Masqué si la roquette file vers la caméra.
+
+**Vérification :** tête pivotée à droite sans poussée : cercle dans l'axe de la rue, x à droite ; après 0,7 s de poussée :
+le cercle s'est déplacé vers le x. Aucune erreur.
