@@ -26,6 +26,7 @@
   };
   U.rng = U.makeRng(1234);      // flux principal (effets, particules)
   U.levelRng = U.makeRng(99);   // flux de génération de niveau
+  U.fx = U.makeRng(4242);       // design : flux purement visuel (particules, micro-mouvements) — le gameplay n'en dépend pas
 
   // Bruit de valeur 2D lissé (terrain, rochers).
   U.hash2 = (x, y, seed) => {

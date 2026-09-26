@@ -190,7 +190,7 @@
       this.object.position.copy(this.pos);
       this.object.quaternion.setFromUnitVectors(new V(0, 0, 1), this.dir);
       this.puff -= dt;
-      if (this.puff <= 0) { this.puff = 0.018; game.effects.trailPuff(this.pos.clone().addScaledVector(this.dir, -0.4)); }
+      if (this.puff <= 0) { this.puff = 0.018; game.effects.trailPuff(this.pos.clone().addScaledVector(this.dir, -0.4), this.dir); }
       // v020 : plus courte distance pendant l'image (mouvement relatif), pas seulement en fin d'image :
       // face à face, les deux engins se rapprochent de plusieurs mètres par image et « sautaient » la détonation
       let closest = Infinity;

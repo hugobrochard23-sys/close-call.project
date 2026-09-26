@@ -263,6 +263,16 @@
 
     updateMesh(dt) {
       this.roll += dt * 2.2;
+      // design : jet de tuyère (longueur et éclat suivent l'intensité du moteur, vacillement rapide)
+      const J = this.mesh.userData.jet;
+      if (J) {
+        const k = this.thrustK || 0, f = this.flick === undefined ? 0.5 : this.flick;
+        J.group.visible = k > 0.01 || this.retroActive;
+        J.core.scale.set(0.85 + 0.3 * f, (0.7 + 0.6 * f) * k, 0.85 + 0.3 * f);
+        J.outer.scale.set(0.9 + 0.25 * f, (0.6 + 0.7 * U.fx()) * k, 0.9 + 0.25 * f);
+        J.core.material.opacity = J.core.userData.op * k; J.outer.material.opacity = J.outer.userData.op * k * (0.8 + 0.4 * f);
+        J.disc.material.color.setRGB(1, 0.75 + 0.2 * k, 0.45 + 0.35 * k);
+      }
       _q.setFromUnitVectors(new V(0, 0, 1), this.fwd);
       this.mesh.quaternion.copy(_q).multiply(new THREE.Quaternion().setFromAxisAngle(new V(0, 0, 1), this.roll));
       this.mesh.position.copy(this.pos);
@@ -284,27 +294,54 @@
       }
     }
 
+    /* Propulsion (design) : intensité qui monte à l'allumage et retombe à la coupure (thrustK), vacillement lissé (flick),
+     * flamme en couches le long du trajet de la tuyère, cœur blanc + étincelles à chaque image, fumée en volume derrière,
+     * bouffée à l'allumage et à la coupure, lumière du moteur qui vacille et change de teinte. */
     emitEffects(dt) {
-      const fx = this.game.effects;
+      const fx = this.game.effects, r = U.fx;
       const noz = this.nozzle(new V());
-      if (this.thrusting) {
-        // cubes espacés le long du trajet de la tuyère (traînée continue)
+      const on = this.thrusting;
+      const was = this.thrustK || 0;
+      this.thrustK = on ? Math.min(1, was + dt / 0.12) : Math.max(0, was - dt / 0.18);
+      this.flick = U.lerp(this.flick || 0.5, r(), U.damp(28, dt));
+      if (on && was === 0) {                                              // allumage : bouffée de flamme et de fumée
+        for (let i = 0; i < 10; i++) fx.exhaust(noz, this.fwd, this.vel, 1.3, r());
+        for (let i = 0; i < 6; i++) fx.exhaustSmoke(_b.copy(noz).addScaledVector(this.fwd, -r.range(0.2, 0.8)), this.vel, 1.2);
+      }
+      if (!on && was === 1) {                                             // coupure : petit nuage qui reste en arrière
+        for (let i = 0; i < 5; i++) fx.exhaustSmoke(_b.copy(noz).addScaledVector(this.fwd, -r.range(0, 0.5)), this.vel, 0.9);
+        this.cutT = 0.6;
+      }
+      const k = this.thrustK;
+      if (k > 0) {
+        // flamme : débit fixe (≈ 260 cubes/s), points répartis le long du trajet de la tuyère pendant l'image
         const seg = _a.subVectors(noz, this.lastNozzle);
         const len = seg.length();
-        const spacing = 0.12;
-        this.emitAcc += len;
-        let k = 0;
-        while (this.emitAcc >= spacing && k < 40) {
-          this.emitAcc -= spacing; k++;
-          const f = 1 - this.emitAcc / Math.max(len, 1e-4);
-          fx.flameCube(_b.copy(this.lastNozzle).addScaledVector(seg, U.clamp(f, 0, 1)).clone(), this.fwd, this.vel, 1);
+        this.emitAcc += dt * 260;
+        let n = 0;
+        const total = Math.floor(this.emitAcc);
+        while (this.emitAcc >= 1 && n < 30) {
+          this.emitAcc -= 1; n++;
+          fx.exhaust(_b.copy(this.lastNozzle).addScaledVector(seg, n / Math.max(1, total)), this.fwd, this.vel, k * (0.85 + 0.3 * this.flick), this.flick);
         }
-        if (k === 0 && U.rng() < dt * 30) fx.flameCube(noz.clone(), this.fwd, this.vel, 0.8);
-        this.light.intensity = 1.8 + Math.sin(this.age * 60) * 0.3 + U.rng() * 0.25;
+        fx.exhaustCore(noz, this.fwd, this.vel, k, dt);
+        // fumée : une bouffée tous les 0,32 m, un peu derrière la flamme
+        this.smokeAcc = (this.smokeAcc || 0) + len;
+        let m = 0;
+        while (this.smokeAcc >= 0.32 && m < 20) {
+          this.smokeAcc -= 0.32; m++;
+          const f = 1 - this.smokeAcc / Math.max(len, 1e-4);
+          fx.exhaustSmoke(_b.copy(this.lastNozzle).addScaledVector(seg, U.clamp(f, 0, 1)).addScaledVector(this.fwd, -r.range(0.6, 1.2)), this.vel, k);
+        }
+        // lumière du moteur : vacille, se réchauffe (orange → jaune) avec l'intensité
+        this.light.intensity = (1.7 + 0.7 * this.flick + Math.sin(this.age * 53) * 0.15) * k;
+        this.light.color.setRGB(1, 0.5 + 0.18 * this.flick, 0.18 + 0.1 * this.flick);
       } else {
-        this.emitAcc = 0;
+        this.emitAcc = 0; this.smokeAcc = 0;
         this.light.intensity = this.retroActive ? 1.2 : 0;
-        if (!this.ignited && U.rng() < dt * 70) fx.smokePuff(noz.clone(), this.vel.clone().multiplyScalar(0.1), 0.45, 0.6);
+        if (!this.ignited && r() < dt * 70) fx.smokePuff(noz.clone(), this.vel.clone().multiplyScalar(0.1), 0.45, 0.6);
+        // après la coupure : filets de fumée de la tuyère encore chaude
+        if (this.cutT > 0) { this.cutT -= dt; if (r() < dt * 30) fx.smokePuff(noz.clone(), this.vel.clone().multiplyScalar(0.05), 0.22 * (this.cutT / 0.6) + 0.08, 0.7); }
       }
       this.light.position.copy(noz).addScaledVector(this.fwd, -1.6);   // assez loin derrière : éclaire les murs, pas le corps de la roquette (OBSERVÉ : roquette gris clair)
       if (this.retroActive) {
