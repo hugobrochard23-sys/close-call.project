@@ -43,6 +43,7 @@
       else if (key === 'glass') m = new THREE.MeshLambertMaterial({ color: '#8fd0ff', transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide });
       else if (key === 'glassWarm') m = new THREE.MeshLambertMaterial({ color: '#d8d28a', transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide });
       else if (key.startsWith('emis:')) m = new THREE.MeshLambertMaterial({ color: key.slice(5), emissive: key.slice(5), emissiveIntensity: 0.8 });
+      else if (key.startsWith('cloud:')) m = new THREE.MeshBasicMaterial({ color: key.slice(6), fog: false, vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false });
       else m = new THREE.MeshLambertMaterial({ map: CC.Textures.get(key), vertexColors: true });
       this.materials.set(key, m);
       return m;
@@ -163,6 +164,7 @@
 
     finish() {
       this.decorateBuildings();
+      this.decorateSky();
       for (const [key, b] of this.batches) {
         if (!b.idx.length) continue;
         const g = geometryFromBatch(b);
@@ -243,6 +245,29 @@
           const gh = 4.2, o = 0.12;
           this.addBoxGeometry(new V3(pos.x, bottom + gh / 2, pos.z), q, w + 2 * o, gh, d + 2 * o, { side: 'storefront', top: 'none', bottom: 'none' }, B.tint);
           this.box({ p: toWorld(0, bottom + gh + 0.12, 0).toArray(), s: [w + 0.5, 0.24, d + 0.5], r: [0, yaw * 180 / Math.PI, 0], mat: 'concreteWarm', collide: false });   // bandeau
+        }
+      }
+    }
+
+    /* Design : nuages voxel (ciels de jour seulement) — amas de pavés aplatis, dessous légèrement plus sombre, très haut et
+     * loin du parcours ; aucune collision. La teinte suit l'horizon du niveau. */
+    decorateSky() {
+      const env = this.level.env;
+      if (!env || !env.sky || env.sky.stars || env.clouds === false) return;
+      const top = new THREE.Color(env.sky.top), hsl = {}; top.getHSL(hsl);
+      if (hsl.l < 0.45) return;                                        // ciel sombre (nuit, crépuscule rouge) : pas de nuages
+      const dr = U.makeRng((this.level.seed || 7) * 13 + 1);
+      const R = this.level.route || (this.level.routes && this.level.routes[0]) || [[0, 0, 0]];
+      const c = R[Math.floor(R.length / 2)];
+      const col = '#' + new THREE.Color('#e8ecf2').lerp(new THREE.Color(env.sky.top), 0.18).getHexString();
+      const under = '#' + new THREE.Color('#b8c2d0').lerp(new THREE.Color(env.sky.top), 0.25).getHexString();   // dessous ombré
+      for (let i = 0; i < 26; i++) {
+        const a = dr() * 6.28, d = dr.range(260, 820), y = dr.range(170, 300);
+        const cx = c[0] + Math.cos(a) * d, cz = c[2] + Math.sin(a) * d, n = dr.int(4, 8), sz = dr.range(0.7, 1.4);
+        for (let k = 0; k < n; k++) {
+          const w = dr.range(26, 60) * sz, h = dr.range(7, 14) * sz, dd = dr.range(20, 44) * sz;
+          const p = new V(cx + dr.range(-40, 40) * sz, y + dr.range(-4, 6) * sz, cz + dr.range(-26, 26) * sz);
+          this.addBoxGeometry(p, new THREE.Quaternion(), w, h, dd, { side: 'cloud:' + col, top: 'cloud:#ffffff', bottom: 'cloud:' + under }, k % 3 ? '#ffffff' : '#e6e8ec', null, false);   // pas d'ombre portée
         }
       }
     }

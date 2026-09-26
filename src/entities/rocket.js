@@ -276,6 +276,9 @@
       _q.setFromUnitVectors(new V(0, 0, 1), this.fwd);
       this.mesh.quaternion.copy(_q).multiply(new THREE.Quaternion().setFromAxisAngle(new V(0, 0, 1), this.roll));
       this.mesh.position.copy(this.pos);
+      // design : micro-vibration du corps sous poussée (quelques millimètres, désynchronisée du vacillement de la flamme)
+      const vib = (this.thrustK || 0) * 0.006;
+      if (vib > 0) this.mesh.position.add(_c.set((U.fx() - 0.5) * vib, (U.fx() - 0.5) * vib, 0));
       // corde
       const G = this.grapple;
       this.rope.visible = G.active;

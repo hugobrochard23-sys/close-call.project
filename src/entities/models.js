@@ -153,6 +153,14 @@
     box(0.025, 0.025, 0.025, basic('#e0802a'), 0, 0.24, -0.08, g);
     box(0.08, 0.22, 0.1, lam('#1c1d1f'), 0, -0.16, -0.05, g);
     const muzzle = cyl(0.14, 0.14, 0.06, lam('#4a4b50'), 12, g); muzzle.rotation.x = Math.PI / 2; muzzle.position.z = -1.0;
+    // design : colliers, bande jaune de sécurité près de la bouche, lunette (objectif bleuté), poignée avant, pavillon arrière
+    for (const z of [-0.75, 0.05]) cylZ(0.14, 0.14, 0.05, lam('#2a2b2e'), 12, 0, 0, z, g);
+    cylZ(0.135, 0.135, 0.06, basic('#c8a020'), 12, 0, 0, -0.9, g);
+    cylZ(0.045, 0.05, 0.3, lam('#1c1d1f'), 8, 0.14, 0.22, -0.1, g);
+    const lens = cylZ(0.04, 0.04, 0.01, basic('#3a6a9a'), 8, 0.14, 0.22, -0.26, g); lens.castShadow = false;
+    box(0.06, 0.08, 0.1, lam('#2a2b2e'), 0.08, 0.17, -0.1, g);
+    const fg = box(0.06, 0.2, 0.08, lam('#1c1d1f'), 0, -0.2, -0.55, g); fg.rotation.x = 0.25;
+    cylZ(0.17, 0.2, 0.08, lam('#1c1d1f'), 12, 0, 0, 0.52, g);
     g.userData.bore = boreRing(g, 0.13, 0.25, '#3c3d41', 0.3, -1.0);
     return g;
   };
@@ -179,6 +187,16 @@
       leg.position.set(Math.sin(a) * 0.35, 0.5, Math.cos(a) * 0.35);
       leg.rotation.set(Math.cos(a) * 0.35, 0, -Math.sin(a) * 0.35);
     }
+    // design : colliers et bouche renforcée, viseur, câble de mise à feu, patins au bout des pieds
+    for (const z of [-0.55, 0.1, 0.55]) cylZ(0.215, 0.215, 0.06, lam('#2c2d30'), 12, 0, 0, z, head);
+    cylZ(0.24, 0.22, 0.12, lam('#2c2d30'), 12, 0, 0, -0.78, head);
+    box(0.08, 0.14, 0.3, lam('#2c2d30'), 0.24, 0.16, -0.1, head);
+    cylZ(0.05, 0.05, 0.02, basic('#3a6a9a'), 8, 0.24, 0.18, -0.26, head).castShadow = false;
+    for (let i = 0; i < 3; i++) {
+      const a = i * Math.PI * 2 / 3;
+      box(0.16, 0.04, 0.16, lam('#1a1b1d'), Math.sin(a) * 0.56, -0.08 + 0.02, Math.cos(a) * 0.56, g);
+    }
+    const cable = cylZ(0.015, 0.015, 1.1, lam('#111'), 4, 0.15, 0.55, 0.7, g); cable.rotation.x = Math.PI / 2 + 0.9;
     g.userData.head = head;
     g.userData.bore = boreRing(head, 0.2, 0.35, '#1e1f22', 0.7, -0.8);
     return g;

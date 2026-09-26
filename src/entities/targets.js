@@ -391,6 +391,10 @@
       this.pos.addScaledVector(this.dir, this.speed * dt);
       this.object.position.copy(this.pos);
       this.object.quaternion.setFromUnitVectors(new V(0, 0, 1), this.dir);
+      // design : le missile tourne sur lui-même, sa tuyère vacille et grandit pendant la phase d'accélération
+      this.spinA = (this.spinA || 0) + dt * 9; this.object.rotateZ(this.spinA);
+      const gl = this.object.userData.glow;
+      if (gl) { const f = 0.8 + 0.4 * U.fx(); gl.scale.set(f, (0.8 + 0.6 * (this.speed / this.vmax)) * f, f); }
       this.puff -= dt;
       if (this.puff <= 0) { this.puff = 0.018; game.effects.trailPuff(this.pos.clone().addScaledVector(this.dir, -0.4), this.dir); }
       // v020 : plus courte distance pendant l'image (mouvement relatif), pas seulement en fin d'image :

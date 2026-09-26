@@ -146,6 +146,30 @@
       if (game.state !== 'FLIGHT' || !rk.active || !w || game.paused) return;
       const W = this.canvas.width, H = this.canvas.height, col = CC.CONFIG.hud.colors;
       if (w.missile && !(Math.floor(performance.now() / 180) % 2)) this.text('MISSILE!', 0.5 * W, 0.2 * H, 0.0058, col.red, { align: 'center', outline: col.outline });
+      // design : repère de chaque missile ennemi proche — crochets rouges autour de lui s'il est à l'écran, flèche au bord
+      // de l'écran sinon (on voit d'où vient la menace pour l'esquiver)
+      const ctx = this.ctx, cam = game.camera, lw = Math.max(2, H / 360);
+      for (const m of game.missiles) {
+        if (!m.alive || m.pos.distanceTo(rk.pos) > CC.CONFIG.aa.warnDist) continue;
+        const p = this._v.copy(m.pos).project(cam), behind = p.z > 1;
+        if (!behind && Math.abs(p.x) < 0.95 && Math.abs(p.y) < 0.95) {
+          const sx = (p.x * 0.5 + 0.5) * W, sy = (-p.y * 0.5 + 0.5) * H, r = Math.max(7, this.refH * 0.018), c = r * 0.45;
+          ctx.strokeStyle = col.red; ctx.lineWidth = lw;
+          ctx.beginPath();
+          for (const [dx, dy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { ctx.moveTo(sx + dx * r, sy + dy * (r - c)); ctx.lineTo(sx + dx * r, sy + dy * r); ctx.lineTo(sx + dx * (r - c), sy + dy * r); }
+          ctx.stroke();
+          continue;
+        }
+        let x = p.x, y = p.y;
+        if (behind) { x = -x; y = -y; }
+        const a = Math.atan2(-y, x), m2 = Math.max(Math.abs(x), Math.abs(y)) || 1;
+        const ex = U.clamp((x / m2 * 0.5 + 0.5) * W, W * 0.05, W * 0.95), ey = U.clamp((-y / m2 * 0.5 + 0.5) * H, H * 0.08, H * 0.92);
+        const s = Math.max(8, this.refH * 0.022);
+        ctx.save(); ctx.translate(ex, ey); ctx.rotate(a);
+        ctx.fillStyle = col.red; ctx.strokeStyle = col.outline; ctx.lineWidth = lw * 0.6;
+        ctx.beginPath(); ctx.moveTo(s, 0); ctx.lineTo(-s * 0.6, -s * 0.7); ctx.lineTo(-s * 0.25, 0); ctx.lineTo(-s * 0.6, s * 0.7); ctx.closePath();
+        ctx.fill(); ctx.stroke(); ctx.restore();
+      }
       if (w.lowFuel && !(Math.floor(performance.now() / 300) % 2)) this.text('LOW FUEL', 0.5 * W, 0.2 * H + 0.075 * this.refH, 0.0046, col.orange, { align: 'center', outline: col.outline });
     }
 
