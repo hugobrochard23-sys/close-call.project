@@ -6,9 +6,16 @@ On pilote un missile qui ne s'arrête jamais : il suit le réticule, frôle les 
 Tous les assets (textures pixel-art, modèles, police, sons, musique) sont **originaux** et générés par le code.
 Aucun fichier du jeu d'origine n'est utilisé, et le matériel de référence (vidéo, images extraites) n'est pas publié ici.
 
+**▶ Jouer en ligne (ordinateur, téléphone, tablette) : https://hugobrochard23-sys.github.io/cold-impact.project/**
+
 ---
 
-## Télécharger et jouer
+## Jouer en ligne
+
+Le jeu est publié par **GitHub Pages** depuis la branche `main` (dossier racine) : chaque `git push` sur `main` met le
+site à jour automatiquement en une à deux minutes. Rien à installer ; sur téléphone, les commandes tactiles s'activent seules.
+
+## Télécharger et jouer hors ligne
 
 1. Sur la page GitHub du dépôt : bouton vert **Code → Download ZIP**, puis décompresser.
    Ou en ligne de commande : `git clone` de l'adresse du dépôt.
