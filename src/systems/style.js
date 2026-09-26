@@ -1,5 +1,5 @@
 /* Système de STYLE : combos en direct ("PROXIMITY 11 x1,1") puis messages finalisés ("PROXIMITY FLIGHT! +13").
- * MESURÉ : STYLE = somme des gains ; CLOSE CALL = 100 × multiplicateur ; BOMB SMASH ≈ 7,5 × vitesse ;
+ * MESURÉ : STYLE = somme des gains ; COLD IMPACT = 100 × multiplicateur ; BOMB SMASH ≈ 7,5 × vitesse ;
  * couleurs : multiplicateur jaune, G orange (MANOEUVRE) / rouge (PULL), BOMB SMASH vert, SPEED BONUS bleu.
  * ESTIMATION : seuils de distance, taux de points, formule des G. */
 (function () {
@@ -86,17 +86,17 @@
       const skimOn = (ground < cfg.groundSkimDist || this.groundContact > 0) && sp > 15;
       this.combo('skim', skimOn, cfg.groundSkimRate, dt, 'GROUND SKIM!', 'SKIM');
       this.groundContact = Math.max(0, this.groundContact - dt);
-      // CLOSE CALL : passage très près d'un obstacle
+      // COLD IMPACT : passage très près d'un obstacle
       const C = this.cc;
       C.cool -= dt;
-      if (wall < cfg.closeCallDist && sp > 25) { C.armed = true; C.min = Math.min(C.min, wall); }
-      else if (C.armed && wall > cfg.closeCallDist * 1.4) {
+      if (wall < cfg.coldImpactDist && sp > 25) { C.armed = true; C.min = Math.min(C.min, wall); }
+      else if (C.armed && wall > cfg.coldImpactDist * 1.4) {
         C.armed = false;
         if (C.cool <= 0) {
-          const mult = U.clamp(1 + 2 * (1 - Math.max(0, C.min) / cfg.closeCallDist), 1, 3);
+          const mult = U.clamp(1 + 2 * (1 - Math.max(0, C.min) / cfg.coldImpactDist), 1, 3);
           const W = CC.CONFIG.hud.colors;
-          this.award('CLOSE CALL!', cfg.closeCallBase * Math.round(mult * 10) / 10, [{ t: 'CLOSE CALL! ', c: W.white }, { t: 'X' + U.formatDec(mult, 1), c: W.yellow }], 1.3);
-          C.cool = cfg.closeCallCooldown;
+          this.award('COLD IMPACT!', cfg.coldImpactBase * Math.round(mult * 10) / 10, [{ t: 'COLD IMPACT! ', c: W.white }, { t: 'X' + U.formatDec(mult, 1), c: W.yellow }], 1.3);
+          C.cool = cfg.coldImpactCooldown;
         }
         C.min = Infinity;
       }

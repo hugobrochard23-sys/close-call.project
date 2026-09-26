@@ -65,7 +65,7 @@
       b.box({ p: [0, 21.8, Cc], s: [9.2, 0.4, 31], mat: 'concreteDark' });
       b.glass([0, 17, -205.2 + DZ], [9.6, 9.6, 0.12]);
       b.glass([0, 17, -235.8 + DZ], [9.6, 9.6, 0.12]);
-      // Toits bas + panneau "CLOSE CALL" + grue
+      // Toits bas + panneau "COLD IMPACT" + grue
       bld(-45, -8, -272 + DZ, -236 + DZ, 20); bld(8, 45, -272 + DZ, -236 + DZ, 16);
       const bb = CC.Textures.special('billboard');
       const dark = new THREE.MeshLambertMaterial({ color: '#2a2a2a' });

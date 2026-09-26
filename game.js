@@ -1,4 +1,4 @@
-/* CLOSE CALL — point d'entrée. Crée le jeu et démarre la boucle (ou le banc de test si ?test=1). */
+/* COLD IMPACT — point d'entrée. Crée le jeu et démarre la boucle (ou le banc de test si ?test=1). */
 (function () {
   function showError(msg) {
     let el = document.getElementById('cc-error');

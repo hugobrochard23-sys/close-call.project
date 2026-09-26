@@ -133,7 +133,7 @@
   "crashes": 0,
   "targets": 1,
   "styleEvents": [
-   "CLOSE CALL! +230",
+   "COLD IMPACT! +230",
    "5,1G MANOEUVRE! +171",
    "BOMB SMASH! +508",
    "SPEED BONUS +683"
@@ -236,18 +236,18 @@
   "crashes": 0,
   "targets": 4,
   "styleEvents": [
-   "CLOSE CALL! +150",
-   "CLOSE CALL! +250",
+   "COLD IMPACT! +150",
+   "COLD IMPACT! +250",
    "PROXIMITY FLIGHT! +5",
    "PROXIMITY FLIGHT! +4",
    "GROUND SKIM! +10",
    "BOMB SMASH! +473",
-   "CLOSE CALL! +220",
+   "COLD IMPACT! +220",
    "BOMB SMASH! +466",
-   "CLOSE CALL! +190",
+   "COLD IMPACT! +190",
    "PROXIMITY FLIGHT! +4",
    "BOMB SMASH! +469",
-   "CLOSE CALL! +270",
+   "COLD IMPACT! +270",
    "PROXIMITY FLIGHT! +5",
    "GROUND SKIM! +5",
    "BOMB SMASH! +452"
@@ -889,7 +889,7 @@
   "targets": 1,
   "styleEvents": [
    "GROUND SKIM! +10",
-   "CLOSE CALL! +230",
+   "COLD IMPACT! +230",
    "GROUND SKIM! +13",
    "PROXIMITY FLIGHT! +15",
    "BOMB SMASH! +489"

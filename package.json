@@ -1,7 +1,7 @@
 {
-  "name": "close-call",
+  "name": "cold-impact",
   "version": "0.1.0",
-  "description": "CLOSE CALL — prototype jouable reconstruit à partir de la vidéo de référence (outils de test et de comparaison)",
+  "description": "COLD IMPACT — prototype jouable reconstruit à partir de la vidéo de référence (outils de test et de comparaison)",
   "main": "tools/serve.js",
   "directories": {
     "test": "tests"

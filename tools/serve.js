@@ -14,4 +14,4 @@ http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': types[path.extname(f)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
     res.end(data);
   });
-}).listen(port, () => console.log('CLOSE CALL : http://localhost:' + port));
+}).listen(port, () => console.log('COLD IMPACT : http://localhost:' + port));

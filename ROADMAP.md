@@ -1,4 +1,4 @@
-# CLOSE CALL — ce qu'il manque pour un jeu compétitif et rentable
+# COLD IMPACT — ce qu'il manque pour un jeu compétitif et rentable
 
 État au 2026-09-23, après le renommage et le premier passage de simplification.
 Rien de cette liste n'est implémenté : c'est le plan pour la reprise.

@@ -150,7 +150,7 @@
         }
       });
     } else if (name === 'billboard') {
-      // Panneau original "CLOSE CALL" (remplace la marque du jeu d'origine — décision validée)
+      // Panneau original "COLD IMPACT" (remplace la marque du jeu d'origine — décision validée)
       tex = make(name, 256, 128, (g) => {
         g.fillStyle = '#1f6a2a'; g.fillRect(0, 0, 256, 128);
         g.fillStyle = '#2f9a3a'; g.fillRect(6, 6, 244, 116);
@@ -158,8 +158,8 @@
         // fusée stylisée
         g.fillStyle = '#c9c9c9'; g.fillRect(18, 30, 34, 10); g.fillStyle = '#d42a1f'; g.fillRect(52, 32, 6, 6);
         g.fillStyle = '#f5d000'; g.fillRect(18, 28, 4, 14); g.fillStyle = '#ff8a1a'; g.fillRect(8, 31, 10, 8);
-        CC.Font.draw(g, 'CLOSE', 70, 16, 4.2, '#ffffff', { outline: '#1a1a1a', skew: -0.2 });
-        CC.Font.draw(g, 'CALL', 70, 52, 4.2, '#ffcf2e', { outline: '#1a1a1a', skew: -0.2 });
+        CC.Font.draw(g, 'COLD', 70, 16, 3.6, '#ffffff', { outline: '#1a1a1a', skew: -0.2 });
+        CC.Font.draw(g, 'IMPACT', 70, 52, 3.6, '#ffcf2e', { outline: '#1a1a1a', skew: -0.2 });
         CC.Font.draw(g, 'PLAY IT IN YOUR BROWSER', 128, 99, 1.9, '#1a1a1a', { align: 'center', outline: '' });
       });
       tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;

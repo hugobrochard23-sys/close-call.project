@@ -383,3 +383,15 @@ message central masqué pendant la pause.
 glissé immédiat → pas de boost ; bord droit 1 s → 56° à droite, centre → 0° ; VIBRATION : MEDIUM → HIGH → OFF → LOW → MEDIUM.
 Ordinateur : visée au lanceur intacte, animation du tir ; pilote automatique : 12 cartes terminées.
 Limite connue : iPhone — Safari n'a pas l'API Vibration ; repli par interrupteur invisible bloqué par Apple depuis iOS 26.5.
+
+## v025 — le jeu s'appelle désormais COLD IMPACT
+
+**Changements (à la demande d'Hugo) :** nom du jeu, du dépôt GitHub (`hugobrochard23-sys/cold-impact.project`) et des
+dossiers ; « CLOSE CALL » remplacé partout (titre, menu, panneau publicitaire du niveau 1 — lettres un peu plus petites
+pour que IMPACT tienne —, bonus de frôlement « COLD IMPACT! », réglages `style.coldImpact*`, anciens rapports de mesure).
+Sauvegarde : nouvelle clé `coldimpact.save` ; l'ancienne clé est relue une fois si la nouvelle n'existe pas encore, pour
+que personne ne perde sa progression (seule mention restante de l'ancien nom dans le code).
+
+**Vérification :** titre de la page et du menu (ordinateur et téléphone 375×812) ; ancienne sauvegarde de test
+(4 242 centimes, records niveaux 1-2, musique coupée) reprise à l'identique ; pilote automatique niveau 1 terminé
+(14,9 s, STYLE 846) avec le bonus « COLD IMPACT! » ; panneau publicitaire rendu sans débordement.

@@ -1,4 +1,4 @@
-# CLOSE CALL
+# COLD IMPACT
 
 Prototype jouable en HTML/WebGL, inspiré de la bande-annonce du jeu *Dumbfire*.
 On pilote un missile qui ne s'arrête jamais : il suit le réticule, frôle les murs pour gagner du style et doit toucher la cible.
@@ -24,13 +24,13 @@ Compatible Chrome, Edge, Firefox et Safari récents (WebGL requis).
 
 ## Travailler à plusieurs
 
-Le dépôt GitHub `hugobrochard23-sys/close-call.project` (public) est la version de référence : **la version GitHub
+Le dépôt GitHub `hugobrochard23-sys/cold-impact.project` (public) est la version de référence : **la version GitHub
 prime toujours sur celle d'un ordinateur**. Tout le monde peut le lire et le télécharger ; pour y envoyer des
 modifications (`git push`), il faut être invité comme collaborateur par Hugo (Settings → Collaborators).
 
 ```bash
-git clone https://github.com/hugobrochard23-sys/close-call.project.git
-cd close-call.project
+git clone https://github.com/hugobrochard23-sys/cold-impact.project.git
+cd cold-impact.project
 node tools/serve.js 8123
 ```
 
@@ -162,7 +162,7 @@ le nombre d'ailerons, des pièces rapportées et la couleur de flamme.
 ## Architecture
 
 ```text
-close-call/
+cold-impact/
 ├── index.html            point d'entrée (scripts classiques : marche en file://)
 ├── style.css             zone 16:9 centrée, HUD superposé
 ├── game.js               démarrage (et affichage des erreurs)
@@ -208,7 +208,7 @@ Tout se règle dans `src/config.js`. Paramètres clés :
 | `camera.crosshairY` | 0,402 | MESURÉ |
 | `camera.fovV` | 70° | ESTIMATION |
 | `hud.*` | positions et tailles | MESURÉES (boîtes englobantes du texte) |
-| `style.closeCallBase` / `bombSmashPerMs` | 100 / 7,5 | MESURÉ (x2,9 → +290 ; 67 m/s → +504) |
+| `style.coldImpactBase` / `bombSmashPerMs` | 100 / 7,5 | MESURÉ (x2,9 → +290 ; 67 m/s → +504) |
 
 ## Protocole de test et comparaison
 

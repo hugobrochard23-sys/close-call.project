@@ -1,11 +1,11 @@
-/* CLOSE CALL — paramètres centralisés.
+/* COLD IMPACT — paramètres centralisés.
  * Chaque valeur porte son origine : MESURÉ (vidéo), ESTIMATION (déduit), CHOIX (décision de conception).
  * Voir analysis/ANALYSE_REFERENCE.md pour les mesures. */
 window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v024',
+  version: 'v025',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
@@ -93,9 +93,9 @@ CC.CONFIG = {
     groundSkimRate: 16,
     comboGrowth: 0.10,           // multiplicateur +0,1/s (MESURÉ : x1,1 après ~1 s)
     endGrace: 0.35,              // s hors zone avant de finaliser
-    closeCallDist: 1.2,          // ESTIMATION
-    closeCallBase: 100,          // MESURÉ : x2,9 → +290 ; x1,4 → +142
-    closeCallCooldown: 0.6,
+    coldImpactDist: 1.2,         // ESTIMATION
+    coldImpactBase: 100,         // MESURÉ : x2,9 → +290 ; x1,4 → +142
+    coldImpactCooldown: 0.6,
     manoeuvreG: 3.6,             // ESTIMATION : seuil de G affiché
     manoeuvreMinTime: 0.35,
     manoeuvrePointsPerG: 80,     // ESTIMATION : ≈ 80 × (G − 2,95)

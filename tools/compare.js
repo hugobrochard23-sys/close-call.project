@@ -170,7 +170,7 @@ fs.writeFileSync(path.join(OUT, 'metrics.json'), JSON.stringify(results.map((r) 
 
 // ---------- rapport ----------
 const lines = [];
-lines.push(`# CLOSE CALL — mesures de comparaison ${version}`, '', `Généré le ${new Date().toISOString().slice(0, 16).replace('T', ' ')} par tools/compare.js.`, '',
+lines.push(`# COLD IMPACT — mesures de comparaison ${version}`, '', `Généré le ${new Date().toISOString().slice(0, 16).replace('T', ' ')} par tools/compare.js.`, '',
   'Alignement : temps de course depuis le tir (référence : temps vidéo − instant du tir mesuré). Images 1132×636.', '');
 lines.push('## Synthèse par niveau', '', '| Niveau | Instants | Similarité couleur | Δ luminance | Δ contraste | Impact clone / réf. (s) | Allumage (s) | Éjection (m/s) | Crashs |', '|---|---|---|---|---|---|---|---|---|');
 for (const r of results) lines.push(`| L${r.L.n} ${r.L.name} | ${r.samples} | ${f1(r.sim * 100)} % | ${f1(r.dLum)} | ${f1(r.dContrast)} | ${f1(r.hitClone)} / ${f1(r.hitRef)} | ${f1(r.ignition)} (réf. 0,63) | ${f1(r.ejectSpeed)} (réf. 31) | ${r.crashes} |`);

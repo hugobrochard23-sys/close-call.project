@@ -110,7 +110,8 @@
     // ---------- sauvegarde / réglages ----------
     loadSave() {
       let s = null;
-      try { s = JSON.parse(localStorage.getItem('closecall.save') || 'null'); } catch (e) { s = null; }
+      // Clé d'avant le changement de nom : reprise une seule fois pour ne pas perdre la progression des joueurs.
+      try { s = JSON.parse(localStorage.getItem('coldimpact.save') || localStorage.getItem('closecall.save') || 'null'); } catch (e) { s = null; }
       this.save = s || { best: {} };
       this.save.best = this.save.best || {};
       // Boutique (v007) : solde en centimes, cosmétiques possédés, cosmétique équipé.
@@ -124,7 +125,7 @@
     writeSave() {
       if (this.testMode) return;
       this.save.settings = this.settings;
-      try { localStorage.setItem('closecall.save', JSON.stringify(this.save)); } catch (e) { /* stockage indisponible */ }
+      try { localStorage.setItem('coldimpact.save', JSON.stringify(this.save)); } catch (e) { /* stockage indisponible */ }
     }
     applySettings() { this.audio.setVolumes(CC.CONFIG.audio.master, this.settings.music, this.settings.sfx); this.writeSave(); }
 

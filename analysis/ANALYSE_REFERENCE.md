@@ -266,7 +266,7 @@ Crop et ratio · synchronisation temps réel du chrono · vitesse d'éjection 31
 plage de vitesse 26–87 m/s · courbes de vitesse séq. 3 et 4 · freinage des rétro-fusées · chronologie du lancement
 (flash 0,03 s, fumée jusqu'à 0,35 s, allumage 0,63 s) · position du réticule (50 %, 40,2 %) · distribution de la position
 de la roquette à l'écran · positions et tailles de tous les éléments du HUD · couleurs de référence · formats numériques
-(`0:04,62`, `1.315`) · barème STYLE (additivité, CLOSE CALL = base 100/200 × multiplicateur, BOMB SMASH ≈ 7,5 × vitesse) ·
+(`0:04,62`, `1.315`) · barème STYLE (additivité, COLD IMPACT = base 100/200 × multiplicateur, BOMB SMASH ≈ 7,5 × vitesse) ·
 durée des messages · séquence d'explosion.
 
 ### Éléments ESTIMÉS
