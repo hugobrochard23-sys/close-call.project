@@ -163,7 +163,7 @@
         let x = p.x, y = p.y;
         if (behind) { x = -x; y = -y; }
         const a = Math.atan2(-y, x), m2 = Math.max(Math.abs(x), Math.abs(y)) || 1;
-        const ex = U.clamp((x / m2 * 0.5 + 0.5) * W, W * 0.05, W * 0.95), ey = U.clamp((-y / m2 * 0.5 + 0.5) * H, H * 0.08, H * 0.92);
+        const ex = U.clamp((x / m2 * 0.5 + 0.5) * W, W * 0.08, W * 0.92), ey = U.clamp((-y / m2 * 0.5 + 0.5) * H, H * 0.16, H * 0.84);   // hors des coins du HUD
         const s = Math.max(8, this.refH * 0.022);
         ctx.save(); ctx.translate(ex, ey); ctx.rotate(a);
         ctx.fillStyle = col.red; ctx.strokeStyle = col.outline; ctx.lineWidth = lw * 0.6;
