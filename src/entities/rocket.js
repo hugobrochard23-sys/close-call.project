@@ -157,7 +157,7 @@
       }
       if (this.sliding > 0) this.sliding -= dt;
       this.speed = this.vel.length();
-      const gRaw = (Math.max(aLat, aRope)) / 9.81;   // G terrestres, quelle que soit la gravité du jeu
+      const gRaw = (Math.max(aLat, aRope)) / 9.81;   // G terrestres : gravité du jeu réduite (v016), affichage et STYLE inchangés
       this.gForce += (gRaw * cfg.gDisplayScale - this.gForce) * U.damp(10, dt);
     }
 

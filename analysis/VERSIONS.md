@@ -257,3 +257,13 @@ et réservoirs de v012). Conservés : gravité 5,715 m/s² (v013), G affichés e
 
 **Vérification :** pilote automatique : 10 cartes terminées sans crash, réserves identiques à v012 (minimum 3,2 s, NIGHT FOREST) ;
 Espace + W 5 s : 497° de rotation de la trajectoire, toujours en vol ; rotation de la caméra 0° ; cercle vert affiché.
+
+## v016 — retour à la v011, gravité Terre / Lune conservée
+
+**Changements (à la demande d'Hugo) :** tout le code du jeu (`src/`, `index.html`, `style.css`, `game.js`) et le README restaurés
+à l'identique de v011 : caméra qui suit la roquette avec retard (`camera.followLag`) et se met sur le dos avec elle, pilotage
+dans le repère de la roquette, loopings. Abandonnés : caméra fixe (v012), vol à inertie (v013), cercle vert (v014).
+Seule différence avec v011 : gravité 5,715 m/s² (moyenne Terre / Lune), G affichés maintenus en G terrestres.
+
+**Vérification :** pilote automatique : 10 cartes terminées sans crash (réserve minimale 3,2 s) ; Espace + W 6 s : 601° de rotation,
+toujours en vol, tuyère sans saut (≤ 1,6 % de l'écran par image) — mêmes valeurs que les mesures de v011.

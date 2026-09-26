@@ -6,14 +6,14 @@
   const U = CC.U;
   const V = THREE.Vector3;
   const _q = new THREE.Quaternion(), _e = new THREE.Euler(0, 0, 0, 'YXZ');
-  const AX = new V(1, 0, 0), AY = new V(0, 1, 0);
+  const AX = new V(1, 0, 0), AY = new V(0, 1, 0), FWD = new V(0, 0, -1);
 
   class Input {
     constructor(game, el) {
       this.game = game; this.el = el;
       this.yaw = 0; this.pitch = 0;
       // v011 : visée = orientation complète (quaternion), sans butée à ±88° : loopings et vol sur le dos possibles
-      this.aimQ = new THREE.Quaternion();
+      this.aimQ = new THREE.Quaternion(); this.pitchActiveT = 0;
       this.keys = {}; this.edges = {};
       this.fireEdge = false; this.grappleHeld = false; this.grappleEdge = false;
       this.locked = false; this.enabled = true;
@@ -68,28 +68,31 @@
     requestLock() { try { const p = this.el.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignoré */ } }
     exitLock() { if (document.pointerLockElement) document.exitPointerLock(); }
 
-    /* Au lanceur : lacet / tangage de la visée. En vol (v012) : rotations autour des axes FIXES de l'écran
-     * (la caméra ne tourne pas) : W/S font basculer la roquette vers le haut / le bas de l'écran (looping complet
-     * en maintenant la touche), A/D la font tourner comme sur un plateau (elle peut pointer vers la caméra). */
+    // Rotations dans le repère de la roquette : lacet autour de son « haut », tangage autour de sa « droite ».
     addAim(dy, dp) {
-      const rig = this.game.rig;
-      if (this.game.state === 'FLIGHT' && rig) {
-        if (dy) this.aimQ.premultiply(_q.setFromAxisAngle(rig.camUp, dy));
-        if (dp) this.aimQ.premultiply(_q.setFromAxisAngle(rig.camRight, dp));
-      } else {
-        if (dy) this.aimQ.multiply(_q.setFromAxisAngle(AY, dy));
-        if (dp) this.aimQ.multiply(_q.setFromAxisAngle(AX, dp));
-      }
+      if (dy) this.aimQ.multiply(_q.setFromAxisAngle(AY, dy));
+      if (dp) { this.aimQ.multiply(_q.setFromAxisAngle(AX, dp)); this.pitchActiveT = 0.3; }
       this.aimQ.normalize();
     }
     setAim(yaw, pitch) { this.aimQ.setFromEuler(_e.set(pitch, yaw, 0, 'YXZ')); }
 
-    // Au lanceur : visée classique (pas de roulis, tangage borné). En vol : aucune contrainte.
-    constrainAim() {
-      if (this.game.state === 'FLIGHT') return;
-      _e.setFromQuaternion(this.aimQ, 'YXZ');
-      const lim = U.deg(CC.CONFIG.input.maxPitchDeg);
-      this.setAim(_e.y, U.clamp(_e.x, -lim, lim));
+    /* Au lanceur : visée classique (pas de roulis, tangage borné). En vol : horizon remis à plat doucement,
+     * sauf pendant un tangage (sinon un looping serait interrompu) et près de la verticale (roulis indéfini). */
+    constrainAim(dt) {
+      const flying = this.game.state === 'FLIGHT';
+      this.pitchActiveT = Math.max(0, this.pitchActiveT - dt);
+      if (!flying) {
+        _e.setFromQuaternion(this.aimQ, 'YXZ');
+        const lim = U.deg(CC.CONFIG.input.maxPitchDeg);
+        this.setAim(_e.y, U.clamp(_e.x, -lim, lim));
+        return;
+      }
+      const f = FWD.clone().applyQuaternion(this.aimQ);
+      if (this.pitchActiveT > 0 || Math.abs(f.y) > 0.9 || dt <= 0) return;
+      const up = AY.clone().applyQuaternion(this.aimQ);
+      const want = AY.clone().addScaledVector(f, -f.y).normalize();
+      const ang = Math.atan2(new V().crossVectors(up, want).dot(f), up.dot(want));
+      this.aimQ.premultiply(_q.setFromAxisAngle(f, ang * U.damp(CC.CONFIG.input.autoLevel, dt))).normalize();
     }
 
     // État consommé par le jeu à chaque image.

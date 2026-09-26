@@ -5,7 +5,7 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v015',
+  version: 'v016',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
@@ -17,7 +17,7 @@ CC.CONFIG = {
 
   physics: {
     fixedDt: 1 / 240,
-    gravity: 5.715,              // CHOIX v013, gardé en v015 (Hugo) : moyenne Terre (9,81) / Lune (1,62) ; ne s'applique qu'à la roquette
+    gravity: 5.715,              // CHOIX d'Hugo (v013, gardé en v016) : moyenne Terre (9,81) / Lune (1,62) ; ne s'applique qu'à la roquette
   },
 
   rocket: {
@@ -37,7 +37,7 @@ CC.CONFIG = {
     slideFriction: 5.0,          // m/s² de perte en glissade
     breakSpeedFactor: 0.88,      // perte de vitesse en traversant vitre/mur de briques (ESTIMATION)
     gDisplayScale: 0.26,         // ESTIMATION : ramène les G affichés dans la plage observée (3,9 à 4,7 G)
-    // Moteur à la demande (CHOIX v009) : Espace maintenue (G en v009-v010) = poussée, relâchée = moteur coupé.
+    // Moteur à la demande (CHOIX v009) : G maintenue = poussée, relâchée = moteur coupé.
     // Après l'allumage, freeBoost secondes de poussée automatique et gratuite ; ensuite chaque seconde de poussée
     // consomme 1 s d'essence. Réservoir par niveau (`fuel` dans la fiche du niveau), plein à chaque tir.
     freeBoost: 0.5,              // v010 : 3 → 0,5 s
@@ -60,13 +60,16 @@ CC.CONFIG = {
     distance: 1.85,              // MESURÉ (indirect) : nez à 55 % et tuyère à 67,8 % de la hauteur ⇒ ≈ 1,5 longueur de roquette
     height: 0.52,                // MESURÉ (indirect), même calcul
     crosshairY: 0.402,           // MESURÉ : réticule à 40,2 % de la hauteur
+    followLag: 2.2,              // CHOIX v010 : vitesse (1/s) à laquelle la caméra se réaligne derrière la trajectoire (plus petit = caméra plus libre)
     offsetLag: 7,                // lissage du décalage caméra (1/s) : dérive de la roquette à l'écran quand la visée tourne (ESTIMATION)
+    rollFromYawRate: 0.16,       // ESTIMATION : inclinaison de l'horizon en virage
+    rollLag: 5,
     launchBlend: 0.45,           // MESURÉ : la caméra rattrape la roquette en ≈ 0,5 s
     near: 0.05, far: 1400,
     eyeHeight: 1.6,
   },
 
-  input: { sensitivity: 0.0021, invertY: false, maxPitchDeg: 88 },   // maxPitchDeg : au lanceur seulement (v011)
+  input: { sensitivity: 0.0021, invertY: false, maxPitchDeg: 88, autoLevel: 1.5 },   // maxPitchDeg : au lanceur seulement (v011) ; autoLevel : remise à plat de l'horizon en vol (1/s)
 
   style: {
     proximityDist: 4.0,          // ESTIMATION : distance "PROXIMITY FLIGHT"
@@ -104,7 +107,6 @@ CC.CONFIG = {
     gauge:   { x0: 0.4150, x1: 0.5870, y0: 0.8950, y1: 0.9120 },
     fuel:    { x0: 0.0300, w: 0.2200, y0: 0.9000, y1: 0.9180, labelY: 0.8600, px: 0.00300 },   // CHOIX v009 : jauge d'essence en bas à gauche
     crosshair: { x: 0.5, y: 0.402, size: 0.0110 },
-    velocityMarker: { size: 0.0225, color: '#56ff5a' },   // CHOIX v014 : repère de trajectoire réelle
     popups:  { cx: 0.785, jitter: 0.045, y0: 0.52, pitch: 0.029, yMin: 0.37, px: 0.00315, skew: -0.26 },
     center:  { y: 0.575, px: 0.00300 },
     colors: {

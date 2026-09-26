@@ -26,7 +26,7 @@ Compatible Chrome, Edge, Firefox et Safari récents (WebGL requis).
 
 | Touche | Action |
 |---|---|
-| W,A,S,D | piloter à 360° autour des axes de l'écran : W / S basculent la roquette vers le haut / le bas de l'écran (maintenir = looping complet), A / D la font tourner comme sur un plateau (elle peut pointer vers la caméra) ; Z,Q,S,D sur AZERTY et les flèches marchent aussi |
+| W,A,S,D | piloter à 360° : W cabre, S pique, A gauche, D droite, par rapport à la roquette (loopings et vol sur le dos possibles ; Z,Q,S,D sur AZERTY et les flèches marchent aussi) |
 | Espace (maintenue) | moteur : pousse tant qu'Espace est enfoncée, s'éteint dès qu'on la relâche ; consomme l'essence |
 | Souris | viser aussi à la souris (facultatif) : la roquette suit le réticule |
 | Clic gauche | tirer / réapparaître au lanceur |
@@ -48,19 +48,14 @@ baisse avec la difficulté (la jauge est plus courte) :
 | Niveau | CITY | BRICKWORKS | CANYON | CAVE | WOODS | CONSTRUCTION | NIGHT FOREST | AUTOMAP facile / moyen / difficile |
 |---|---|---|---|---|---|---|---|---|
 | Essence (s) | 23 | 20 | 18 | 16 | 14 | 12 | 11 | 15 / 16 / 18 |
-| Réserve restante au pilote automatique (s) | 13,6 | 15,8 | 8,6 | 6,5 | 5,8 | 6,0 | 3,2 | 7,5 / 5,5 / 3,9 |
+| Réserve restante au pilote automatique (s) | 13,8 | 15,8 | 8,6 | 6,5 | 5,8 | 6,1 | 3,2 | 7,5 / 5,5 / 3,9 |
 
 Sur AUTOMAP les cartes difficiles sont plus longues : le réservoir est plus grand, mais la marge est plus faible.
 Réglages : `rocket.freeBoost`, `rocket.fuelDefault` dans `src/config.js`, `fuel` dans chaque fiche de niveau.
 
-**Vol (v015).** La trajectoire suit le nez (loopings, virages serrés) ; gravité 5,72 m/s² (moyenne Terre / Lune).
-À l'écran : le **x** montre où pointe la tête, le **cercle vert** (v014) montre où va réellement la roquette
-(il s'écarte du x dans les virages serrés et les chutes) ; masqué quand la roquette file vers la caméra.
-
-**Caméra de vol (v012).** Au tir, la caméra garde l'orientation du lanceur et **ne tourne plus jamais** pendant le vol :
-elle suit la roquette en translation, à distance constante, et la regarde donc toujours. La roquette peut pointer vers
-la caméra ; si elle fonce vers elle, la caméra recule d'autant. Si un mur passe entre les deux, la caméra se rapproche
-sans tourner. Le réticule indique la direction visée.
+**Caméra de vol (v010).** La caméra suit la roquette mais pas la visée : elle se réaligne peu à peu derrière la trajectoire
+(`camera.followLag`, plus petit = caméra plus libre). En pilotant, on voit donc la roquette tourner à l'écran ; le réticule
+indique la direction visée.
 
 Un contact rasant avec le sol ou un toit fait **glisser** la roquette. Un choc de face la fait **exploser**.
 Les vitres, les murs de briques fins et les caisses se brisent.
@@ -159,9 +154,9 @@ Tout se règle dans `src/config.js`. Paramètres clés :
 | `rocket.ignitionDelay` | 0,28 s | MESURÉ (le compteur SPEED passe 31→35 entre 0,23 et 0,33 s) |
 | `rocket.thrust` | 50 m/s² (55 en v006) | MESURÉ (courbe SPEED du canyon : 31→55 m/s en 0,6 s) puis CHOIX v007 : la vitesse passait pour trop élevée ; le HUD affiche toujours « THRUST:45 » comme la vidéo |
 | `rocket.dragK` | 0,0100 (0,0086 en v006) | MESURÉ (plafond ≈ 80 m/s en palier, 87 en piqué) puis CHOIX v007 : plafond ≈ 71 m/s |
-| `rocket.maxTurnRate` / `steerGain` / `grip` | 3,5 rad/s / 9 / 11 (3 / 7,5 / 9 en v006) | ESTIMATION, relevées en v007 : roquette plus maniable (traînée induite 0,085 → 0,070, glissade tolérée jusqu'à 27°) ; vol à inertie essayé en v013 puis abandonné en v015 |
-| `physics.gravity` | 5,715 m/s² | CHOIX d'Hugo (v013, gardé en v015) : moyenne Terre (9,81) / Lune (1,62), roquette seulement |
+| `rocket.maxTurnRate` / `steerGain` / `grip` | 3,5 rad/s / 9 / 11 (3 / 7,5 / 9 en v006) | ESTIMATION, relevées en v007 : roquette plus maniable (traînée induite 0,085 → 0,070, glissade tolérée jusqu'à 27°) |
 | `economy.*` | solde de départ 5 €, 60 + 0,05/pt + 1 € record | CHOIX v007 (boutique) |
+| `physics.gravity` | 5,715 m/s² | CHOIX d'Hugo (v016) : moyenne Terre (9,81) / Lune (1,62), roquette seulement ; les G affichés restent en G terrestres |
 | `abilities.retro.decel` | 25 m/s² (+ traînée) ; le moteur principal s'éteint pendant le freinage | MESURÉ (75→27 m/s en 1,75 s), OBSERVÉ |
 | `camera.distance` / `height` | 1,85 m / 0,52 m | MESURÉ indirectement (nez à 55 %, tuyère à 67,8 % de la hauteur) |
 | `camera.crosshairY` | 0,402 | MESURÉ |
