@@ -1,5 +1,7 @@
 /* CLOSE CALL — mise en page : zone de jeu 16:9 centrée (letterbox), HUD canvas superposé. */
 html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+/* v010 : bloque le balayage deux doigts « page précédente » du trackpad Mac, qui faisait quitter la partie en visant */
+html, body { overscroll-behavior: none; }
 body { display: flex; align-items: center; justify-content: center; }
 #game { position: relative; background: #000; }
 #game canvas { position: absolute; left: 0; top: 0; display: block; image-rendering: pixelated; }
