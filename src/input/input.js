@@ -157,9 +157,11 @@
         // (uniquement la cible visée par cette route : la plus proche de son dernier point)
         let goal = null, gd = 18;
         for (const t of g.targets) { if (!t.alive || t.guard) continue; const d = t.obb.c.distanceTo(R[R.length - 1]); if (d < gd) { gd = d; goal = t; } }
+        const mover = g.targets.find((t) => t.alive && !t.guard && t.path);   // v023 : cible qui s'enfuit → poursuite dès qu'elle est à portée
+        if (mover) goal = mover;
         if (goal) {
           const to = new V().subVectors(goal.obb.c, rk.pos);
-          if (to.length() < (this.level.terminalRange || 40) && to.angleTo(rk.vel) < 1.0 && this.idx >= R.length - 3) target = goal.obb.c.clone();
+          if (to.length() < (this.level.terminalRange || 40) && to.angleTo(rk.vel) < 1.0 && (mover || this.idx >= R.length - 3)) target = goal.obb.c.clone();
         }
         const desired = new V().subVectors(target, rk.pos).normalize();
         const vDir = rk.vel.clone().normalize();
@@ -178,13 +180,24 @@
         const threat = g.missiles.filter((m) => m.alive && m.pos.distanceTo(rk.pos) < CC.CONFIG.aa.warnDist && onCourse(m))
           .sort((a, b) => a.pos.distanceTo(rk.pos) - b.pos.distanceTo(rk.pos))[0];
         if (threat) {
-          const los = new V().subVectors(rk.pos, threat.pos).normalize();
-          let away = new V().crossVectors(los, new V(0, 1, 0));
-          if (away.lengthSq() < 1e-4) away.set(1, 0, 0);
-          away.normalize();
-          if (this.evadeSide === undefined) this.evadeSide = away.dot(rk.vel) >= 0 ? 1 : -1;
-          aim.addScaledVector(away, 1.6 * this.evadeSide).normalize();
-        } else this.evadeSide = undefined;
+          // v023 : direction d'esquive la plus dégagée parmi gauche / droite / haut / bas (perpendiculaires à l'axe du missile),
+          // choisie une fois par menace : dans une tranchée ou un canyon, s'écarter sur le côté mène droit dans la paroi
+          if (!this.evadeDir) {
+            const los = new V().subVectors(rk.pos, threat.pos).normalize();
+            let side = new V().crossVectors(los, new V(0, 1, 0));
+            if (side.lengthSq() < 1e-4) side.set(1, 0, 0);
+            side.normalize();
+            const up = new V().crossVectors(side, los).normalize();
+            let best = null, bestFree = -1;
+            for (const c of [side, side.clone().negate(), up, up.clone().negate()]) {
+              const hit = g.world.raycast(rk.pos, c, 30);
+              const free = hit ? hit.dist : 30;
+              if (free > bestFree) { bestFree = free; best = c; }
+            }
+            this.evadeDir = best;
+          }
+          aim.addScaledVector(this.evadeDir, 1.6).normalize();
+        } else this.evadeDir = null;
         this.aimAt(new V().copy(rk.pos).addScaledVector(aim, 20), dt, 14);
         let wantOff = false;
         for (const a of this.actions) {

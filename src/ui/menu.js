@@ -44,8 +44,9 @@
       this.text(ctx, 'CLOSE CALL', W / 2, H * 0.09, H * (P ? 0.0095 : 0.0125), col.white, { align: 'center', skew: -0.22 });
       this.text(ctx, 'STEER THE MISSILE. HIT THE TARGET. FLY CLOSE FOR STYLE.', W / 2, H * 0.2, H * (P ? 0.0019 : 0.0024), col.yellow, { align: 'center' });
       const best = game.save.best, px = H * 0.0036;
+      const rowStep = Math.min(0.068, 0.56 / (CC.Levels.length + 1));   // v023 : 9 niveaux + AUTOMAP tiennent au-dessus de la boutique
       CC.Levels.forEach((lv, i) => {
-        const y = H * (0.275 + i * 0.068);
+        const y = H * (0.275 + i * rowStep);
         const open = game.isUnlocked(i);   // v023 : niveau verrouillé tant que le précédent n'est pas terminé
         if (open) this.button(ctx, (i + 1) + '  ' + lv.name, W * (P ? 0.07 : 0.3), y, px, () => game.startLevel(i), { align: 'left' });
         else this.text(ctx, (i + 1) + '  ' + lv.name, W * (P ? 0.07 : 0.3), y, px, '#5a5a5a');
@@ -55,7 +56,7 @@
         this.text(ctx, info, W * (P ? 0.97 : 0.88), y + px * 1.2, H * 0.0026, b ? '#cfcfcf' : '#7a7a7a', { align: 'right' });
       });
       // v007 : dernière carte = carte aléatoire (le clic ouvre le choix de difficulté)
-      const ny = H * (0.275 + CC.Levels.length * 0.068);
+      const ny = H * (0.275 + CC.Levels.length * rowStep);
       this.button(ctx, (CC.Levels.length + 1) + '  AUTOMAP', W * (P ? 0.07 : 0.3), ny, px, () => { this.overlay = 'difficulty'; }, { align: 'left', color: '#8fd0ff' });
       this.text(ctx, 'RANDOM - 3 DIFFICULTIES', W * (P ? 0.97 : 0.88), ny + px * 1.2, H * 0.0026, '#8fd0ff', { align: 'right' });
       this.button(ctx, 'ROCKET SHOP   ' + CC.Skins.formatPrice(game.save.cash), W / 2, H * 0.92, px, () => { this.overlay = 'shop'; }, { color: '#fdfd02' });

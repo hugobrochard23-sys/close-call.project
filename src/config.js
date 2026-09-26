@@ -161,7 +161,11 @@ CC.CONFIG = {
     turn: [0.5, 1.1],            // rad/s : virage du missile, toujours sous celui du joueur (joystick 1,5 rad/s, clavier 1,8) : on peut le semer
     speed: [50, 68],             // m/s, juste sous la vitesse de pointe de la roquette (≈ 71 m/s) : à pleine poussée on le distance
     life: 5,                     // s avant autodestruction
+    boostStart: 0.35, boostTime: 1.2,   // v023 : départ à 35 % de la vitesse, pleine vitesse en 1,2 s (temps de réaction)
     maxAlive: 3,                 // missiles ennemis en vol en même temps, au plus
+    // salves (v023, 3 derniers niveaux + AUTOMAP difficile) : salvoCount tirs espacés de salvoGap s, puis
+    // repos = cooldown × salvoRest ; un tireur à moins de volleyJoin s de sa recharge se joint au tir d'un autre
+    salvoCount: 2, salvoGap: 0.45, salvoRest: 1.5, volleyJoin: 1.2, maxAliveSalvo: 5,   // 3 par salve : injouable au canyon (v023)
     fuse: 1.6,                   // m : détonation de proximité
     warnDist: 90,                // m : avertissement « MISSILE! » à l'écran
   },

@@ -111,7 +111,14 @@ Chaque niveau reconstruit une séquence de la vidéo, avec l'interface (HUD) qu'
 | 5 | WOODS | 48,2–64,5 s | B (SCORE) | score | char dans la maison |
 | 6 | CONSTRUCTION | 64,5–79,3 s | C (sans SPEED) | style | hélicoptère camouflé |
 | 7 | NIGHT FOREST | 79,3–89,1 s | B (SCORE) | score | maison |
-| 8 | AUTOMAP | hors vidéo | C | cibles | généré : 2 à 4 cibles selon la difficulté |
+| 8 | TRENCH RUN | création (v023, façon Star Wars) | C | style | hélicoptère qui s'enfuit dans une tranchée de 20 m, 19 obstacles, 9 tourelles |
+| 9 | NIGHT CANYON | création (v023) | C | style | hélicoptère qui s'enfuit dans un canyon de nuit, convoi de 5 tanks en salves |
+| 10 | AUTOMAP | hors vidéo | C | cibles | généré : 2 à 4 cibles selon la difficulté |
+
+**Progression (v023)** : un niveau ne s'ouvre qu'une fois le précédent terminé (AUTOMAP toujours libre) ; le menu pause
+propose NEXT LEVEL quand le suivant est ouvert. Niveaux 1 à 3 : flèches vertes le long du chemin ; ensuite, repère rouge
+permanent sur la cible. Salves anti-aériennes (2 missiles rapprochés, tirs groupés) sur les 3 derniers niveaux et AUTOMAP
+difficile ; les missiles ennemis accélèrent après le tir (on les voit partir). Essence réduite d'environ 15 %.
 
 ### Carte aléatoire (8e carte : AUTOMAP)
 

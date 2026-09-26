@@ -7,7 +7,7 @@
   const DZ = -70;          // décalage de tout ce qui suit la rue (rue allongée en v002)
   const BOT = -190;        // fond du puits
   CC.Levels.push({
-    id: 'city', fuel: 23, name: 'CITY', hud: 'A', mode: 'style', impactVariant: 'orange', seed: 11, parTime: 16,
+    id: 'city', fuel: 20, name: 'CITY', hud: 'A', mode: 'style', impactVariant: 'orange', seed: 11, parTime: 16,
     refSegment: { start: 0.0, end: 15.4, fire: 0.17 },
     launcher: { type: 'tripod', pos: [0, 42.3, 6], yaw: 0, pitch: 0 },
     menuView: { center: [0, 30, -160], radius: 100, height: 40 },

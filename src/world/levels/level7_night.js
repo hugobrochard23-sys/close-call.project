@@ -8,7 +8,7 @@
   // les arbres cachent la roquette une partie du temps (4 tanks au bord du couloir : un tir toutes les 0,4 s, injouable)
   const guards = [[24, -300, 90], [-20, -455, -90]];
   CC.Levels.push({
-    id: 'night', fuel: 11, name: 'NIGHT FOREST', hud: 'B', mode: 'score', impactVariant: 'cyan', seed: 77,
+    id: 'night', fuel: 10, name: 'NIGHT FOREST', hud: 'B', mode: 'score', impactVariant: 'cyan', seed: 77,
     refSegment: { start: 79.25, end: 89.14, fire: 80.22 },
     launcher: { type: 'shoulder', pos: [0, 1.7, 0], yaw: 0, pitch: 2 },
     menuView: { center: [0, 4, -300], radius: 60, height: 14 },

@@ -29,7 +29,22 @@
       this.alert.position.set(0, this.size[1] + 1.2, 0); this.object.add(this.alert);
       this.dot = CC.Models.targetDot(); this.dot.position.fromArray(this.center); this.object.add(this.dot);
       this.obb = null;
+      // v023 : cible qui s'enfuit — suit `opts.path` à `opts.fleeSpeed` m/s dès que la roquette est tirée, puis fait du
+      // surplace au bout ; revient au départ quand le niveau recommence
+      if (opts.path) {
+        this.path = opts.path.map((p) => new V().fromArray(p));
+        this.fleeSpeed = opts.fleeSpeed || 30; this.fleeDist = 0;
+        this.pathLen = 0; for (let i = 1; i < this.path.length; i++) this.pathLen += this.path[i].distanceTo(this.path[i - 1]);
+        this.placeOnPath();
+      }
       this.updateObb();
+    }
+    placeOnPath() {
+      let d = Math.min(this.fleeDist, this.pathLen), i = 0;
+      while (i < this.path.length - 2 && d > this.path[i].distanceTo(this.path[i + 1])) { d -= this.path[i].distanceTo(this.path[i + 1]); i++; }
+      const a = this.path[i], b = this.path[i + 1], seg = _v.subVectors(b, a), len = seg.length();
+      this.base.copy(a).addScaledVector(seg, len > 0 ? Math.min(1, d / len) : 0);
+      if (len > 0) this.object.rotation.y = Math.atan2(-seg.x, -seg.z);   // le nez dans le sens de la fuite
     }
     updateObb() { this.object.updateMatrixWorld(true); this.obb = obbFrom(this.object, this.size, this.center); }
 
@@ -37,6 +52,7 @@
       this.t += dt;
       if (!this.alive) return;
       const rk = game.rocket && game.rocket.active ? game.rocket : null;
+      if (this.path && game.state === 'FLIGHT' && rk && this.fleeDist < this.pathLen) { this.fleeDist += this.fleeSpeed * dt; this.placeOnPath(); }
       if (this.type === 'heli' || this.type === 'heliCamo') {
         const ud = this.model.userData;
         ud.rotor.rotation.y += dt * 24; ud.tailRotor.rotation.x += dt * 40;
@@ -64,7 +80,8 @@
         }
       }
       if (this.type === 'heli' || this.type === 'heliCamo') this.updateObb();
-      if (rk && game.state === 'FLIGHT' && (this.type === 'tank' || this.type === 'heli' || this.type === 'heliCamo')) this.updateAA(dt, game, rk);
+      // tirs anti-aériens : tanks et hélicoptères, sauf une cible qui s'enfuit (v023 : elle fuit, elle ne se bat pas)
+      if (rk && game.state === 'FLIGHT' && !this.path && (this.type === 'tank' || this.type === 'heli' || this.type === 'heliCamo')) this.updateAA(dt, game, rk);
       if (this.alert.visible) this.alert.position.y = this.size[1] + 1.2 + Math.sin(this.t * 6) * 0.1;
     }
 
@@ -85,15 +102,27 @@
       if (sp > 1 && -to.dot(rk.vel) / sp < CC.CONFIG.aa.frontCos) { this.aaSeen = 0; return; }
       if (game.world.raycast(from, to, dist - 1, (b) => b.kind === 'solid' || b.kind === 'brick')) { this.aaSeen = 0; return; }
       this.aaSeen = (this.aaSeen || 0) + dt;
-      if (this.aaSeen < L(A.firstDelay) || this.aaCool > 0) return;
-      if (game.missiles.filter((m) => m.alive).length >= A.maxAlive) return;
-      this.aaCool = L(A.cooldown);
+      if (this.aaSeen < L(A.firstDelay)) return;
+      // v023 : salves (3 derniers niveaux, AUTOMAP difficile) : plusieurs tirs rapprochés, et un tireur presque rechargé
+      // qui voit la roquette ouvre le feu en même temps qu'un autre (tir groupé)
+      const salvo = game.aaSalvo(), now = game.telemetry.t;
+      if (this.aaCool > 0) {
+        const joins = salvo && !this.burst && game.aaVolleyT !== undefined && now - game.aaVolleyT < 0.15 && this.aaCool < A.volleyJoin;
+        if (!joins) return;
+      }
+      if (game.missiles.filter((m) => m.alive).length >= (salvo ? A.maxAliveSalvo : A.maxAlive)) return;
+      if (!salvo) this.aaCool = L(A.cooldown);
+      else if (this.burst > 0) { this.burst--; this.aaCool = this.burst > 0 ? A.salvoGap : L(A.cooldown) * A.salvoRest; }
+      else { this.burst = A.salvoCount - 1; this.aaCool = A.salvoGap; game.aaVolleyT = now; }
       const miss = A.miss[1] + (A.miss[0] - A.miss[1]) * Math.pow(1 - d, A.missCurve);   // la précision progresse dès le milieu du parcours
       game.spawnEnemyMissile(from.clone(), rk, { miss, lead: L(A.lead), turn: L(A.turn), speed: L(A.speed), life: A.life });
     }
 
     kill() { this.alive = false; this.object.visible = false; }
-    reset() { this.alive = true; this.object.visible = true; this.alert.visible = false; this.aaCool = 0; this.aaSeen = 0; }
+    reset() {
+      this.alive = true; this.object.visible = true; this.alert.visible = false; this.aaCool = 0; this.aaSeen = 0; this.burst = 0;
+      if (this.path) { this.fleeDist = 0; this.placeOnPath(); this.object.position.copy(this.base); }
+    }
   }
 
   class Soldier {
@@ -136,6 +165,10 @@
       this.miss = new V(U.rng() - 0.5, U.rng() * 0.6, U.rng() - 0.5).normalize().multiplyScalar(missDist);
       this.dir = new V().subVectors(target.pos, from).add(this.miss).normalize();
       this.speed = opts ? opts.speed : 48; this.turn = opts ? opts.turn : 0.8; this.life = opts ? opts.life : 5;
+      // v023 : tir anti-aérien → phase d'accélération (départ à boostStart × vitesse, pleine vitesse en boostTime s) :
+      // à bout portant, le joueur voit partir le missile et a le temps de réagir
+      this.vmax = this.speed;
+      if (opts) this.speed = this.vmax * CC.CONFIG.aa.boostStart;
       this.lead = opts ? opts.lead : 0; this.fuse = opts ? CC.CONFIG.aa.fuse : 1.0;
       this.alive = true; this.puff = 0;
       this.object.position.copy(this.pos);
@@ -151,6 +184,7 @@
         const ang = this.dir.angleTo(want);
         if (ang > 1e-4) this.dir.lerp(want, Math.min(1, this.turn * dt / ang)).normalize();
       }
+      if (this.speed < this.vmax) this.speed = Math.min(this.vmax, this.speed + this.vmax * (1 - CC.CONFIG.aa.boostStart) * dt / CC.CONFIG.aa.boostTime);
       const p0 = this.pos.clone();
       this.pos.addScaledVector(this.dir, this.speed * dt);
       this.object.position.copy(this.pos);

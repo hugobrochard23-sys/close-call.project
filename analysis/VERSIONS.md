@@ -352,3 +352,20 @@ Rendu (Mac) 2,9 → 2,4 ms / image, surface 563×1218 → 375×812. Ordinateur i
 
 **Vérification :** rendu audio hors ligne : crête max 0,56 (moteur + explosion, plus de saturation ; 1,18 avant le limiteur) ;
 SOUND / MUSIC OFF → gains 0 après rechargement, rétablis à 0,9 / 0,28. CITY : 17 flèches. Pilote automatique : 10 cartes, 0 crash.
+
+## v023 (suite) — 2 niveaux, cible qui s'enfuit, salves, missiles qui accélèrent, essence réduite
+
+**Changements (à la demande d'Hugo) :**
+- TRENCH RUN (tranchée façon Star Wars, 20 m × 32 m × 1,1 km, 19 obstacles : poutres, piliers, lasers ; 8 tourelles sur
+  piédestal + tour au bout) et NIGHT CANYON (canyon de nuit sinueux, arches, crêtes, piliers ; convoi de 5 tanks) ;
+  cible : hélicoptère qui s'enfuit (`opts.path`, 55 et 48 m/s), ne tire pas ; menu resserré (10 lignes) ;
+- salves (`aa.salvoCount` 2, `salvoGap` 0,45 s, repos × 1,5, tir groupé si un autre tireur est à < 1,2 s de sa recharge) ;
+- missiles anti-aériens : départ à 35 % de la vitesse, pleine vitesse en 1,2 s (un tir de face à 100 m était inévitable) ;
+- menace répartie sur 9 niveaux (NIGHT FOREST 0,75 au lieu de 1) ;
+- essence : 20 / 17 / 15 / 14 / 12 / 10 / 10 / 22 / 18 s ; AUTOMAP 13 / 14 / 17 s ;
+- pilote automatique : esquive vers la direction la plus dégagée (gauche, droite, haut, bas) ; poursuite des cibles mobiles.
+
+**Vérification (pilote automatique) :** 12 cartes terminées. TRENCH RUN : hélicoptère rattrapé au bout (z −1091), essence
+3,4 s, 4 tentatives sans esquive. NIGHT CANYON : 10 tentatives en esquivant, impossible sans esquiver (28 impacts sur 28).
+Réserves les plus serrées : NIGHT FOREST 1,9 s, AUTOMAP moyen 2,3 s. Progression : niveaux 1-2 terminés → 3 ouvert, 4+ verrouillés ;
+NEXT LEVEL en pause au niveau 2, absent au niveau 3.

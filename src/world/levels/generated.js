@@ -9,17 +9,17 @@
 
   CC.GEN_DIFFS = {
     easy: {
-      id: 'easy', fuel: 15, label: 'FACILE', hud: 'C', length: 520, half: 30, par: 16, routeH: 34,
+      id: 'easy', fuel: 13, label: 'FACILE', hud: 'C', length: 520, half: 30, par: 16, routeH: 34,
       blocks: 20, hRange: [16, 40], clutter: 0.35, soldiers: 0, kinds: ['tank', 'truck'],
       spread: [0.55, 0.95], env: 'day', ground: 'asphalt',
     },
     medium: {
-      id: 'medium', fuel: 16, label: 'MOYEN', hud: 'C', length: 720, half: 24, par: 20, routeH: 42,
+      id: 'medium', fuel: 14, label: 'MOYEN', hud: 'C', length: 720, half: 24, par: 20, routeH: 42,
       blocks: 34, hRange: [24, 62], clutter: 0.6, soldiers: 1, kinds: ['tank', 'truck', 'heli'],
       spread: [0.4, 0.7, 0.97], env: 'dusk', ground: 'dirt',
     },
     hard: {
-      id: 'hard', fuel: 18, label: 'DIFFICILE', hud: 'C', length: 940, half: 19, par: 26, routeH: 50,
+      id: 'hard', fuel: 17, label: 'DIFFICILE', hud: 'C', length: 940, half: 19, par: 26, routeH: 50,
       blocks: 48, hRange: [32, 92], clutter: 0.9, soldiers: 3, kinds: ['tank', 'tank', 'heli', 'truck'],
       spread: [0.32, 0.56, 0.78, 0.98], env: 'night', ground: 'concreteDark',
     },

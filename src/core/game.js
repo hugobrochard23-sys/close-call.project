@@ -322,6 +322,13 @@
       return !this.generated && this.levelIndex >= 0 && n < CC.Levels.length && this.isUnlocked(n) ? n : -1;
     }
 
+    // v023 : salves anti-aériennes sur les 3 derniers niveaux et sur AUTOMAP difficile
+    aaSalvo() {
+      const L = this.level;
+      if (!L) return false;
+      return L.generated ? L.difficulty === 'hard' : this.levelIndex >= CC.Levels.length - 3;
+    }
+
     respawnMsg() { return CC.Touch && CC.Touch.active ? 'TAP TO RESPAWN' : 'PRESS FIRE TO RESPAWN AT LAUNCHER'; }
 
     // v020 : niveau de menace des tirs anti-aériens, 0 (premier niveau) → 1 (dernier) ; AUTOMAP : selon la difficulté

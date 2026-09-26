@@ -9,7 +9,7 @@
   const W = 8;             // demi-largeur de la cage d'escalier (v003 : 16 m, volées de 5 m)
   const ZE = -410;         // façade nord (fenêtre du couloir)
   CC.Levels.push({
-    id: 'construction', fuel: 12, name: 'CONSTRUCTION', hud: 'C', hideSpeed: true, mode: 'style', impactVariant: 'orange', seed: 66, parTime: 15,
+    id: 'construction', fuel: 10, name: 'CONSTRUCTION', hud: 'C', hideSpeed: true, mode: 'style', impactVariant: 'orange', seed: 66, parTime: 15,
     refSegment: { start: 64.45, end: 79.25, fire: 64.48 },
     launcher: { type: 'shoulder', pos: [0, T + 2.2, 4], yaw: 0, pitch: 3 },
     menuView: { center: [0, T + 2, -120], radius: 90, height: 30 },
