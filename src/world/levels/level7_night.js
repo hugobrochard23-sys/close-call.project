@@ -28,7 +28,10 @@
       const distRoute = U.routeDistXZ(route);
       const ground = (x, z) => distRoute(x, z) < 10 ? 0 : 2.2 * U.fbm2(x * 0.015, z * 0.015, 3, 8) - 0.6;
       b.terrain({ x0: -300, z0: -780, n: 126, step: 6.4, mat: 'grass', height: ground, color: () => [1, 1.1, 1] });
-      for (let i = 0; i < 480; i++) b.box({ p: [r.range(-90, 90), 0.2, r.range(20, -680)], s: [0.5, 0.4, 0.5], mat: 'col:#2f7a24', collide: false });
+      for (let i = 0; i < 480; i++) {   // design : touffes posées sur le sol réel, tailles et teintes variées
+        const x = r.range(-90, 90), z = r.range(20, -680), k = 0.7 + 0.6 * U.hash2(i, 3, 17), hh = 0.4 * k;
+        b.box({ p: [x, (b.groundAt ? b.groundAt(x, z) : 0) + hh / 2 - 0.04, z], s: [0.5 * k, hh, 0.5 * k], r: [0, 45 * U.hash2(i, 5, 9), 0], mat: 'col:#2f7a24', tint: U.hash2(i, 7, 3) < 0.5 ? '#ffffff' : '#c8d8a0', collide: false });
+      }
       let n = 0, guard = 0;
       while (n < 700 && guard++ < 14000) {
         const x = r.range(-160, 160), z = r.range(20, -720);

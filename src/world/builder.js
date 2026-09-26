@@ -28,6 +28,9 @@
       this.targets = [];
       this.grapplePoints = [];
       this.rng = U.makeRng(level.seed || 7);
+      this.deco = U.makeRng((level.seed || 7) * 31 + 5);   // design : hasard des détails de décor (n'altère pas this.rng)
+      this.buildings = [];        // design : immeubles repérés (façade + toit) → toits et rez-de-chaussée décorés dans finish()
+      this.groundAt = null;       // design : hauteur du terrain (définie par terrain())
       this._e = new THREE.Euler();
     }
 
@@ -65,6 +68,10 @@
       const pos = new V().fromArray(o.p);
       const [w, h, d] = o.s;
       if (o.render !== false) this.addBoxGeometry(pos, q, w, h, d, o.mat || 'concrete', o.tint, o.tile, o.shadow);
+      const m = o.mat;
+      if (o.render !== false && m && typeof m === 'object' && /^facade/.test(m.side || '') && m.top && m.top !== 'none' && Math.abs(q.x) < 1e-3 && Math.abs(q.z) < 1e-3) {
+        this.buildings.push({ pos, w, h, d, q: q.clone(), facade: m.side, tint: o.tint });
+      }
       if (o.collide !== false && o.kind !== 'noCollide') {
         return this.world.addBox({ center: pos, size: o.s, quat: q, kind: o.kind || 'solid', ground: o.ground, ref: o.ref });
       }
@@ -87,7 +94,12 @@
         if (key === 'none') continue;
         const bt = this.batch(key);
         if (shadow === false) bt.shadow = false;
-        const tile = tileOverride || CC.Textures.tile[key] || [2, 2];
+        let tile = tileOverride || CC.Textures.tile[key] || [2, 2];
+        // design : façades → nombre entier de travées et d'étages sur chaque face (aucune fenêtre coupée par un angle)
+        if (!tileOverride && /^facade|^storefront/.test(key) && f.k === 'side') {
+          const lenU = f.n[0] !== 0 ? d : w;
+          tile = [lenU / Math.max(1, Math.round(lenU / tile[0])), h / Math.max(1, Math.round(h / tile[1]))];
+        }
         const base = bt.pos.length / 3;
         nn.fromArray(f.n).applyQuaternion(q);
         for (const c of f.c) {
@@ -150,6 +162,7 @@
     }
 
     finish() {
+      this.decorateBuildings();
       for (const [key, b] of this.batches) {
         if (!b.idx.length) continue;
         const g = geometryFromBatch(b);
@@ -160,6 +173,78 @@
         this.root.add(mesh);
       }
       this.batches.clear();
+    }
+
+    /* Design : toits et rez-de-chaussée des immeubles.
+     *  - acrotère (muret) autour du toit, couvertine claire ;
+     *  - équipements : édicule d'escalier, climatiseurs à ventilateur, château d'eau sur pieds, antenne à feu rouge, conduits ;
+     *    posés à ≥ 1,5 m des bords, jamais sur un toit survolé par une trajectoire (marge 12 m au-dessus) ni sur le toit du
+     *    lanceur ; ils ont une collision (monde cohérent : on ne traverse pas un climatiseur) ;
+     *  - rez-de-chaussée des immeubles posés au sol : bandeau de vitrines légèrement en saillie (rendu seul). */
+    decorateBuildings() {
+      const L = this.level, dr = this.deco;
+      const routes = L.routes || (L.route ? [L.route] : []);
+      const la = L.launcher && L.launcher.pos;
+      const V3 = V;
+      for (const B of this.buildings) {
+        const { pos, w, h, d, q } = B;
+        const top = pos.y + h / 2, bottom = pos.y - h / 2;
+        const yaw = new THREE.Euler().setFromQuaternion(q, 'YXZ').y;
+        const toWorld = (lx, ly, lz) => new V3(lx, ly, lz).applyQuaternion(q).add(new V3(pos.x, 0, pos.z)).setY(ly);
+        const inFoot = (p, m) => { const l = new V3(p[0] - pos.x, 0, p[2] - pos.z).applyQuaternion(q.clone().invert()); return Math.abs(l.x) < w / 2 + m && Math.abs(l.z) < d / 2 + m; };
+        // survol : un point de route au-dessus du toit (ou juste à côté) à moins de 12 m → pas d'équipements
+        let flown = false;
+        for (const R of routes) for (let i = 0; i < R.length - 1 && !flown; i++) {
+          for (let k = 0; k <= 8; k++) {
+            const t = k / 8, p = [U.lerp(R[i][0], R[i + 1][0], t), U.lerp(R[i][1], R[i + 1][1], t), U.lerp(R[i][2], R[i + 1][2], t)];
+            if (inFoot(p, 6) && p[1] < top + 12 && p[1] > bottom) { flown = true; break; }
+          }
+        }
+        const launcherRoof = la && inFoot(la, 2) && Math.abs(la[1] - top) < 4;
+        const big = w > 7 && d > 7;
+        // acrotère
+        if (big && !flown) {
+          const t = 0.3, ph = 0.75;
+          for (const [lx, lz, sw, sd] of [[0, d / 2 - t / 2, w, t], [0, -d / 2 + t / 2, w, t], [w / 2 - t / 2, 0, t, d - 2 * t], [-w / 2 + t / 2, 0, t, d - 2 * t]]) {
+            const c = toWorld(lx, top + ph / 2, lz);
+            this.box({ p: c.toArray(), s: [sw, ph, sd], r: [0, yaw * 180 / Math.PI, 0], mat: 'concreteDark', collide: false });
+            const cc = toWorld(lx, top + ph + 0.05, lz);
+            this.box({ p: cc.toArray(), s: [sw + 0.08, 0.1, sd + 0.08], r: [0, yaw * 180 / Math.PI, 0], mat: 'concrete', collide: false, shadow: false });
+          }
+        }
+        // équipements de toit
+        if (big && !flown && !launcherRoof) {
+          const inner = (m) => [dr.range(-w / 2 + m, w / 2 - m), dr.range(-d / 2 + m, d / 2 - m)];
+          const ry = yaw * 180 / Math.PI;
+          if (dr() < 0.6) { const [lx, lz] = inner(3); this.box({ p: toWorld(lx, top + 1.3, lz).toArray(), s: [2.6, 2.6, 3.2], r: [0, ry, 0], mat: { side: 'concreteWarm', top: 'concreteDark' } }); }   // édicule
+          const nAC = dr.int(1, Math.min(5, Math.floor(w * d / 90) + 1));
+          for (let i = 0; i < nAC; i++) {
+            const [lx, lz] = inner(2);
+            const c = toWorld(lx, top + 0.6, lz);
+            this.box({ p: c.toArray(), s: [1.6, 1.1, 1.3], r: [0, ry + (dr() < 0.5 ? 90 : 0), 0], mat: 'metal', tint: '#' + new THREE.Color('#c8ccd0').multiplyScalar(dr.range(0.85, 1.05)).getHexString() });
+            this.cylinder({ p: [c.x, top + 1.18, c.z], rad: 0.45, h: 0.06, seg: 10, mat: 'col:#1c1e20', collide: false });
+          }
+          if (h > 30 && dr() < 0.4) {                                             // château d'eau
+            const [lx, lz] = inner(3.5), c = toWorld(lx, 0, lz);
+            for (const [ox, oz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) this.box({ p: [c.x + ox * 1.1, top + 1.2, c.z + oz * 1.1], s: [0.2, 2.4, 0.2], mat: 'col:#3a3028', collide: false });
+            this.cylinder({ p: [c.x, top + 3.6, c.z], rad: 1.6, h: 2.6, seg: 12, mat: 'planks' });
+            this.cylinder({ p: [c.x, top + 5.3, c.z], rTop: 0.1, rBot: 1.75, h: 0.8, seg: 12, mat: 'col:#4a3a30', collide: false });
+          }
+          if (dr() < 0.45) {                                                     // antenne + feu d'obstacle
+            const [lx, lz] = inner(1.5), c = toWorld(lx, 0, lz), ah = dr.range(4, 9);
+            this.cylinder({ p: [c.x, top + ah / 2, c.z], rad: 0.07, h: ah, seg: 5, mat: 'col:#2a2a2a', collide: false });
+            for (let k = 1; k <= 2; k++) this.box({ p: [c.x, top + ah * k / 3, c.z], s: [1.2, 0.06, 0.06], r: [0, dr() * 180, 0], mat: 'col:#2a2a2a', collide: false });
+            this.box({ p: [c.x, top + ah + 0.1, c.z], s: [0.22, 0.22, 0.22], mat: 'basic:#ff2a1a', collide: false, shadow: false });
+          }
+          for (let i = 0; i < dr.int(0, 3); i++) { const [lx, lz] = inner(1); this.cylinder({ p: toWorld(lx, top + 0.6, lz).toArray(), rad: 0.18, h: 1.2, seg: 6, mat: 'metal', collide: false }); }
+        }
+        // rez-de-chaussée : vitrines (immeubles posés au sol, assez hauts pour être des immeubles de ville)
+        if (bottom < 1 && h > 12 && B.facade !== 'facadeDark') {
+          const gh = 4.2, o = 0.12;
+          this.addBoxGeometry(new V3(pos.x, bottom + gh / 2, pos.z), q, w + 2 * o, gh, d + 2 * o, { side: 'storefront', top: 'none', bottom: 'none' }, B.tint);
+          this.box({ p: toWorld(0, bottom + gh + 0.12, 0).toArray(), s: [w + 0.5, 0.24, d + 0.5], r: [0, yaw * 180 / Math.PI, 0], mat: 'concreteWarm', collide: false });   // bandeau
+        }
+      }
     }
 
     // ---------- Aides de haut niveau ----------
@@ -178,19 +263,60 @@
       return this.world.addBox({ center: mid, size: [th, th, len], quat: q, kind: 'cable' });
     }
 
+    /* Arbre : tronc (collision inchangée) + design : pied enfoncé de 1,5 m sous le sol réel (plus de tronc qui flotte),
+     * évasement à la base, houppier de conifère en 3 étages dans le tiers supérieur (rendu seul, au-dessus des trajectoires). */
     tree(x, z, h, rad, yBase, mat) {
+      const g0 = yBase !== undefined ? yBase : (this.groundAt ? this.groundAt(x, z) : 0);
       const y = (yBase || 0) + h / 2;
-      return this.cylinder({ p: [x, y, z], rad, h, seg: 7, mat: mat || 'bark', colSize: [rad * 1.7, h, rad * 1.7] });
+      const col = this.cylinder({ p: [x, y, z], rad, h, seg: 7, mat: mat || 'bark', colSize: [rad * 1.7, h, rad * 1.7] });
+      const dr = this.deco;
+      this.cylinder({ p: [x, g0 - 0.5, z], rTop: rad, rBot: rad * 1.45, h: 3, seg: 7, mat: mat || 'bark', collide: false });
+      if (this.level.foliage !== false) {
+        const fcol = this.level.foliage || '#2a4a2c', tint = '#' + new THREE.Color(1, 1, 1).multiplyScalar(dr.range(0.78, 1)).getHexString();   // variation de teinte d'un arbre à l'autre
+        const top = (yBase || 0) + h, R = Math.max(2.2, h * dr.range(0.09, 0.12));
+        for (let k = 0; k < 3; k++) {
+          const cy = top - h * (0.34 - k * 0.11), ch = h * 0.2, cr = R * (1 - k * 0.24);
+          const geo = new THREE.ConeGeometry(cr, ch, 7);
+          this.addGeometry(geo, new V(x, cy, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, dr() * 6.28, 0)), null, 'col:' + fcol, tint);
+          geo.dispose();
+        }
+      }
+      return col;
     }
 
     rockLump(x, y, z, s, mat) {
       const r = this.rng;
-      this.box({ p: [x, y + s * 0.25, z], s: [s * r.range(1, 1.6), s * 0.55, s * r.range(0.8, 1.3)], r: [r.range(-8, 8), r.range(0, 180), r.range(-8, 8)], mat: mat || 'col:#5b6472', tint: '#ffffff' });
+      const gy = this.groundAt ? Math.min(y, this.groundAt(x, z)) : y;   // design : posé sur le sol réel (le point le plus bas)
+      const size = [s * r.range(1, 1.6), s * 0.55, s * r.range(0.8, 1.3)], rot = [r.range(-8, 8), r.range(0, 180), r.range(-8, 8)];
+      const p = [x, gy + s * 0.18, z];
+      this.box({ p, s: size, r: rot, render: false });                   // collision inchangée
+      // design : rocher à facettes (icosaèdre déformé, base aplatie, un peu enterré) au lieu d'un pavé
+      const dr = this.deco, geo = new THREE.IcosahedronGeometry(0.62, 0), P = geo.attributes.position, jit = new Map();
+      for (let i = 0; i < P.count; i++) {
+        const key = P.getX(i).toFixed(3) + ',' + P.getY(i).toFixed(3) + ',' + P.getZ(i).toFixed(3);
+        if (!jit.has(key)) jit.set(key, dr.range(0.78, 1.18));
+        const k = jit.get(key);
+        P.setXYZ(i, P.getX(i) * k, Math.max(-0.42, P.getY(i) * k), P.getZ(i) * k);
+      }
+      geo.computeVertexNormals();
+      const tint = '#' + new THREE.Color(1, 1, 1).multiplyScalar(dr.range(0.8, 1.05)).getHexString();
+      this.addGeometry(geo, new V(p[0], p[1] - s * 0.05, p[2]), this.quatFrom(rot), new V(size[0], size[1] * 1.15, size[2]), mat || 'col:#5b6472', tint);
+      geo.dispose();
     }
 
     // Surface de terrain (heightfield) : rendu + collision.
     terrain(o) {
       const n = o.n, step = o.step, x0 = o.x0, z0 = o.z0;
+      const xMax = x0 + (n - 1) * step, zMax = z0 + (n - 1) * step;
+      // design : hauteur exacte du sol rendu (interpolation bilinéaire de la grille) pour poser arbres, rochers, herbes
+      this.groundAt = (x, z) => {
+        if (x < x0 || x > xMax || z < z0 || z > zMax) return 0;
+        const fx = (x - x0) / step, fz = (z - z0) / step, ix = Math.min(n - 2, Math.floor(fx)), iz = Math.min(n - 2, Math.floor(fz));
+        const tx = fx - ix, tz = fz - iz, hh = (a, c) => o.height(x0 + a * step, z0 + c * step);
+        // même découpage en triangles que PlaneGeometry (diagonale a-d)
+        const h00 = hh(ix, iz), h10 = hh(ix + 1, iz), h01 = hh(ix, iz + 1), h11 = hh(ix + 1, iz + 1);
+        return tx + tz <= 1 ? h00 + (h10 - h00) * tx + (h01 - h00) * tz : h11 + (h01 - h11) * (1 - tx) + (h10 - h11) * (1 - tz);
+      };
       const H = new Float32Array(n * n);
       for (let iz = 0; iz < n; iz++) for (let ix = 0; ix < n; ix++) H[iz * n + ix] = o.height(x0 + ix * step, z0 + iz * step);
       this.world.addHeightfield({ x0, z0, step, n, h: H, kind: 'solid' });

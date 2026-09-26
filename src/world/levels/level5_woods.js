@@ -27,7 +27,10 @@
       const r = b.rng, U = CC.U;
       const distRoute = U.routeDistXZ(route);
       b.terrain({ x0: -300, z0: -880, n: 151, step: 6, mat: 'grass', height: (x, z) => distRoute(x, z) < 12 ? 0 : 0.8 * (U.fbm2(x * 0.03, z * 0.03, 2, 3) - 0.3), color: () => [0.46, 0.44, 0.36] });
-      for (let i = 0; i < 420; i++) b.box({ p: [r.range(-70, 70), 0.2, r.range(20, -800)], s: [0.5, 0.4, 0.5], mat: 'col:#2f6e22', collide: false });
+      for (let i = 0; i < 420; i++) {   // design : touffes posées sur le sol réel, tailles et teintes variées
+        const x = r.range(-70, 70), z = r.range(20, -800), k = 0.7 + 0.6 * U.hash2(i, 3, 17), hh = 0.4 * k;
+        b.box({ p: [x, (b.groundAt ? b.groundAt(x, z) : 0) + hh / 2 - 0.04, z], s: [0.5 * k, hh, 0.5 * k], r: [0, 45 * U.hash2(i, 5, 9), 0], mat: 'col:#2f6e22', tint: U.hash2(i, 7, 3) < 0.5 ? '#ffffff' : '#c8d8a0', collide: false });
+      }
       // plateforme en bois avec silos rouges (la route passe dessous)
       b.box({ p: [0, 5.3, -48], s: [26, 0.6, 16], mat: 'planks' });
       for (const x of [-12.5, -4.5, 4.5, 12.5]) for (const z of [-40.5, -55.5]) b.box({ p: [x, 2.5, z], s: [0.6, 5, 0.6], mat: 'cream' });

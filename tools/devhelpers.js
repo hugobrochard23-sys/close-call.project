@@ -2,16 +2,20 @@
  * Dans la console d'une page ?test=1 : await import('/tools/devhelpers.js') puis __multi / __side / __look / __grid. */
 const V = THREE.Vector3;
 
-window.__grid = async (shots, cols = 2) => {
-  const imgs = [];
-  for (const s of shots) { const im = new Image(); im.src = s; await im.decode(); imgs.push(im); }
-  const w = 640, h = 360, rows = Math.ceil(imgs.length / cols);
+// capture synchrone (3D + HUD) dans un petit canvas : pas de décodage d'image (bloquant quand le volet est masqué)
+window.__cap = () => {
+  const g = CC.game, c = document.createElement('canvas'); c.width = 640; c.height = 360;
+  const x = c.getContext('2d'); x.drawImage(g.canvas, 0, 0, 640, 360); x.drawImage(g.hudCanvas, 0, 0, 640, 360);
+  return c;
+};
+window.__grid = (shots, cols = 2) => {
+  const w = 640, h = 360, rows = Math.ceil(shots.length / cols);
   const c = document.createElement('canvas'); c.width = w * cols; c.height = h * rows;
   const g = c.getContext('2d');
-  imgs.forEach((im, i) => g.drawImage(im, (i % cols) * w, Math.floor(i / cols) * h, w, h));
+  shots.forEach((im, i) => g.drawImage(im, (i % cols) * w, Math.floor(i / cols) * h, w, h));
   let d = document.getElementById('__g');
-  if (!d) { d = document.createElement('img'); d.id = '__g'; d.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:auto;z-index:99999;background:#000'; document.body.appendChild(d); }
-  d.src = c.toDataURL(); d.hidden = false;
+  if (!d) { d = document.createElement('canvas'); d.id = '__g'; d.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:auto;z-index:99999;background:#000'; document.body.appendChild(d); }
+  d.width = c.width; d.height = c.height; d.getContext('2d').drawImage(c, 0, 0); d.hidden = false;
   return [c.width, c.height];
 };
 window.__hide = () => { const d = document.getElementById('__g'); if (d) d.hidden = true; };
@@ -21,7 +25,7 @@ window.__multi = async (levels, frames, cols) => {
   for (const L of levels) {
     CC.game.startLevel(L);
     let f = 0;
-    for (const n of frames) { while (f < n) { CC.harness.step(1); f++; if (CC.harness.state().done) break; } out.push(CC.harness.capture()); }
+    for (const n of frames) { while (f < n) { CC.harness.step(1); f++; if (CC.harness.state().done) break; } out.push(__cap()); }
   }
   return __grid(out, cols || frames.length);
 };
@@ -34,7 +38,7 @@ window.__side = (dx, back, up, look) => {
   cam.updateMatrixWorld();
   g.effects.update(0, cam); g.trails.update(0, rk, cam);
   g.render(performance.now() / 1000);
-  return CC.harness.capture();
+  return __cap();
 };
 // vue libre : caméra en `from`, regarde `to` (tableaux [x,y,z])
 window.__look = (from, to, fov) => {
@@ -44,7 +48,7 @@ window.__look = (from, to, fov) => {
   cam.updateMatrixWorld();
   g.effects.update(0, cam);
   g.render(performance.now() / 1000);
-  return CC.harness.capture();
+  return __cap();
 };
 // objet à inspecter : `obj` (Object3D) vu depuis une direction [x,y,z] à `dist` m
 window.__orbit = (obj, dir, dist, fov) => {
