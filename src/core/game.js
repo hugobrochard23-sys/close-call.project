@@ -147,10 +147,11 @@
     // ---------- dimensions (16:9 letterbox) ----------
     resize() {
       const w = window.innerWidth, h = window.innerHeight, ar = CC.CONFIG.render.aspect;
-      // v017 : téléphone tenu droit → vue pleine largeur, au plus 3:4 (plus haut, l'angle de vue horizontal devient trop étroit)
-      this.portrait = !!(CC.Touch && CC.Touch.active) && h > w;
+      // v022 : écran tactile → plein écran (couché comme debout) ; ordinateur → zone 16:9 centrée
+      const touch = !!(CC.Touch && CC.Touch.active);
+      this.portrait = touch && h > w;
       let cw = w, ch = Math.round(w / ar);
-      if (this.portrait) ch = Math.min(h, Math.round(w * CC.CONFIG.render.portraitHeight));
+      if (touch) ch = h;
       else if (ch > h) { ch = h; cw = Math.round(h * ar); }
       this.root.style.width = cw + 'px'; this.root.style.height = ch + 'px';
       const pr = this.testMode ? 1 : Math.min(window.devicePixelRatio || 1, CC.CONFIG.render.maxPixelRatio);
@@ -159,7 +160,12 @@
       this.canvas.style.width = cw + 'px'; this.canvas.style.height = ch + 'px';
       this.hudCanvas.width = Math.round(cw * pr); this.hudCanvas.height = Math.round(ch * pr);
       this.hudCanvas.style.width = cw + 'px'; this.hudCanvas.style.height = ch + 'px';
-      this.camera.aspect = cw / ch; this.camera.updateProjectionMatrix();
+      this.camera.aspect = cw / ch;
+      // debout, l'écran est étroit : on élargit la vue verticale pour garder un angle horizontal suffisant (v022)
+      const fovV = CC.CONFIG.camera.fovV, minH = touch ? CC.CONFIG.input.touch.fovMinH : 0;
+      const needV = 2 * Math.atan(Math.tan(U.deg(minH) / 2) / this.camera.aspect) * 180 / Math.PI;
+      this.camera.fov = Math.min(100, Math.max(fovV, needV));
+      this.camera.updateProjectionMatrix();
       this.postfx.setSize(Math.round(cw * pr), Math.round(ch * pr));
     }
 
@@ -298,6 +304,8 @@
       this.telemetry.event('crash', { kind, pos: pos.toArray().map((v) => +v.toFixed(2)), runTime: +this.runTime.toFixed(3) });
     }
 
+    respawnMsg() { return CC.Touch && CC.Touch.active ? 'TAP TO RESPAWN' : 'PRESS FIRE TO RESPAWN AT LAUNCHER'; }
+
     // v020 : niveau de menace des tirs anti-aériens, 0 (premier niveau) → 1 (dernier) ; AUTOMAP : selon la difficulté
     aaThreat() {
       const L = this.level;
@@ -398,12 +406,12 @@
           this.impactT += dt;
           if (this.level.mode === 'targets' && !this.complete) this.runTime += dt;
           if (this.complete && this.impactT > 2.2) this.finishLevel();
-          else if (!this.complete && this.impactT > 0.5) { this.state = 'RESPAWN'; this.centerMsg = 'PRESS FIRE TO RESPAWN AT LAUNCHER'; }
+          else if (!this.complete && this.impactT > 0.5) { this.state = 'RESPAWN'; this.centerMsg = this.respawnMsg(); }
           break;
         case 'CRASHED':
           this.impactT += dt;
           if (this.level.mode === 'targets') this.runTime += dt;
-          if (this.impactT > 0.45) { this.state = 'RESPAWN'; this.centerMsg = 'PRESS FIRE TO RESPAWN AT LAUNCHER'; }
+          if (this.impactT > 0.45) { this.state = 'RESPAWN'; this.centerMsg = this.respawnMsg(); }
           break;
         case 'RESPAWN':
           if (this.level.mode === 'targets') this.runTime += dt;

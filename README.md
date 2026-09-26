@@ -62,10 +62,11 @@ chaque niveau après une modification du vol, de l'essence ou des ennemis).
 | F1 | liste des touches |
 | H | masquer le HUD |
 
-**Sur téléphone ou tablette (v017)** : joystick à gauche (piloter), **PROPULSION** à maintenir (moteur), **FEU** (tir /
-réapparition / reprendre après une pause), **MENU** et **R** en haut à gauche ; les menus se touchent directement.
-Couché : commandes par-dessus la vue 16:9. Debout : vue 3:4 en haut, commandes dessous, menus et boutique redisposés.
-Sur ordinateur, ajouter `#touch` à l'adresse force l'affichage des commandes tactiles (essai).
+**Sur téléphone ou tablette (v022)** : plein écran, aucun bouton sauf la pause. **Glisser le doigt** n'importe où dirige
+la roquette ; **toucher** tire (ou fait réapparaître après un crash) ; **double toucher** en vol allume le moteur, qui reste
+allumé jusqu'au double toucher suivant. **Bouton pause** (en haut à droite) : reprendre, son, musique, recommencer, menu.
+Affichage réduit à la jauge d'essence, au réticule, aux repères de cibles et à l'alerte missile ; rendu à 1 pixel par point
+et ombres 1024 pour la fluidité (`input.touch` dans `src/config.js`). Sur ordinateur, `#touch` dans l'adresse force ce mode.
 
 Dans les menus et la boutique, tout se fait à la souris (survol pour sélectionner, clic pour valider) ; **Échap** revient en arrière.
 

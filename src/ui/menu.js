@@ -81,14 +81,27 @@
       this.button(ctx, 'BACK (ESC)', W / 2, H * 0.85, px, () => { this.overlay = null; });
     }
 
+    // v022 : son et musique coupés / remis d'un geste (le volume précédent est conservé) ; sur écran tactile, pas de
+    // rappel de touches clavier et des boutons plus gros
+    toggleVolume(game, key) {
+      const s = game.settings, keep = '_' + key;
+      if (s[key] > 0) { s[keep] = s[key]; s[key] = 0; } else s[key] = s[keep] || CC.CONFIG.audio[key];
+      game.applySettings();
+    }
     drawPause(ctx, game, W, H) {
       this.dim(ctx, W, H, 0.55);
-      const px = H * 0.0042;
-      this.text(ctx, 'PAUSED', W / 2, H * 0.25, H * 0.009, '#f4f4f4', { align: 'center', skew: -0.2 });
-      this.button(ctx, 'RESUME', W / 2, H * 0.45, px, () => game.resume());
-      this.button(ctx, 'RESTART (R)', W / 2, H * 0.54, px, () => { game.resume(); game.restartLevel(); });
-      this.button(ctx, 'SETTINGS (TAB)', W / 2, H * 0.63, px, () => { this.overlay = 'settings'; });
-      this.button(ctx, 'MAIN MENU', W / 2, H * 0.72, px, () => game.toMenu());
+      const touch = document.body.classList.contains('cc-touch'), s = game.settings;
+      const px = H * (touch ? 0.0056 : 0.0042), step = touch ? 0.115 : 0.09;
+      this.text(ctx, 'PAUSED', W / 2, H * (touch ? 0.12 : 0.2), H * 0.009, '#f4f4f4', { align: 'center', skew: -0.2 });
+      const rows = [
+        ['RESUME', () => game.resume()],
+        ['SOUND: ' + (s.sfx > 0 ? 'ON' : 'OFF'), () => this.toggleVolume(game, 'sfx')],
+        ['MUSIC: ' + (s.music > 0 ? 'ON' : 'OFF'), () => this.toggleVolume(game, 'music')],
+        [touch ? 'RESTART' : 'RESTART (R)', () => { game.resume(); game.restartLevel(); }],
+      ];
+      if (!touch) rows.push(['SETTINGS (TAB)', () => { this.overlay = 'settings'; }]);
+      rows.push(['MAIN MENU', () => game.toMenu()]);
+      rows.forEach((r, i) => this.button(ctx, r[0], W / 2, H * ((touch ? 0.3 : 0.36) + i * step), px, r[1]));
     }
 
     drawResults(ctx, game, W, H) {

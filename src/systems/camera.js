@@ -25,7 +25,7 @@
     // Offset angulaire vertical du réticule (MESURÉ y = 40,2 %).
     crossAngle() {
       const ndcY = (0.5 - this.cfg.crosshairY) * 2;
-      return Math.atan(ndcY * Math.tan(U.deg(this.cfg.fovV) / 2));
+      return Math.atan(ndcY * Math.tan(U.deg(this.cam.fov) / 2));   // v022 : angle de vue réel (élargi debout sur téléphone)
     }
 
     setAim(yaw, pitch) { this.setAimQ(new THREE.Quaternion().setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'))); }

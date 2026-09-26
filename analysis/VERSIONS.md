@@ -323,3 +323,17 @@ immobile). README : section « Travailler à plusieurs ».
 
 **Vérification :** NIGHT FOREST sans esquive : 23 tirs, 23 impacts ; avec esquive : fini, 0 impact, essence minimale 2,7 s.
 Pilote automatique : 10 cartes terminées sans impact.
+
+## v022 — mobile : plein écran, sans bouton, glisser / toucher / double toucher
+
+**Changements (à la demande d'Hugo) :** `src/input/touch.js` réécrit : glisser = diriger (2,2 rad pour la largeur de l'écran),
+tap = tir / réapparition, double tap en vol = moteur allumé / éteint (bascule), gros bouton pause seul bouton. Plein écran
+couché comme debout ; debout, angle de vue vertical élargi pour garder ≥ 57° à l'horizontale (`fovMinH`, plafond 100°).
+Affichage tactile minimal (sans chrono, STYLE, THRUST, TIME, SPEED, annonces ; jauge d'essence sans texte sauf NO FUEL ;
+aide « TAP TO FIRE / DOUBLE TAP: ENGINE » au lanceur, « TAP TO RESPAWN » après un crash). Menu pause (tous supports) :
+SOUND et MUSIC ON/OFF. Fluidité : 1 pixel par point, ombres 1024. Police Google (Silkscreen) retirée (plus utilisée).
+
+**Vérification (téléphone simulé 375×812 et 740×360) :** vue = écran entier ; glisser 100 px → visée 33,6° à droite ;
+tap → tir ; tap simple en vol → rien ; double tap → moteur allumé, essence 22,97 → 21,97 en 1 s ; double tap → éteint ;
+taps espacés de 500 ms → rien ; pause → menu, SOUND / MUSIC → 0 puis rétablis, RESUME ; crash → « TAP TO RESPAWN » → tap → lanceur.
+Rendu (Mac) 2,9 → 2,4 ms / image, surface 563×1218 → 375×812. Ordinateur inchangé ; pilote automatique : 10 cartes, 0 impact.

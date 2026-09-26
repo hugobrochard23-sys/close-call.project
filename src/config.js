@@ -5,11 +5,10 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v021',
+  version: 'v022',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
-    portraitHeight: 4 / 3,       // CHOIX v017 : téléphone tenu droit, hauteur de la vue = largeur × 4/3
     maxPixelRatio: 1.5,
     shadows: true,
     shadowMapSize: 2048,
@@ -73,7 +72,15 @@ CC.CONFIG = {
 
   input: {
     sensitivity: 0.0021, invertY: false, maxPitchDeg: 88, autoLevel: 1.5,
-    touch: { rate: 1.5, deadZone: 0.12, curve: 2.0 },   // CHOIX v017, adouci en v018 (2,4 → 1,5 rad/s à fond ; réponse 1,5 → 2 : plus fin près du centre)
+    // CHOIX v022 (Hugo) : commandes tactiles sans bouton (src/input/touch.js), remplacent le joystick de v017-v021
+    touch: {
+      dragGain: 2.2,             // rad de visée pour un glissé de la largeur (ou hauteur, la plus petite) de l'écran
+      tapMaxMs: 250, tapMaxMove: 12,   // un toucher court (ms) et presque immobile (px) = tap
+      doubleTapMs: 320,          // deux taps rapprochés = double toucher (moteur allumé / éteint)
+      pixelRatio: 1,             // fluidité : rendu à 1 pixel par point d'écran (au lieu de 1,5)
+      shadowMapSize: 1024,       // fluidité : ombres 1024 au lieu de 2048
+      fovMinH: 62,               // debout : angle de vue horizontal minimal (°), la vue verticale s'élargit en conséquence
+    },
   },   // maxPitchDeg : au lanceur seulement (v011) ; autoLevel : remise à plat de l'horizon en vol (1/s)
 
   style: {

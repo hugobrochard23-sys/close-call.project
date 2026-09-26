@@ -40,8 +40,15 @@
       const v = game.level.hud, rk = game.rocket;
       // v017 : en vertical, les textes du coin haut droit sont alignés à droite sur le bord (sinon ils débordent)
       const R = this.portrait ? { x: () => 0.97 * W, o: { align: 'right' } } : { x: (c) => c.x * W, o: undefined };
-      // raccourcis
-      if ((v === 'A' || v === 'C') && !document.body.classList.contains('cc-touch')) {   // rappels clavier : inutiles au doigt (v017)
+      // v022 : écran tactile → affichage minimal (jauge d'essence, réticule, repères de cibles, alerte missile, aide au lancement)
+      const lite = document.body.classList.contains('cc-touch');
+      if (!lite) this.drawInfo(game, W, H, C, col, v, rk, R);
+      this.drawGameRest(game, W, H, C, col, v, rk, lite);
+    }
+
+    // Textes d'information du HUD (raccourcis, chrono, STYLE, THRUST, TIME, SPEED…), absents sur écran tactile (v022).
+    drawInfo(game, W, H, C, col, v, rk, R) {
+      if (v === 'A' || v === 'C') {
         const b = C.binds[v];
         const lines = v === 'A' ? ['BINDS:F1', 'SETTINGS:TAB', 'MENU:ESC'] : ['RESET:R', 'MENU:ESC', 'SETTINGS:TAB'];
         lines.forEach((l, i) => this.text(l, b.x * W, (b.y + i * b.pitch) * H, b.px, col.white));
@@ -64,6 +71,9 @@
         this.text('TIME:∞', R.x(C.time), C.time.y * H, C.time.px, col.white, R.o);
         if (!game.level.hideSpeed) this.text('SPEED:' + Math.round(rk && rk.active ? rk.speed : (game.state === 'AIM' ? 0 : game.lastSpeed)), R.x(C.speed), C.speed.y * H, C.speed.px, col.white, R.o);
       }
+    }
+
+    drawGameRest(game, W, H, C, col, v, rk, lite) {
       // jauge de capacité (MESURÉE : barre jaune sur gris, sous la roquette)
       if (rk && rk.active && (rk.gaugeShowT > 0 || rk.retroActive || rk.grapple.active)) {
         const g = C.gauge, ctx = this.ctx;
@@ -86,10 +96,11 @@
         ctx.strokeStyle = col.crosshair; ctx.lineWidth = Math.max(1, H / 540);
         ctx.beginPath(); ctx.moveTo(cx - sz, cy - sz); ctx.lineTo(cx + sz, cy + sz); ctx.moveTo(cx + sz, cy - sz); ctx.lineTo(cx - sz, cy + sz); ctx.stroke();
       }
-      if (v !== 'B') this.drawPopups(game);   // OBSERVÉ : aucune annonce de style dans les séquences au HUD B
+      if (v !== 'B' && !lite) this.drawPopups(game);   // OBSERVÉ : aucune annonce de style dans les séquences au HUD B
       this.drawIndicators(game);
       this.drawMissileWarning(game);
-      if (game.centerMsg) this.text(game.centerMsg, 0.5 * W, C.center.y * H, C.center.px, '#101010', { align: 'center', outline: '#f0f0f0' });
+      const msg = game.centerMsg || (lite && game.state === 'AIM' ? 'TAP TO FIRE    DOUBLE TAP: ENGINE' : null);
+      if (msg) this.text(msg, 0.5 * W, C.center.y * H, C.center.px, '#101010', { align: 'center', outline: '#f0f0f0' });
     }
 
     // Jauge d'essence (v009) : longueur du cadre proportionnelle au réservoir du niveau, remplissage = essence restante.
@@ -106,7 +117,7 @@
       let label = 'FUEL ' + U.formatDec(fuel, 1) + 'S', color = frac < 0.25 ? col.red : col.orange;
       if (rk.active && rk.freeBoost) { label = 'FREE BOOST ' + U.formatDec(Math.max(0, boostLeft), 1) + 'S'; color = col.blue; }
       else if (rk.active && fuel <= 0) { label = 'NO FUEL'; color = col.red; }
-      this.text(label, x0, F.labelY * H, F.px, color);
+      if (!document.body.classList.contains('cc-touch') || label === 'NO FUEL') this.text(label, x0, F.labelY * H, F.px, color);   // v022 : au doigt, la barre suffit
       ctx.fillStyle = col.outline; ctx.fillRect(x0 - 2, y0 - 2, w + 4, h + 4);
       ctx.fillStyle = '#7d7d7d'; ctx.fillRect(x0, y0, w, h);
       ctx.fillStyle = color; ctx.fillRect(x0, y0, w * frac, h);

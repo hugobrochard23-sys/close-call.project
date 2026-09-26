@@ -107,8 +107,7 @@
       if (turnRight) this.addAim(-ar, 0);
       if (pitchUp) this.addAim(0, ar);
       if (pitchDown) this.addAim(0, -ar);
-      const t = this.touch;   // v017 : joystick tactile (src/input/touch.js), vers le haut = cabrer comme W
-      if (t && (t.sx || t.sy)) { const tr = CC.CONFIG.input.touch.rate * dt; this.addAim(-t.sx * tr, -t.sy * tr); }
+      const t = this.touch;   // v022 : écran tactile (src/input/touch.js) : le glissé agit directement via addAim, ici seul le moteur
       this.constrainAim(dt);
       const st = {
         aimQ: this.aimQ.clone(),
