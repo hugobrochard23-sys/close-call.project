@@ -158,23 +158,15 @@
           if (to.length() < (this.level.terminalRange || 40) && to.angleTo(rk.vel) < 1.0 && this.idx >= R.length - 3) target = goal.obb.c.clone();
         }
         const desired = new V().subVectors(target, rk.pos).normalize();
-        // v013 (inertie) : le nez est la direction de poussée ; on pousse vers l'avant de la route, on corrige l'écart
-        // entre la vitesse voulue et la vitesse réelle, et on compense la gravité
-        // vitesse visée selon le virage à venir : on ralentit (nez retourné, poussée à contre-sens) avant un virage serré
-        const far = new V().subVectors(this.pointAhead(rk.pos, U.clamp(rk.speed * 1.4, 20, 90)), rk.pos).normalize();
-        const turn = Math.max(desired.angleTo(far), rk.speed > 5 ? rk.vel.clone().normalize().angleTo(far) : 0) * 180 / Math.PI;
-        const vTarget = U.clamp((this.level.apVmax || 62) - turn * 0.75, this.level.apVmin || 20, this.level.apVmax || 62);
-        const vWant = desired.clone().multiplyScalar(vTarget);
-        const aim = desired.clone().multiplyScalar((this.level.apForward || 25) * (rk.speed < vTarget ? 1 : 0.15))
-          .addScaledVector(vWant.sub(rk.vel), this.level.apGain || 4)
-          .add(new V(0, CC.CONFIG.physics.gravity, 0)).normalize();
+        const vDir = rk.vel.clone().normalize();
+        const aim = desired.clone().addScaledVector(new V().subVectors(desired, vDir), this.level.pnGain !== undefined ? this.level.pnGain : 1.3).normalize();
+        if (aim.angleTo(desired) > 1.0) aim.copy(desired).lerp(aim, 1.0 / aim.angleTo(desired)).normalize();
         this.aimAt(new V().copy(rk.pos).addScaledVector(aim, 20), dt, 14);
         let wantOff = false;
         for (const a of this.actions) {
           if (a.from !== undefined && this.idx >= a.from && this.idx < a.to) {
-            // v013 : consignes « moteur coupé » / « rétro » (calquées sur la vidéo) ignorées : avec l'inertie, le pilote gère sa vitesse lui-même
-            if (a.retro && CC.CONFIG.test.apLegacyActions) { if (a._r0 === undefined) a._r0 = this.t; if (!a.hold || this.t - a._r0 < a.hold) st.retro = true; }
-            if (a.engineOff && CC.CONFIG.test.apLegacyActions) wantOff = true;
+            if (a.retro) { if (a._r0 === undefined) a._r0 = this.t; if (!a.hold || this.t - a._r0 < a.hold) st.retro = true; }
+            if (a.engineOff) wantOff = true;
             if (a.grapple) {
               if (!a._fired) { st.grappleEdge = true; a._fired = true; a._t0 = this.t; }
               if (!a.hold || this.t - a._t0 < a.hold) st.grappleHeld = true;

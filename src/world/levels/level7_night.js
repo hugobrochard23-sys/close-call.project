@@ -5,7 +5,7 @@
   // v002 : maison éloignée (la vidéo se coupe à 8,9 s de course sans impact)
   const route = [[0, 1.7, 0], [0, 3, -40], [-8, 3.5, -90], [6, 3.2, -150], [-4, 4, -210], [8, 4.2, -270], [-6, 4, -340], [5, 4, -410], [-4, 4, -480], [8, 3.8, -550], [14, 3.2, -618], [15, 3, -628]];
   CC.Levels.push({
-    id: 'night', fuel: 16, name: 'NIGHT FOREST', hud: 'B', mode: 'score', impactVariant: 'cyan', seed: 77,
+    id: 'night', fuel: 11, name: 'NIGHT FOREST', hud: 'B', mode: 'score', impactVariant: 'cyan', seed: 77,
     refSegment: { start: 79.25, end: 89.14, fire: 80.22 },
     launcher: { type: 'shoulder', pos: [0, 1.7, 0], yaw: 0, pitch: 2 },
     menuView: { center: [0, 4, -300], radius: 60, height: 14 },

@@ -8,7 +8,7 @@
     [4, 3.5, -250], [0, 3.2, -285], [0, 3, -320], [0, 2.6, -352], [0, 2.6, -372], [0, 3.5, -400], [5, 3.5, -435], [0, 5, -470],
     [0, 9.8, -492], [0, 11.6, -505], [0, 11.5, -560], [0, 11.5, -605], [0, 8, -625], [0, 4.5, -650], [-3, 4, -680], [0, 4, -705], [0, 3.8, -726], [0, 3.6, -738], [0, 1.6, -748]];
   CC.Levels.push({
-    id: 'woods', fuel: 21, name: 'WOODS', hud: 'B', mode: 'score', impactVariant: 'cyan', seed: 55, pnGain: 0.5, lookAhead: 16,
+    id: 'woods', fuel: 14, name: 'WOODS', hud: 'B', mode: 'score', impactVariant: 'cyan', seed: 55, pnGain: 0.5, lookAhead: 16,
     refSegment: { start: 48.17, end: 64.45, fire: 48.3 },
     launcher: { type: 'shoulder', pos: [0, 1.7, 0], yaw: 0, pitch: 2 },
     menuView: { center: [0, 6, -300], radius: 90, height: 26 },

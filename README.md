@@ -47,18 +47,15 @@ baisse avec la difficulté (la jauge est plus courte) :
 
 | Niveau | CITY | BRICKWORKS | CANYON | CAVE | WOODS | CONSTRUCTION | NIGHT FOREST | AUTOMAP facile / moyen / difficile |
 |---|---|---|---|---|---|---|---|---|
-| Essence (s) | 29 | 26 | 23 | 22 | 21 | 20 | 16 | 18 / 19 / 23 |
-| Réserve restante au pilote automatique (s) | 14,2 | 19,1 | 10,9 | 6,9 | 7,6 | 6,4 | 4,2 | 8,1 / 5,5 / 4,7 |
+| Essence (s) | 23 | 20 | 18 | 16 | 14 | 12 | 11 | 15 / 16 / 18 |
+| Réserve restante au pilote automatique (s) | 13,6 | 15,8 | 8,6 | 6,5 | 5,8 | 6,0 | 3,2 | 7,5 / 5,5 / 3,9 |
 
 Sur AUTOMAP les cartes difficiles sont plus longues : le réservoir est plus grand, mais la marge est plus faible.
 Réglages : `rocket.freeBoost`, `rocket.fuelDefault` dans `src/config.js`, `fuel` dans chaque fiche de niveau.
 
-**Vol à inertie (v013).** La roquette pivote sur son centre : W,A,S,D ne déplacent que sa tête, sans courber la trajectoire.
-Elle continue sur sa lancée ; seul le réacteur (Espace, dans l'axe du nez), la gravité (5,72 m/s², moyenne Terre / Lune)
-et l'air la font changer de trajectoire. Pour tourner : pivoter, puis pousser ; pour freiner : retourner le nez et pousser
-(ou rétro-fusées). La roquette ne tourne plus sur son axe long.
-À l'écran : le **x** montre où pointe la tête, le **cercle vert** (v014) montre où va réellement la roquette ; en poussant,
-le cercle glisse vers le x. Le cercle est masqué quand la roquette file vers la caméra.
+**Vol (v015).** La trajectoire suit le nez (loopings, virages serrés) ; gravité 5,72 m/s² (moyenne Terre / Lune).
+À l'écran : le **x** montre où pointe la tête, le **cercle vert** (v014) montre où va réellement la roquette
+(il s'écarte du x dans les virages serrés et les chutes) ; masqué quand la roquette file vers la caméra.
 
 **Caméra de vol (v012).** Au tir, la caméra garde l'orientation du lanceur et **ne tourne plus jamais** pendant le vol :
 elle suit la roquette en translation, à distance constante, et la regarde donc toujours. La roquette peut pointer vers
@@ -162,7 +159,8 @@ Tout se règle dans `src/config.js`. Paramètres clés :
 | `rocket.ignitionDelay` | 0,28 s | MESURÉ (le compteur SPEED passe 31→35 entre 0,23 et 0,33 s) |
 | `rocket.thrust` | 50 m/s² (55 en v006) | MESURÉ (courbe SPEED du canyon : 31→55 m/s en 0,6 s) puis CHOIX v007 : la vitesse passait pour trop élevée ; le HUD affiche toujours « THRUST:45 » comme la vidéo |
 | `rocket.dragK` | 0,0100 (0,0086 en v006) | MESURÉ (plafond ≈ 80 m/s en palier, 87 en piqué) puis CHOIX v007 : plafond ≈ 71 m/s |
-| Vol à inertie (v013) | la tête pivote sur le centre, la trajectoire ne suit pas le nez ; `physics.gravity` = 5,715 m/s² (moyenne Terre / Lune) | CHOIX d'Hugo (v013) ; `grip`, `gripEngineOff`, `inducedDrag` supprimés ; `maxTurnRate` / `steerGain` ne servent plus qu'au grappin |
+| `rocket.maxTurnRate` / `steerGain` / `grip` | 3,5 rad/s / 9 / 11 (3 / 7,5 / 9 en v006) | ESTIMATION, relevées en v007 : roquette plus maniable (traînée induite 0,085 → 0,070, glissade tolérée jusqu'à 27°) ; vol à inertie essayé en v013 puis abandonné en v015 |
+| `physics.gravity` | 5,715 m/s² | CHOIX d'Hugo (v013, gardé en v015) : moyenne Terre (9,81) / Lune (1,62), roquette seulement |
 | `economy.*` | solde de départ 5 €, 60 + 0,05/pt + 1 € record | CHOIX v007 (boutique) |
 | `abilities.retro.decel` | 25 m/s² (+ traînée) ; le moteur principal s'éteint pendant le freinage | MESURÉ (75→27 m/s en 1,75 s), OBSERVÉ |
 | `camera.distance` / `height` | 1,85 m / 0,52 m | MESURÉ indirectement (nez à 55 %, tuyère à 67,8 % de la hauteur) |

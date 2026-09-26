@@ -248,3 +248,12 @@ réticule « x » (direction de la tête). Masqué si la roquette file vers la c
 
 **Vérification :** tête pivotée à droite sans poussée : cercle dans l'axe de la rue, x à droite ; après 0,7 s de poussée :
 le cercle s'est déplacé vers le x. Aucune erreur.
+
+## v015 — retour au vol d'avant (loopings), gravité et cercle vert conservés
+
+**Changements (à la demande d'Hugo) :** abandon du vol à inertie de v013 : `rocket.js`, `input.js`, `camera.js`, niveaux et
+réglages de vol restaurés depuis v012 (trajectoire qui suit le nez, rotation continue sur l'axe long, pilote automatique
+et réservoirs de v012). Conservés : gravité 5,715 m/s² (v013), G affichés en G terrestres, cercle vert de trajectoire (v014).
+
+**Vérification :** pilote automatique : 10 cartes terminées sans crash, réserves identiques à v012 (minimum 3,2 s, NIGHT FOREST) ;
+Espace + W 5 s : 497° de rotation de la trajectoire, toujours en vol ; rotation de la caméra 0° ; cercle vert affiché.

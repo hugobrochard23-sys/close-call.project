@@ -5,7 +5,7 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v014',
+  version: 'v015',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
@@ -17,7 +17,7 @@ CC.CONFIG = {
 
   physics: {
     fixedDt: 1 / 240,
-    gravity: 5.715,              // CHOIX v013 (Hugo) : moyenne Terre (9,81) / Lune (1,62) ; ne s'applique qu'à la roquette
+    gravity: 5.715,              // CHOIX v013, gardé en v015 (Hugo) : moyenne Terre (9,81) / Lune (1,62) ; ne s'applique qu'à la roquette
   },
 
   rocket: {
@@ -28,9 +28,11 @@ CC.CONFIG = {
     thrust: 50,                  // MESURÉ (v003) puis CHOIX v007 : 55 → 50 (la vitesse de pointe était un peu trop élevée)
     thrustHud: 45,               // valeur affichée par le HUD A ("THRUST:45", OBSERVÉ)
     dragK: 0.0100,               // MESURÉ (v003) puis CHOIX v007 : 0,0086 → 0,0100 (vitesse de pointe 80 → 71 m/s)
-    // v013 : inducedDrag, grip, gripEngineOff supprimés (inertie : la trajectoire ne suit plus le nez)
-    steerGain: 9.0,              // pendant le grappin seulement (v013) : le nez s'aligne sur la trajectoire
-    maxTurnRate: 3.5,            // rad/s, idem
+    inducedDrag: 0.070,          // ESTIMATION : perte de vitesse en virage serré (v007 : 0,085 → 0,070, virage moins coûteux)
+    steerGain: 9.0,              // ESTIMATION : réponse de l'orientation au réticule (v007 : 7,5 → 9)
+    maxTurnRate: 3.5,            // rad/s, ESTIMATION (v007 : 3,0 → 3,5)
+    grip: 11.0,                  // alignement de la vitesse sur le nez (1/s) (v007 : 9 → 11)
+    gripEngineOff: 4.6,          // v007 : 3,5 → 4,6
     slideMaxAngleDeg: 27,        // CHOIX : contact rasant → glissade, sinon crash (v007 : 24 → 27, plus tolérant)
     slideFriction: 5.0,          // m/s² de perte en glissade
     breakSpeedFactor: 0.88,      // perte de vitesse en traversant vitre/mur de briques (ESTIMATION)
@@ -40,7 +42,7 @@ CC.CONFIG = {
     // consomme 1 s d'essence. Réservoir par niveau (`fuel` dans la fiche du niveau), plein à chaque tir.
     freeBoost: 0.5,              // v010 : 3 → 0,5 s
     fuelDefault: 12,             // s de poussée si le niveau ne précise pas `fuel`
-    fuelBarMax: 30,              // réservoir qui remplit toute la largeur de la jauge : un petit réservoir donne une jauge plus courte
+    fuelBarMax: 24,              // réservoir qui remplit toute la largeur de la jauge : un petit réservoir donne une jauge plus courte
   },
 
   abilities: {
@@ -132,5 +134,5 @@ CC.CONFIG = {
 
   audio: { master: 0.7, music: 0.28, sfx: 0.9 },
 
-  test: { fps: 30, apLegacyActions: false },   // v013 : true = le pilote automatique suit les consignes moteur coupé / rétro des niveaux
+  test: { fps: 30 },
 };

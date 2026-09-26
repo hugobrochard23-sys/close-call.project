@@ -13,7 +13,7 @@
   route.push([0, -57, -768], [0, -60.5, -782], [0, -62.2, -789]);
 
   CC.Levels.push({
-    id: 'cave', fuel: 22, name: 'CAVE', hud: 'C', mode: 'style', impactVariant: 'orange', seed: 44, parTime: 13,
+    id: 'cave', fuel: 16, name: 'CAVE', hud: 'C', mode: 'style', impactVariant: 'orange', seed: 44, parTime: 13,
     refSegment: { start: 36.03, end: 48.17, fire: 31.51 },
     launcher: { type: 'shoulder', pos: [0, -6, 18], yaw: 0, pitch: -2 },
     menuView: { center: [0, -10, -60], radius: 8, height: 2 },
