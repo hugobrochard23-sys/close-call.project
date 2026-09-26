@@ -279,3 +279,10 @@ centrée (colonnes, titres et boutique redisposés : 2 colonnes). `CC.game` expo
 **Vérification :** téléphone simulé (375×812 et 667×375, tactile) : FEU → vol, PROPULSION → moteur et essence qui baisse,
 joystick → visée qui tourne, MENU → pause, FEU → reprise, R → recommence ; menu, difficulté, boutique, pause, résultats lisibles
 sans débordement en vertical. Ordinateur : aucune commande tactile, pilote automatique 10 cartes sans crash.
+
+## v018 — joystick moins sensible
+
+**Changement (à la demande d'Hugo) :** `input.touch.rate` 2,4 → 1,5 rad/s à fond, `curve` 1,5 → 2 (plus fin près du centre).
+Vitesse de rotation de la visée : 138 → 86 °/s à fond, 39 → 16 °/s à mi-course.
+
+**Vérification :** téléphone simulé, joystick 0,5 s : 43° à fond (69° en v017), 8° à mi-course ; aucune erreur.

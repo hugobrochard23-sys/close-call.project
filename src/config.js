@@ -5,7 +5,7 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v017',
+  version: 'v018',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
@@ -72,7 +72,7 @@ CC.CONFIG = {
 
   input: {
     sensitivity: 0.0021, invertY: false, maxPitchDeg: 88, autoLevel: 1.5,
-    touch: { rate: 2.4, deadZone: 0.12, curve: 1.5 },   // CHOIX v017 : joystick tactile (rad/s à fond, zone morte, réponse progressive)
+    touch: { rate: 1.5, deadZone: 0.12, curve: 2.0 },   // CHOIX v017, adouci en v018 (2,4 → 1,5 rad/s à fond ; réponse 1,5 → 2 : plus fin près du centre)
   },   // maxPitchDeg : au lanceur seulement (v011) ; autoLevel : remise à plat de l'horizon en vol (1/s)
 
   style: {
