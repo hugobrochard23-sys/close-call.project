@@ -1,15 +1,19 @@
 /* Entrées : souris (pointer lock) + clavier, et pilote automatique pour les tests reproductibles.
  * Contrôles (CHOIX validé) : souris = visée, clic gauche = tir/réapparition, clic droit maintenu = grappin,
- * W,A,S,D (ou Z,Q,S,D, ou flèches) = piloter, G maintenue = moteur (v009, remplace Espace on/off), Maj maintenue = rétro-fusées,
+ * W,A,S,D (ou Z,Q,S,D, ou flèches) = piloter, Espace maintenue = moteur (v011, G en v009-v010), Maj maintenue = rétro-fusées,
  * R = reset, Échap = menu, Tab = réglages, F1 = touches. */
 (function () {
   const U = CC.U;
   const V = THREE.Vector3;
+  const _q = new THREE.Quaternion(), _e = new THREE.Euler(0, 0, 0, 'YXZ');
+  const AX = new V(1, 0, 0), AY = new V(0, 1, 0), FWD = new V(0, 0, -1);
 
   class Input {
     constructor(game, el) {
       this.game = game; this.el = el;
       this.yaw = 0; this.pitch = 0;
+      // v011 : visée = orientation complète (quaternion), sans butée à ±88° : loopings et vol sur le dos possibles
+      this.aimQ = new THREE.Quaternion(); this.pitchActiveT = 0;
       this.keys = {}; this.edges = {};
       this.fireEdge = false; this.grappleHeld = false; this.grappleEdge = false;
       this.locked = false; this.enabled = true;
@@ -64,12 +68,32 @@
     requestLock() { try { const p = this.el.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignoré */ } }
     exitLock() { if (document.pointerLockElement) document.exitPointerLock(); }
 
+    // Rotations dans le repère de la roquette : lacet autour de son « haut », tangage autour de sa « droite ».
     addAim(dy, dp) {
-      this.yaw += dy;
-      const lim = U.deg(CC.CONFIG.input.maxPitchDeg);
-      this.pitch = U.clamp(this.pitch + dp, -lim, lim);
+      if (dy) this.aimQ.multiply(_q.setFromAxisAngle(AY, dy));
+      if (dp) { this.aimQ.multiply(_q.setFromAxisAngle(AX, dp)); this.pitchActiveT = 0.3; }
+      this.aimQ.normalize();
     }
-    setAim(yaw, pitch) { this.yaw = yaw; this.pitch = pitch; }
+    setAim(yaw, pitch) { this.aimQ.setFromEuler(_e.set(pitch, yaw, 0, 'YXZ')); }
+
+    /* Au lanceur : visée classique (pas de roulis, tangage borné). En vol : horizon remis à plat doucement,
+     * sauf pendant un tangage (sinon un looping serait interrompu) et près de la verticale (roulis indéfini). */
+    constrainAim(dt) {
+      const flying = this.game.state === 'FLIGHT';
+      this.pitchActiveT = Math.max(0, this.pitchActiveT - dt);
+      if (!flying) {
+        _e.setFromQuaternion(this.aimQ, 'YXZ');
+        const lim = U.deg(CC.CONFIG.input.maxPitchDeg);
+        this.setAim(_e.y, U.clamp(_e.x, -lim, lim));
+        return;
+      }
+      const f = FWD.clone().applyQuaternion(this.aimQ);
+      if (this.pitchActiveT > 0 || Math.abs(f.y) > 0.9 || dt <= 0) return;
+      const up = AY.clone().applyQuaternion(this.aimQ);
+      const want = AY.clone().addScaledVector(f, -f.y).normalize();
+      const ang = Math.atan2(new V().crossVectors(up, want).dot(f), up.dot(want));
+      this.aimQ.premultiply(_q.setFromAxisAngle(f, ang * U.damp(CC.CONFIG.input.autoLevel, dt))).normalize();
+    }
 
     // État consommé par le jeu à chaque image.
     poll(dt) {
@@ -83,11 +107,12 @@
       if (turnRight) this.addAim(-ar, 0);
       if (pitchUp) this.addAim(0, ar);
       if (pitchDown) this.addAim(0, -ar);
+      this.constrainAim(dt);
       const st = {
-        yaw: this.yaw, pitch: this.pitch,
+        aimQ: this.aimQ.clone(),
         fire: this.fireEdge, grappleHeld: this.grappleHeld, grappleEdge: this.grappleEdge,
         retro: !!(k.ShiftLeft || k.ShiftRight),
-        thrust: !!k.KeyG,
+        thrust: !!k.Space,
       };
       this.fireEdge = false; this.grappleEdge = false; this.edges = {};
       return st;

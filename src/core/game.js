@@ -353,8 +353,8 @@
     // ---------- boucle ----------
     update(dt) {
       const inp = (this.useAutopilot && this.autopilot && this.state !== 'MENU') ? this.autopilot.poll(dt) : this.input.poll(dt);
-      if (this.useAutopilot) this.input.setAim(inp.yaw, inp.pitch);
-      this.rig.setAim(inp.yaw, inp.pitch);
+      if (inp.aimQ) this.rig.setAimQ(inp.aimQ);
+      else { this.input.setAim(inp.yaw, inp.pitch); this.rig.setAim(inp.yaw, inp.pitch); }   // pilote automatique : lacet / tangage
       const rk = this.rocket;
       switch (this.state) {
         case 'AIM':

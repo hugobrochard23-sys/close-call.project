@@ -2,7 +2,9 @@
  * MESURÉ : réticule à 40,2 % de la hauteur ; la direction visée passe par le réticule.
  * MESURÉ (indirect) : distance 1,85 m, hauteur 0,52 m. ESTIMATION : lissage du décalage, roulis en virage.
  * v010 (CHOIX) : en vol, la caméra ne suit plus la visée mais la trajectoire de la roquette, avec retard (camera.followLag) :
- * piloter (W,A,S,D, souris) fait tourner la roquette à l'écran sans faire pivoter la vue d'un coup. */
+ * piloter (W,A,S,D, souris) fait tourner la roquette à l'écran sans faire pivoter la vue d'un coup.
+ * v011 : visée libre à 360° ; le « haut » de la caméra suit (avec retard) celui de la visée, pas celui du monde :
+ * pas de retournement brutal en haut d'un looping. */
 (function () {
   const V = THREE.Vector3;
   const U = CC.U;
@@ -12,11 +14,12 @@
       this.cam = camera; this.game = game; this.cfg = CC.CONFIG.camera;
       this.mode = 'menu';
       this.pos = new V(); this.eye = new V(); this.t = 0;
-      this.roll = 0; this.prevYaw = 0; this.focus = new V();
+      this.roll = 0; this.focus = new V();
       this.aimDir = new V(0, 0, -1); this.right = new V(1, 0, 0); this.up = new V(0, 1, 0);
       this.shake = 0;
       this.offset = new V(0, 0.5, 2);
       this.camDir = new V(0, 0, -1); this.camRight = new V(1, 0, 0); this.camUp = new V(0, 1, 0);
+      this.upRef = new V(0, 1, 0); this.prevCamDir = new V(0, 0, -1);
     }
 
     // Offset angulaire vertical du réticule (MESURÉ y = 40,2 %).
@@ -25,12 +28,12 @@
       return Math.atan(ndcY * Math.tan(U.deg(this.cfg.fovV) / 2));
     }
 
-    setAim(yaw, pitch) {
-      const cp = Math.cos(pitch);
-      this.aimDir.set(-Math.sin(yaw) * cp, Math.sin(pitch), -Math.cos(yaw) * cp).normalize();
-      this.right.set(Math.cos(yaw), 0, -Math.sin(yaw));
-      this.up.crossVectors(this.right, this.aimDir).normalize();
-      this.yaw = yaw; this.pitch = pitch;
+    setAim(yaw, pitch) { this.setAimQ(new THREE.Quaternion().setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'))); }
+    setAimQ(q) {
+      this.aimDir.set(0, 0, -1).applyQuaternion(q);
+      this.right.set(1, 0, 0).applyQuaternion(q);
+      this.up.set(0, 1, 0).applyQuaternion(q);
+      this.yaw = Math.atan2(-this.aimDir.x, -this.aimDir.z);
     }
 
     orient(forward, rollAngle, right, up) {
@@ -44,11 +47,15 @@
     }
 
     startLauncher(eyePos) { this.mode = 'launcher'; this.eye.copy(eyePos); this.pos.copy(eyePos); this.roll = 0; }
-    startFlight() { this.mode = 'transition'; this.t = 0; this.camDir.copy(this.aimDir); this.updateCamBasis(); this.wantedOffset(this.offset); }
+    startFlight() {
+      this.mode = 'transition'; this.t = 0;
+      this.camDir.copy(this.aimDir); this.prevCamDir.copy(this.aimDir); this.upRef.copy(this.up);
+      this.updateCamBasis(); this.wantedOffset(this.offset);
+    }
 
-    // Repère de la caméra de poursuite, construit sur camDir (horizon gardé à plat, roulis ajouté à part).
+    // Repère de la caméra de poursuite, construit sur camDir et sur le « haut » de référence (roulis ajouté à part).
     updateCamBasis() {
-      const r = new V().crossVectors(this.camDir, new V(0, 1, 0));
+      const r = new V().crossVectors(this.camDir, this.upRef);
       if (r.lengthSq() > 1e-6) this.camRight.copy(r.normalize());   // à la verticale : on garde le repère précédent
       this.camUp.crossVectors(this.camRight, this.camDir).normalize();
     }
@@ -76,11 +83,9 @@
       const c = this.cfg, cam = this.cam, rk = this.game.rocket;
       this.t += dt;
       // roulis d'après la vitesse de lacet (ESTIMATION : horizon incliné en virage)
-      const flying = this.mode === 'chase' || this.mode === 'transition';
-      const yawNow = flying ? Math.atan2(-this.camDir.x, -this.camDir.z) : (this.yaw || 0);
-      let dy = yawNow - this.prevYaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
-      this.prevYaw = yawNow;
-      const yawRate = dt > 0 ? dy / dt : 0;
+      // vitesse de lacet mesurée dans le repère de la caméra (pas autour de la verticale du monde : saut à 180° dans un looping)
+      const yawRate = dt > 0 ? new V().crossVectors(this.prevCamDir, this.camDir).dot(this.camUp) / dt : 0;
+      this.prevCamDir.copy(this.camDir);
       const targetRoll = this.mode === 'chase' || this.mode === 'transition' ? U.clamp(-yawRate * c.rollFromYawRate, -0.35, 0.35) : 0;
       this.roll += (targetRoll - this.roll) * U.damp(c.rollLag, dt);
 
@@ -92,7 +97,10 @@
         if (rk.active) {
           const sp = rk.vel.length();
           const target = sp > 1 ? rk.vel.clone().divideScalar(sp) : rk.fwd;
-          this.camDir.lerp(target, U.damp(c.followLag, dt)).normalize();
+          const k = U.damp(c.followLag, dt);
+          this.camDir.lerp(target, k).normalize();
+          const u = this.upRef.clone().lerp(this.up, k);
+          if (u.lengthSq() > 1e-6) this.upRef.copy(u.normalize());   // haut exactement opposé (rare) : on garde l'ancien
           this.updateCamBasis();
         }
         this.offset.lerp(this.wantedOffset(new V()), U.damp(c.offsetLag, dt));

@@ -5,7 +5,7 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v010',
+  version: 'v011',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
@@ -69,7 +69,7 @@ CC.CONFIG = {
     eyeHeight: 1.6,
   },
 
-  input: { sensitivity: 0.0021, invertY: false, maxPitchDeg: 88 },
+  input: { sensitivity: 0.0021, invertY: false, maxPitchDeg: 88, autoLevel: 1.5 },   // maxPitchDeg : au lanceur seulement (v011) ; autoLevel : remise à plat de l'horizon en vol (1/s)
 
   style: {
     proximityDist: 4.0,          // ESTIMATION : distance "PROXIMITY FLIGHT"

@@ -199,3 +199,16 @@ du modèle 3D et changement de couleur de flamme).
 **Vérification :** pilote automatique : 7 niveaux + 3 AUTOMAP terminés, réserve minimale 3,2 s (NIGHT FOREST).
 Virage à droite maintenu 0,5 s : la tuyère se déplace de 50 % à 36 % de la largeur de l'écran puis revient vers le centre en ≈ 1,5 s.
 
+
+## v011 — pilotage à 360°, moteur sur Espace
+
+**Changements (CHOIX) :**
+- visée = orientation complète (quaternion) au lieu de lacet + tangage bornés à ±88° : W,A,S,D et la souris tournent la roquette
+  dans son propre repère → loopings, vol sur le dos ; l'horizon se remet à plat doucement quand on ne cabre / pique pas
+  (`input.autoLevel`) ; au lanceur, visée inchangée (tangage borné, sans roulis) ;
+- la caméra de poursuite prend pour « haut » celui de la visée (avec retard) : pas de retournement en haut d'un looping ;
+- moteur : G → **Espace** maintenue.
+
+**Vérification :** pilote automatique : 10 cartes terminées, chiffres identiques à v010. Espace + W maintenues 6 s sur AUTOMAP facile :
+601° de rotation de la trajectoire, toujours en vol ; tuyère à l'écran sans saut (≤ 1,9 % de l'écran par image).
+Limite : pendant un looping continu la queue de la roquette sort légèrement par le bas de l'écran (retard de la caméra, `camera.followLag`).

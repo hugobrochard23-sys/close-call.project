@@ -26,8 +26,8 @@ Compatible Chrome, Edge, Firefox et Safari récents (WebGL requis).
 
 | Touche | Action |
 |---|---|
-| W,A,S,D | piloter : W monte, S descend, A gauche, D droite (Z,Q,S,D sur AZERTY et les flèches marchent aussi) |
-| G (maintenue) | moteur : pousse tant que G est enfoncée, s'éteint dès qu'on la relâche ; consomme l'essence |
+| W,A,S,D | piloter à 360° : W cabre, S pique, A gauche, D droite, par rapport à la roquette (loopings et vol sur le dos possibles ; Z,Q,S,D sur AZERTY et les flèches marchent aussi) |
+| Espace (maintenue) | moteur : pousse tant qu'Espace est enfoncée, s'éteint dès qu'on la relâche ; consomme l'essence |
 | Souris | viser aussi à la souris (facultatif) : la roquette suit le réticule |
 | Clic gauche | tirer / réapparaître au lanceur |
 | Clic droit (maintenu) | grappin : s'accroche au mur ou au disque visé, relâcher pour lâcher |
@@ -41,7 +41,7 @@ Compatible Chrome, Edge, Firefox et Safari récents (WebGL requis).
 Dans les menus et la boutique, tout se fait à la souris (survol pour sélectionner, clic pour valider) ; **Échap** revient en arrière.
 
 **Moteur et essence (v009, v010).** Au tir, la roquette a **0,5 s de poussée gratuite** (jauge bleue « FREE BOOST ») ;
-ensuite elle ne pousse que si **G** est maintenue, et chaque seconde de poussée brûle 1 s d'essence (jauge orange en bas à gauche,
+ensuite elle ne pousse que si **Espace** est maintenue, et chaque seconde de poussée brûle 1 s d'essence (jauge orange en bas à gauche,
 rouge sous 25 %). Réservoir vide : moteur coupé, la roquette plane puis tombe. Le réservoir est plein à chaque tir et sa taille
 baisse avec la difficulté (la jauge est plus courte) :
 
