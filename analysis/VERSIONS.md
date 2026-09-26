@@ -212,3 +212,16 @@ Virage à droite maintenu 0,5 s : la tuyère se déplace de 50 % à 36 % de la l
 **Vérification :** pilote automatique : 10 cartes terminées, chiffres identiques à v010. Espace + W maintenues 6 s sur AUTOMAP facile :
 601° de rotation de la trajectoire, toujours en vol ; tuyère à l'écran sans saut (≤ 1,9 % de l'écran par image).
 Limite : pendant un looping continu la queue de la roquette sort légèrement par le bas de l'écran (retard de la caméra, `camera.followLag`).
+
+## v012 — caméra fixe en orientation, pilotage selon les axes de l'écran
+
+**Changements (CHOIX, à la demande d'Hugo) :**
+- en vol, la caméra ne tourne plus : orientation figée au tir, translation seule à distance constante de la roquette
+  (qui peut pointer vers la caméra) ; rapprochement sans rotation si un mur s'interpose ; plus de roulis en virage ;
+- W,A,S,D / souris : rotations autour des axes fixes de l'écran (W/S : axe horizontal, looping complet ; A/D : axe vertical) ;
+- supprimés : `camera.followLag`, `rollFromYawRate`, `rollLag`, `input.autoLevel` (devenus sans objet) ;
+- télémétrie : pose de la caméra (`cam`) à chaque image.
+
+**Vérification :** rotation de la caméra mesurée = 0° pendant un looping (5 s), un demi-tour (D) et un vol mixte (W+A) ;
+distance caméra–roquette 1,92–1,93 m (0,95 m quand un mur s'interpose) ; la roquette se dirige vers la caméra dans les trois cas.
+Pilote automatique : 10 cartes terminées, chiffres identiques à v011.

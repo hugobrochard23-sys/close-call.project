@@ -26,7 +26,7 @@ Compatible Chrome, Edge, Firefox et Safari récents (WebGL requis).
 
 | Touche | Action |
 |---|---|
-| W,A,S,D | piloter à 360° : W cabre, S pique, A gauche, D droite, par rapport à la roquette (loopings et vol sur le dos possibles ; Z,Q,S,D sur AZERTY et les flèches marchent aussi) |
+| W,A,S,D | piloter à 360° autour des axes de l'écran : W / S basculent la roquette vers le haut / le bas de l'écran (maintenir = looping complet), A / D la font tourner comme sur un plateau (elle peut pointer vers la caméra) ; Z,Q,S,D sur AZERTY et les flèches marchent aussi |
 | Espace (maintenue) | moteur : pousse tant qu'Espace est enfoncée, s'éteint dès qu'on la relâche ; consomme l'essence |
 | Souris | viser aussi à la souris (facultatif) : la roquette suit le réticule |
 | Clic gauche | tirer / réapparaître au lanceur |
@@ -53,9 +53,10 @@ baisse avec la difficulté (la jauge est plus courte) :
 Sur AUTOMAP les cartes difficiles sont plus longues : le réservoir est plus grand, mais la marge est plus faible.
 Réglages : `rocket.freeBoost`, `rocket.fuelDefault` dans `src/config.js`, `fuel` dans chaque fiche de niveau.
 
-**Caméra de vol (v010).** La caméra suit la roquette mais pas la visée : elle se réaligne peu à peu derrière la trajectoire
-(`camera.followLag`, plus petit = caméra plus libre). En pilotant, on voit donc la roquette tourner à l'écran ; le réticule
-indique la direction visée.
+**Caméra de vol (v012).** Au tir, la caméra garde l'orientation du lanceur et **ne tourne plus jamais** pendant le vol :
+elle suit la roquette en translation, à distance constante, et la regarde donc toujours. La roquette peut pointer vers
+la caméra ; si elle fonce vers elle, la caméra recule d'autant. Si un mur passe entre les deux, la caméra se rapproche
+sans tourner. Le réticule indique la direction visée.
 
 Un contact rasant avec le sol ou un toit fait **glisser** la roquette. Un choc de face la fait **exploser**.
 Les vitres, les murs de briques fins et les caisses se brisent.

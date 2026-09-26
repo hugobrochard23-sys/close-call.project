@@ -123,7 +123,7 @@
       this.dim(ctx, W, H, 0.7);
       const px = H * 0.0032;
       this.text(ctx, 'BINDS', W / 2, H * 0.1, H * 0.008, '#f4f4f4', { align: 'center', skew: -0.2 });
-      const b = [['W,A,S,D', 'STEER 360 (ALSO Z,Q,S,D OR ARROWS)'], ['SPACE (HOLD)', 'ENGINE (0,5S FREE, THEN FUEL)'], ['MOUSE', 'AIM (OPTIONAL)'],
+      const b = [['W,A,S,D', 'ROTATE 360 ON SCREEN AXES (OR ARROWS)'], ['SPACE (HOLD)', 'ENGINE (0,5S FREE, THEN FUEL)'], ['MOUSE', 'AIM (OPTIONAL)'],
         ['LEFT CLICK', 'FIRE / RESPAWN AT LAUNCHER'], ['RIGHT CLICK (HOLD)', 'GRAPPLE HOOK'], ['SHIFT (HOLD)', 'RETRO BURNERS'], ['R', 'RESET'], ['ESC', 'MENU / PAUSE'], ['TAB', 'SETTINGS'], ['F1', 'BINDS']];
       b.forEach((row, i) => {
         const y = H * (0.25 + i * 0.058);

@@ -5,7 +5,7 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v011',
+  version: 'v012',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
@@ -60,16 +60,13 @@ CC.CONFIG = {
     distance: 1.85,              // MESURÉ (indirect) : nez à 55 % et tuyère à 67,8 % de la hauteur ⇒ ≈ 1,5 longueur de roquette
     height: 0.52,                // MESURÉ (indirect), même calcul
     crosshairY: 0.402,           // MESURÉ : réticule à 40,2 % de la hauteur
-    followLag: 2.2,              // CHOIX v010 : vitesse (1/s) à laquelle la caméra se réaligne derrière la trajectoire (plus petit = caméra plus libre)
     offsetLag: 7,                // lissage du décalage caméra (1/s) : dérive de la roquette à l'écran quand la visée tourne (ESTIMATION)
-    rollFromYawRate: 0.16,       // ESTIMATION : inclinaison de l'horizon en virage
-    rollLag: 5,
     launchBlend: 0.45,           // MESURÉ : la caméra rattrape la roquette en ≈ 0,5 s
     near: 0.05, far: 1400,
     eyeHeight: 1.6,
   },
 
-  input: { sensitivity: 0.0021, invertY: false, maxPitchDeg: 88, autoLevel: 1.5 },   // maxPitchDeg : au lanceur seulement (v011) ; autoLevel : remise à plat de l'horizon en vol (1/s)
+  input: { sensitivity: 0.0021, invertY: false, maxPitchDeg: 88 },   // maxPitchDeg : au lanceur seulement (v011)
 
   style: {
     proximityDist: 4.0,          // ESTIMATION : distance "PROXIMITY FLIGHT"
