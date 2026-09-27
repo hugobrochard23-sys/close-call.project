@@ -5,7 +5,7 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v032',
+  version: 'v033',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
@@ -201,6 +201,39 @@ CC.CONFIG = {
     warnBeep: 0.45,              // v026 : s entre deux bips tant qu'un missile est à moins de warnDist
   },
   aaByDifficulty: { easy: 0.3, medium: 0.6, hard: 0.95 },
+
+  // v033 : mode CLASSIQUE — couloir infini (src/world/endless.js). Score = mètres parcourus, une seule vie.
+  // La difficulté monte par paliers de distance (FACILE → MOYEN → DIFFICILE → IMPOSSIBLE) ; les décors changent par zone.
+  endless: {
+    chunkLen: 200,               // m : longueur d'un tronçon construit d'un coup
+    ahead: 3,                    // tronçons prêts devant la roquette (le brouillard cache le bout)
+    behind: 1,                   // tronçons gardés derrière avant d'être détruits
+    stageLen: 800,               // m par palier de difficulté (le 4e palier, IMPOSSIBLE, ne finit jamais)
+    zoneLen: 1000,               // m par décor (ville, désert, neige, industrie, canyon…)
+    width: [40, 30, 23, 18],     // m : largeur du couloir par palier
+    gap: [85, 70, 58, 48],       // m : espacement moyen des obstacles par palier
+    hole: [15, 12, 10, 8.5],     // m : côté du trou des murs percés par palier
+    bend: [8, 13, 18, 22],       // m : amplitude des virages du couloir par palier
+    ceiling: 48,                 // m : altitude au-dessus de laquelle l'alarme ALTITUDE! se déclenche
+    ceilingGrace: 1.5,           // s au-dessus du plafond avant l'explosion
+    cruise: 14,                  // m : altitude de vol du pilote automatique (banc de test)
+    fuelStart: 14,               // s d'essence au départ
+    fuelMax: 20,                 // s : taille du réservoir (les recharges ne dépassent pas)
+    fuelPerStyle: 0.0035,        // s d'essence gagnées par point de STYLE (COLD IMPACT X2 = 200 pts → +0,7 s)
+    fuelTarget: 4,               // s d'essence par cible détruite en route (dépôt de carburant, camion, char)
+    targetGap: [200, 300],       // m entre deux cibles à détruire
+    threat: [0.2, 0.45, 0.75, 1],        // menace des tirs ennemis par palier (bornes de CC.CONFIG.aa)
+    tanks: [0, 1, 2, 3],         // chars ennemis par tronçon et par palier
+    maxMissiles: [2, 2, 3, 4],   // missiles ennemis en vol en même temps, par palier
+  },
+
+  // v033 : mode DÉFI — série fixe de cartes générées par difficulté, 1 à 3 étoiles au temps, trophées par difficulté.
+  challenge: {
+    maps: 20,                    // cartes par difficulté (identiques pour tous les joueurs)
+    star3: 1.0,                  // 3 étoiles : temps ≤ temps de référence de la carte × star3
+    star2: 1.5,                  // 2 étoiles : temps ≤ référence × star2 ; sinon 1 étoile (carte terminée)
+    trophies: [10, 20, 40],      // étoiles d'une difficulté pour les trophées BRONZE, ARGENT, OR (sur 60)
+  },
 
   audio: { master: 0.7, music: 0.28, sfx: 0.9 },
 

@@ -28,6 +28,8 @@
     const ymd = d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
     return { id: ymd, label: p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + d.getFullYear(), seed: SEED_MIN + (G.hashStr('cold-impact-daily-' + ymd) % SEED_SPAN), difficulty: 'hard' };
   };
+  // v033 : mode DÉFI — carte n (1…CC.CONFIG.challenge.maps) d'une difficulté : même graine pour tous les joueurs
+  G.challengeSeed = (diff, n) => SEED_MIN + (G.hashStr('cold-impact-defi-' + diff + '-' + n) % SEED_SPAN);
 
   // Flux aléatoire propre à une couche : changer le décor ne déplace pas les bâtiments, et inversement.
   G.stream = (seed, tag) => {

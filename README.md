@@ -122,7 +122,49 @@ publicités d'exemple (bannière, interstitielle, récompensée — annonceurs f
 qui brûlent, chars et hélicoptères détaillés et animés (tourelle à inertie, recul, assiette de vol), façades sans fenêtre
 coupée, toits équipés, forêts de conifères, son du réacteur en couches. Détails et mesures : [analysis/DESIGN_REFONTE.md](analysis/DESIGN_REFONTE.md).
 
+## Modes de jeu (v033)
+
+Le menu d'accueil n'a plus que **trois gros boutons** (façon *Block Blast*) : **CLASSIQUE**, **DÉFI**, **BOUTIQUE**.
+
+### CLASSIQUE — couloir infini
+
+Le but : **faire le plus de mètres possible**, en une seule vie. Le couloir (rue entre des immeubles, canyon, gorge
+enneigée…) est **généré à l'infini** devant la roquette, par tronçons de 200 m construits en quelques millisecondes et
+détruits derrière elle (`src/world/endless.js`). Chaque partie a sa propre graine : jamais deux fois le même couloir.
+
+- **Score** : la distance, en haut de l'écran, avec le record dessous (« NOUVEAU RECORD » dès qu'il est battu).
+- **Paliers de difficulté** tous les 800 m : FACILE → MOYEN → DIFFICILE → IMPOSSIBLE (couloir de 40 m → 18 m de large,
+  virages plus serrés, obstacles plus rapprochés, trous plus petits, chars ennemis de plus en plus précis à partir de MOYEN).
+- **Obstacles** : barrière basse (passer dessus), poutre haute (dessous), pilier (côté libre), vitre géante (on la
+  traverse), passerelle, laser, mur percé d'un trou, slalom, fenêtre entre deux poutres.
+- **Essence** : 14 s au départ, réservoir de 20 s. Elle se recharge en **frôlant** (chaque point de STYLE rapporte de
+  l'essence : « +0,7 S » s'affiche au-dessus de la jauge) et en **détruisant les cibles en route** (dépôts de carburant,
+  camions, chars : +4 s ; la roquette les traverse et continue). Réservoir vide : la roquette plane puis s'écrase.
+- **Zones de décor** tous les 1 000 m : ville, puis désert, neige, zone industrielle, canyon et ville de nuit dans un ordre
+  tiré au sort ; l'ambiance lumineuse glisse d'une zone à l'autre.
+- **Plafond** à 48 m : au-dessus, l'alarme « ALTITUDE! DESCENDS » clignote, puis explosion après 1,5 s.
+- **Fin de partie** : distance, record, palier atteint, cause (MUR, MISSILE, LASER, TROP HAUT, PANNE SECHE), STYLE ;
+  REJOUER relance aussitôt un nouveau couloir.
+
+Réglages : `CC.CONFIG.endless` dans `src/config.js`. Banc de test : `?test=1&autopilot=1&endless=<graine>`, et
+`tools/endlessplay.js` (le pilote automatique joue N parties et donne distance, cause du crash, obstacle en cause).
+
+### DÉFI — cartes numérotées, étoiles et trophées
+
+Quatre onglets **FACILE, MOYEN, DIFFICILE, IMPOSSIBLE** de **20 cartes numérotées** chacun (générées par le générateur de
+missions à partir d'une graine fixe : les mêmes pour tous les joueurs), plus l'onglet **NIVEAUX** (les 9 niveaux d'origine).
+
+- La carte suivante s'ouvre quand la précédente est terminée.
+- **1 à 3 étoiles** au temps : 3 étoiles sous le temps de référence de la carte, 2 sous 1,5 fois ce temps, 1 étoile sinon
+  (carte terminée). L'écran de fin donne le temps à battre pour l'étoile suivante.
+- **Trophées** par difficulté : BRONZE à 10 étoiles, ARGENT à 20, OR à 40 (sur 60).
+- Le bouton **MISSIONS LIBRES** ouvre l'ancien générateur (mission du jour, graine au choix, dernières missions).
+
+Réglages : `CC.CONFIG.challenge`. Étalonnage : sur un vol propre, le pilote automatique met 75 à 82 % du temps de référence.
+
 ## Niveaux
+
+Les 9 niveaux d'origine sont dans **DÉFI → NIVEAUX** (v033).
 
 Chaque niveau reconstruit une séquence de la vidéo, avec l'interface (HUD) qu'il a dans la vidéo.
 
@@ -144,9 +186,9 @@ propose NEXT LEVEL quand le suivant est ouvert. Niveaux 1 et 3 : flèches vertes
 permanent sur la cible. Salves anti-aériennes (2 missiles rapprochés, tirs groupés) sur les 3 derniers niveaux et les missions
 DIFFICILE / IMPOSSIBLE ; les missiles ennemis accélèrent après le tir (on les voit partir). Essence réduite d'environ 15 %.
 
-### Générateur de missions (v032 : ligne MISSIONS du menu)
+### Générateur de missions (v032 ; v033 : DÉFI → MISSIONS LIBRES)
 
-La dernière ligne du menu ouvre le **GÉNÉRATEUR DE MISSIONS** : on choisit **FACILE, MOYEN, DIFFICILE ou IMPOSSIBLE**,
+Le bouton MISSIONS LIBRES de l'écran DÉFI ouvre le **GÉNÉRATEUR DE MISSIONS** : on choisit **FACILE, MOYEN, DIFFICILE ou IMPOSSIBLE**,
 l'écran « GÉNÉRATION... » s'affiche, et une carte entière est **construite à la volée** (≈ 0,1 à 0,4 s sur ordinateur)
 à partir d'une **graine** : même graine + même difficulté = même carte pour tout le monde. Rien n'est stocké à part la
 graine, la difficulté, le temps (dernières missions, record par graine, record de la carte du jour).
@@ -226,6 +268,7 @@ cold-impact/
 │   ├── rendering/        textures.js (pixel-art procédural), particles.js (voxels instanciés), postfx.js (vignette, aberration, tramage, bloom)
 │   ├── world/            builder.js (géométrie fusionnée, murs percés, terrains, tunnel),
 │   │                     levels/ (9 niveaux + generated.js : fiche d'une mission générée),
+│   │                     endless.js (v033 : mode CLASSIQUE, couloir infini par tronçons),
 │   │                     gen/ (v032 : générateur de missions — graine, profils, biomes, disposition, gabarits,
 │   │                     mission, navigation, validation, construction ; voir analysis/GENERATOR.md)
 │   ├── input/            input.js (souris/clavier + pilote automatique de test)

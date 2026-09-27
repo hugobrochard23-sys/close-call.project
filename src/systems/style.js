@@ -40,6 +40,7 @@
       s.push({ t: (last.endsWith(' ') ? '' : ' ') + '+' + points, c: W.white });
       this.push(s, null, { tone });
       this.game.telemetry.event('style', { label, points });
+      if (this.game.onStyleAward) this.game.onStyleAward(label, points);   // v033 : recharge d'essence du mode CLASSIQUE
     }
 
     live(key, text, mult) {

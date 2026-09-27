@@ -44,6 +44,23 @@
       return b;
     }
 
+    // v033 : retire des boîtes (tronçon du couloir infini détruit derrière la roquette) de la grille et de la liste
+    removeBoxes(list) {
+      if (!list || !list.length) return;
+      const gone = new Set(list), cs = this.cell;
+      for (const b of list) {
+        b.active = false;
+        for (let ix = Math.floor(b.min.x / cs); ix <= Math.floor(b.max.x / cs); ix++)
+          for (let iz = Math.floor(b.min.z / cs); iz <= Math.floor(b.max.z / cs); iz++) {
+            const k = this.key(ix, iz), arr = this.grid.get(k);
+            if (!arr) continue;
+            const kept = arr.filter((x) => !gone.has(x));
+            if (kept.length) this.grid.set(k, kept); else this.grid.delete(k);
+          }
+      }
+      this.boxes = this.boxes.filter((b) => !gone.has(b));
+    }
+
     addHeightfield(hf) { hf.kind = hf.kind || 'solid'; this.heightfields.push(hf); return hf; }
     addTube(tube) { tube.hint = 0; this.tubes.push(tube); return tube; }
 

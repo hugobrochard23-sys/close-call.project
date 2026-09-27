@@ -55,7 +55,7 @@
       }
       // chrono (format MESURÉ 0:08,27)
       const tm = C.timer[v] || C.timer;
-      this.text(U.formatTime(game.runTime), 0.5 * W, C.timer.y * H, tm.px, col.white, { align: 'center', cw: tm.cw });
+      if (!game.endlessRun) this.text(U.formatTime(game.runTime), 0.5 * W, C.timer.y * H, tm.px, col.white, { align: 'center', cw: tm.cw });   // v033 : distance à la place (drawEndless)
       if (v === 'A' || v === 'C') {
         const st = C.style[v];
         this.text('STYLE ' + U.formatInt(game.style.total), 0.5 * W, st.y * H, st.px, col.white, { align: 'center' });
@@ -82,6 +82,7 @@
         ctx.fillStyle = col.yellow; ctx.fillRect(x0, y0, (x1 - x0) * U.clamp(rk.gauge, 0, 1), y1 - y0);
       }
       this.drawFuel(game);
+      if (game.endlessRun && game.state !== 'RESULTS') this.drawEndless(game, W, H, C, col, lite);
       // réticule "x" (MESURÉ 50 % / 40,2 %)
       let cross = (game.state === 'AIM' || game.state === 'FLIGHT') && !lite;   // v024 : pas de curseur sur mobile
       let cx = C.crosshair.x * W, cy = C.crosshair.y * H;
@@ -129,6 +130,24 @@
     }
 
     // Jauge d'essence (v009) : longueur du cadre proportionnelle au réservoir du niveau, remplissage = essence restante.
+    /* v033 : mode CLASSIQUE — distance (le score) en haut au centre, record dessous (jaune une fois battu), palier de
+     * difficulté, essence gagnée (+2,4 S) au-dessus de la jauge, alarme ALTITUDE! au-dessus du plafond du couloir. */
+    drawEndless(game, W, H, C, col, lite) {
+      const run = game.endlessRun, rec = (game.save.endless && game.save.endless.best) || 0, d = Math.round(run.dist);
+      const y0 = (lite ? 0.045 : C.timer.y) * H;
+      this.text(d + ' M', 0.5 * W, y0, lite ? 0.0052 : 0.0046, col.white, { align: 'center', outline: '#101010' });
+      if (rec > 0) this.text(d > rec ? 'NOUVEAU RECORD' : 'RECORD ' + rec + ' M', 0.5 * W, y0 + this.refH * (lite ? 0.068 : 0.098), 0.0021, d > rec ? col.yellow : '#d8d8d8', { align: 'center', outline: '#101010' });
+      const D = run.stageLabel();
+      this.text(D.label, (this.portrait ? 0.04 : 0.03) * W, y0 + (lite ? 0 : this.refH * 0.1), 0.0024, D.color, { outline: '#101010' });
+      if (run.fuelGainT > 0 && game.state === 'FLIGHT') {
+        const F = C.fuel, a = Math.min(1, run.fuelGainT / 0.4);
+        this.ctx.globalAlpha = a;
+        this.text('+' + U.formatDec(run.fuelGain, 1) + ' S', F.x0 * W, (F.labelY - 0.05) * H, 0.0032, col.green, { outline: '#101010' });
+        this.ctx.globalAlpha = 1;
+      }
+      if (run.altT > 0 && game.state === 'FLIGHT' && Math.floor(run.altT * 6) % 2 === 0) this.text('ALTITUDE! DESCENDS', 0.5 * W, 0.3 * H, 0.0036, col.red, { align: 'center', outline: '#101010' });
+    }
+
     drawFuel(game) {
       if (game.state !== 'AIM' && game.state !== 'FLIGHT') return;
       const W = this.canvas.width, H = this.canvas.height, ctx = this.ctx, F = CC.CONFIG.hud.fuel, col = CC.CONFIG.hud.colors;

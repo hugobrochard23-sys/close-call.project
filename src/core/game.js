@@ -184,6 +184,7 @@
 
     // ---------- niveaux ----------
     unloadLevel() {
+      if (this.endlessRun) { this.endlessRun.dispose(); this.endlessRun = null; }   // v033 : tronçons du couloir infini
       if (this.builder) { this.builder.dispose(); this.builder = null; }
       for (const m of this.missiles) this.scene.remove(m.object);
       for (const t of this.targets) if (t.clearWreck) t.clearWreck(this);   // design : épaves ajoutées à la scène
@@ -257,11 +258,12 @@
       this.loadLevelFrom(L, -1);
       const t2 = performance.now();
       this.generated = true;
-      this.mission = Object.assign({}, L.mission, { daily: opts.daily || null, genMs: Math.round(t1 - t0), buildMs: Math.round(t2 - t1), attempt: plan.attempt });
+      this.mission = Object.assign({}, L.mission, { daily: opts.daily || null, challenge: opts.challenge || null, genMs: Math.round(t1 - t0), buildMs: Math.round(t2 - t1), attempt: plan.attempt });
       this.restartLevel();
       // brief de mission : graine, zone, difficulté, cibles (quelques secondes au lanceur)
       const m = this.mission;
-      this.centerMsg = (opts.daily ? 'MISSION DU JOUR  ' : 'MISSION ') + seed + '  -  ' + m.biome + '  -  ' + m.label;
+      this.centerMsg = opts.challenge ? 'DÉFI ' + m.label + '  -  CARTE ' + opts.challenge.n + '/' + CC.CONFIG.challenge.maps + '  -  ' + m.biome
+        : (opts.daily ? 'MISSION DU JOUR  ' : 'MISSION ') + seed + '  -  ' + m.biome + '  -  ' + m.label;
       this.centerMsgT = 3.4;
       if (!this.testMode) { this.input.requestLock(); this.audio.init(); this.audio.resume(); if (this.audio.music) this.audio.music.start(); }
     }
@@ -280,7 +282,46 @@
       }
     }
 
-    restartLevel() {
+    /* v033 : mode CLASSIQUE — couloir infini (src/world/endless.js). Chaque partie a sa graine (une nouvelle à chaque
+     * essai, sauf graine imposée par le banc de test) ; une seule vie, score = mètres parcourus. */
+    startEndless(seed) {
+      if (seed === undefined || seed === null) seed = CC.Gen.randomSeed();
+      this.generated = false; this.mission = null;
+      const L = CC.Endless.level(seed);
+      this.loadLevelFrom(L, -1);
+      this.endlessRun = new CC.Endless.Run(this, L);
+      this.restartLevel(true);
+      this.rocket.fuel = CC.CONFIG.endless.fuelStart;
+      const rec = this.save.endless && this.save.endless.best;
+      this.centerMsg = rec ? 'RECORD ' + Math.round(rec) + ' M' : 'VA LE PLUS LOIN POSSIBLE';
+      this.centerMsgT = 2.6;
+      if (!this.testMode) { this.input.requestLock(); this.audio.init(); this.audio.resume(); if (this.audio.music) this.audio.music.start(); }
+    }
+
+    // v033 : partie CLASSIQUE terminée (crash) → distance, record, cause
+    finishEndless() {
+      const run = this.endlessRun, S = this.save, dist = Math.round(run.dist);
+      S.endless = S.endless || { best: 0, runs: 0 };
+      const prev = S.endless.best || 0;
+      S.endless.runs = (S.endless.runs || 0) + 1;
+      if (dist > prev) S.endless.best = dist;
+      const causes = { wall: 'MUR', hazard: 'LASER', cable: 'CABLE', missile: 'MISSILE', altitude: 'TROP HAUT', outOfBounds: 'CHUTE', stalled: 'PANNE SECHE' };
+      this.results = { endless: true, title: 'DISTANCE ' + dist + ' M', dist, best: S.endless.best, newRecord: dist > prev && prev > 0, firstRun: prev === 0,
+        style: this.style.total, time: this.runTime, stage: run.stageLabel(), cause: causes[this.crashKind] || 'CRASH' };
+      this.state = 'RESULTS'; this.centerMsg = null;
+      if (this.ads) this.ads.onLevelEnd();
+      this.writeSave();
+      this.input.exitLock();
+      this.telemetry.event('results', { dist, style: this.style.total });
+    }
+
+    // v033 : chaque gain de STYLE recharge l'essence en mode CLASSIQUE (la destruction d'une cible a son propre bonus)
+    onStyleAward(label, points) {
+      if (this.endlessRun && label !== 'BOMB SMASH!') this.endlessRun.addFuel(points * CC.CONFIG.endless.fuelPerStyle);
+    }
+
+    restartLevel(fromEndless) {
+      if (this.endlessRun && fromEndless !== true) { this.startEndless(this.testMode ? this.level.seed : null); return; }   // v033 : nouveau couloir
       for (const t of this.targets) { t.reset(); t.updateObb(); }
       for (const e of this.entities) if (e.reset && !(e instanceof CC.Target)) e.reset();
       for (const m of this.missiles) this.scene.remove(m.object);
@@ -326,6 +367,7 @@
       const dir = this.rig.aimDir.clone();
       const muzzle = this.launcherEye.clone().addScaledVector(dir, this.level.launcher.type === 'tripod' ? 3.2 : 1.3).addScaledVector(this.rig.up, -0.25);
       this.rocket.launch(muzzle, dir);
+      if (this.endlessRun) this.rocket.fuel = Math.min(this.rocket.fuel, CC.CONFIG.endless.fuelStart);   // v033 : réservoir de 20 s, départ à 14 s
       this.effects.launchBurst(muzzle.clone(), dir);
       this.audio.play('launch');
       // v024 : animation du tube (renflement qui file vers la bouche + recul)
@@ -345,6 +387,16 @@
     onTargetHit(t, rocket) {
       const c = t.obb.c.clone();
       t.kill(this);
+      if (this.endlessRun) {   // v033 : la roquette traverse la cible et continue ; essence rechargée
+        this.effects.explosion(c, null, true, 'orange');
+        this.rig.shake = 0.7;
+        this.audio.play('boom', c); this.audio.play('target');
+        this.style.bombSmash(rocket.vel.length());
+        this.endlessRun.addFuel(CC.CONFIG.endless.fuelTarget);
+        if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('warn');
+        this.telemetry.event('targetHit', { target: t.type, speed: +rocket.vel.length().toFixed(2), runTime: +this.runTime.toFixed(3) });
+        return;
+      }
       if (!t.guard) this.targetsDone++;   // v021 : un tank de garde détruit ne compte pas dans l'objectif
       const speed = rocket.vel.length();
       this.lastSpeed = 4;                                            // MESURÉ : "SPEED:4" après l'impact
@@ -368,7 +420,7 @@
     onRocketCrash(kind, pos, normal) {
       if (!this.rocket.active) return;
       const rk = this.rocket;
-      this.lastSpeed = 0;
+      this.lastSpeed = 0; this.crashKind = kind;
       rk.active = false; rk.mesh.visible = false; rk.light.intensity = 0; rk.rope.visible = false; rk.grapple.active = false;
       this.effects.explosion(pos, normal, false, 'orange');
       this.audio.play('boom', pos);
@@ -419,7 +471,8 @@
       if (!best || this.runTime < best.time) { this.save.best[id] = { time: this.runTime, style: this.style.total }; r.newRecord = !!best || true; }
       r.bestTime = this.save.best[id].time;
       if (this.generated && this.mission) this.recordMission(r);
-      this.results = r; this.state = 'RESULTS';
+      if (this.generated && this.mission && this.mission.challenge) this.recordChallenge(r);   // v033
+      this.results = r; this.state = 'RESULTS'; this.centerMsg = null;
       if (this.ads) this.ads.onLevelEnd();
       if (!this.settings.tutorialDone) this.settings.tutorialDone = true;   // v030 : premier niveau terminé → plus de tutoriel
       this.writeSave();
@@ -442,6 +495,26 @@
       if (keys.length > 200) delete S.seedBest[keys[0]];               // au plus 200 records de graines
       if (m.daily) { S.daily = S.daily || {}; const d = S.daily[m.daily]; if (d === undefined || r.time < d) S.daily[m.daily] = +r.time.toFixed(2); }
     }
+
+    /* v033 : mode DÉFI — 20 cartes fixes par difficulté (graines communes à tous), 1 à 3 étoiles au temps, la carte
+     * suivante s'ouvre quand la précédente est terminée ; trophées BRONZE / ARGENT / OR au total d'étoiles. */
+    startChallenge(diff, n) { this.requestMission(diff, CC.Gen.challengeSeed(diff, n), { challenge: { diff, n } }); }
+    challengeRec(diff, n) { const c = this.save.challenge && this.save.challenge[diff]; return (c && c[n]) || null; }
+    challengeOpen(diff, n) { return n <= 1 || !!this.challengeRec(diff, n - 1); }
+    challengeStars(diff) { let t = 0; for (let n = 1; n <= CC.CONFIG.challenge.maps; n++) { const r = this.challengeRec(diff, n); if (r) t += r.s; } return t; }
+    starsFor(time, par) { const C = CC.CONFIG.challenge; return time <= par * C.star3 ? 3 : time <= par * C.star2 ? 2 : 1; }
+    recordChallenge(r) {
+      const ch = this.mission.challenge, S = this.save, par = this.level.parTime;
+      S.challenge = S.challenge || {}; S.challenge[ch.diff] = S.challenge[ch.diff] || {};
+      const prev = S.challenge[ch.diff][ch.n], stars = this.starsFor(r.time, par);
+      r.challenge = { diff: ch.diff, n: ch.n, stars, prevStars: prev ? prev.s : 0, par,
+        next: stars < 3 ? par * (stars === 2 ? CC.CONFIG.challenge.star3 : CC.CONFIG.challenge.star2) : null,
+        trophyBefore: this.trophyCount(ch.diff) };
+      S.challenge[ch.diff][ch.n] = { s: Math.max(stars, prev ? prev.s : 0), t: +Math.min(r.time, prev ? prev.t : Infinity).toFixed(2) };
+      r.challenge.trophyAfter = this.trophyCount(ch.diff);
+      r.challenge.best = S.challenge[ch.diff][ch.n].t;
+    }
+    trophyCount(diff) { const s = this.challengeStars(diff); return CC.CONFIG.challenge.trophies.filter((t) => s >= t).length; }
 
     toMenu() {
       this.paused = false; this.ui.overlay = null;
@@ -508,7 +581,7 @@
             this.updateWarnings(dt, rk);
             this.lastSpeed = rk.speed;
             const killY = this.level.killY !== undefined ? this.level.killY : -60;
-            if (rk.pos.y < killY || rk.pos.length() > 4000) this.onRocketCrash('outOfBounds', rk.pos.clone(), null);
+            if (rk.pos.y < killY || (rk.pos.length() > 4000 && !this.endlessRun)) this.onRocketCrash('outOfBounds', rk.pos.clone(), null);   // v033 : le couloir infini n'a pas de bord
             // v032 : roquette immobilisée (posée en glissant sur un toit, sans essence) → comptée comme un crash, sinon
             // la partie ne peut plus avancer
             this.stallT = rk.speed < 3 && this.flightTime > 1 ? (this.stallT || 0) + dt : 0;
@@ -525,6 +598,7 @@
           break;
         case 'CRASHED':
           this.impactT += dt;
+          if (this.endlessRun) { if (this.impactT > 1.3) this.finishEndless(); break; }   // v033 : une seule vie
           if (this.level.mode === 'targets') this.runTime += dt;
           if (this.impactT > 0.45) { this.state = 'RESPAWN'; this.centerMsg = this.respawnMsg(); }
           break;
@@ -535,6 +609,7 @@
           break;
       }
       this.updateLaunchFx(dt);
+      if (this.endlessRun && this.state !== 'MENU' && this.state !== 'RESULTS') this.endlessRun.update(dt);   // v033 : tronçons, paliers, zones
       for (const e of this.entities) if (e.update) e.update(dt, this);
       for (const m of this.missiles) m.update(dt, this);
       this.missiles = this.missiles.filter((m) => { if (!m.alive) this.scene.remove(m.object); return m.alive; });
@@ -646,6 +721,7 @@
       this.telemetry.enabled = true;
       // ?gen=easy|medium|hard&seed=N : carte aléatoire reproductible (enregistrable comme les niveaux fixes)
       if (P.get('gen')) this.startGenerated(P.get('gen'), parseInt(P.get('seed') || '4242', 10));
+      else if (P.has('endless')) this.startEndless(parseInt(P.get('endless') || '4242', 10));   // v033 : ?endless=<graine>
       else this.startLevel(lv);
       const self = this;
       CC.harness = {

@@ -521,3 +521,30 @@ montagne (le relief est désormais testé par les vérifications exactes) ; gén
 - Les 9 niveaux fixes terminés au pilote automatique, sans crash, temps et STYLE inchangés (CITY 14,90 s, 847).
 - Menus vérifiés sur ordinateur et téléphone simulé (375 × 812) : générateur, génération, brief, pause (graine,
   NOUVELLE MISSION), résultats (graine, record de la graine, NOUVELLE MISSION, MISSIONS) ; rendu des 8 familles de cartes.
+
+## v033 — menu à trois boutons, mode CLASSIQUE infini, mode DÉFI à étoiles
+
+**Changements (à la demande d'Hugo, d'après le message vocal de son collègue du 27/09/2026) :**
+- **Menu d'accueil** à trois gros boutons, façon *Block Blast* : CLASSIQUE (record affiché), DÉFI (étoiles gagnées),
+  BOUTIQUE ; les 9 niveaux passent dans DÉFI → NIVEAUX, le générateur dans DÉFI → MISSIONS LIBRES.
+- **CLASSIQUE** (`src/world/endless.js`) : couloir généré à l'infini par tronçons de 200 m (un LevelBuilder par
+  tronçon ; collisions retirées du monde quand il est détruit : `World.removeBoxes`), parois en polyligne sans marche,
+  9 types d'obstacles, 4 paliers de difficulté tous les 800 m, 6 zones de décor avec transition d'ambiance, essence
+  rechargée par le STYLE et par les cibles traversées, plafond à 48 m, une seule vie, score = mètres, record sauvegardé
+  (`save.endless`), cause du crash à l'écran de fin. Chars ennemis créés un par image (modèle coûteux).
+- **DÉFI** : 20 cartes par difficulté (`CC.Gen.challengeSeed`), 1 à 3 étoiles au temps (`CC.CONFIG.challenge`), carte
+  suivante ouverte après la précédente, trophées BRONZE / ARGENT / OR à 10 / 20 / 40 étoiles (`save.challenge`), écran de
+  fin avec étoiles, temps visé pour l'étoile suivante, CARTE SUIVANTE.
+- HUD du CLASSIQUE : distance, record, palier, essence gagnée, alarme d'altitude. Outil `tools/endlessplay.js`.
+
+**Vérification :**
+- Pilote automatique sur 10 couloirs (graines 5000 + 7919·i) : 1 750 à 3 800 m (palier IMPOSSIBLE atteint 7 fois sur
+  10), fins de partie surtout par missile au palier IMPOSSIBLE ; les défauts trouvés en jouant (slaloms trop serrés,
+  points de passage trop tardifs, cibles et obstacles trop proches, sortie de carte à 4 000 m) sont corrigés.
+- Construction d'un tronçon : 3 à 5 ms au pire sur le Mac une fois les chars étalés (9 ms avant), 5 tronçons en mémoire.
+- DÉFI : 16 cartes au pilote automatique (4 par difficulté) : 14 terminées, 0,75 à 0,82 × le temps de référence sur un
+  vol propre ; étoiles, carte suivante et trophées vérifiés.
+- Les 9 niveaux fixes terminés au pilote automatique, temps et STYLE inchangés (CITY 14,90 s, 847).
+- Menus vérifiés sur ordinateur et téléphone simulé (375 × 812) : accueil, DÉFI (onglets, grille, NIVEAUX), partie
+  CLASSIQUE, résultats CLASSIQUE et DÉFI ; aucune erreur dans la console.
+

@@ -49,6 +49,7 @@
       else if (this.overlay === 'binds') this.drawBinds(ctx, game, W, H);
       // Surcouches exclusives : elles repartent d'une liste de boutons vide (aucun clic ne doit passer au travers).
       else if (this.overlay === 'missions' || this.overlay === 'difficulty') { this.buttons = []; this.drawMissions(ctx, game, W, H); }
+      else if (this.overlay === 'defi') { this.buttons = []; this.drawDefi(ctx, game, W, H); }   // v033
       else if (this.overlay === 'generating') { this.buttons = []; this.drawGenerating(ctx, game, W, H); }
       else if (this.overlay === 'shop') { this.buttons = []; if (!this.shop) this.shop = new CC.Shop(this); this.shop.draw(ctx, game, W, H); }
       else if (this.overlay === 'ad' && game.ads) { this.buttons = []; game.ads.draw(ctx, game, W, H, this); }
@@ -63,61 +64,138 @@
       if (game.genDebug && game.level && game.level.plan && CC.Gen.drawDebugOverlay && !this.overlay) CC.Gen.drawDebugOverlay(ctx, game, W, H, this);   // v032
     }
 
+    /* v033 : menu d'accueil à trois gros boutons (façon Block Blast) : CLASSIQUE (couloir infini), DÉFI (cartes numérotées
+     * à étoiles + les 9 niveaux d'origine), BOUTIQUE. Plein écran, portrait comme paysage ; boutons ≥ 44 points. */
     drawMenu(ctx, game, W, H) {
-      if (this.portrait && this.isTouch()) { this.drawMenuPortrait(ctx, game, W, H); return; }
-      this.dim(ctx, W, H, 0.45);
-      const col = CC.CONFIG.hud.colors;
-      const P = this.portrait;   // v017 : en vertical, colonnes élargies (noms à gauche, records au bord droit), titre réduit
-      this.text(ctx, 'COLD IMPACT', W / 2, H * 0.09, H * (P ? 0.0095 : 0.0125), col.white, { align: 'center', skew: -0.22 });
-      this.text(ctx, 'STEER THE MISSILE. HIT THE TARGET. FLY CLOSE FOR STYLE.', W / 2, H * 0.2, H * (P ? 0.0019 : 0.0024), col.yellow, { align: 'center' });
-      const best = game.save.best, px = H * 0.0036;
-      const rowStep = Math.min(0.068, 0.56 / (CC.Levels.length + 1));   // v023 : 9 niveaux + AUTOMAP tiennent au-dessus de la boutique
-      CC.Levels.forEach((lv, i) => {
-        const y = H * (0.275 + i * rowStep);
-        const open = game.isUnlocked(i);   // v023 : niveau verrouillé tant que le précédent n'est pas terminé
-        if (open) this.button(ctx, (i + 1) + '  ' + lv.name, W * (P ? 0.07 : 0.3), y, px, () => game.startLevel(i), { align: 'left' });
-        else this.text(ctx, (i + 1) + '  ' + lv.name, W * (P ? 0.07 : 0.3), y, px, '#5a5a5a');
-        const b = best[lv.id];
-        const info = b ? U.formatTime(b.time) + '   STYLE ' + U.formatInt(b.style) : open ? '--:--,--' : 'LOCKED';
-        // colonne assez à droite : un temps enregistré ("0:12,27   STYLE 1.234") ne doit pas toucher le nom du niveau
-        this.text(ctx, info, W * (P ? 0.97 : 0.88), y + px * 1.2, H * 0.0026, b ? '#cfcfcf' : '#7a7a7a', { align: 'right' });
-      });
-      // v032 : dernière ligne = générateur de missions (infini, 4 difficultés)
-      const ny = H * (0.275 + CC.Levels.length * rowStep);
-      this.button(ctx, (CC.Levels.length + 1) + '  MISSIONS', W * (P ? 0.07 : 0.3), ny, px, () => { this.overlay = 'missions'; }, { align: 'left', color: '#8fd0ff' });
-      this.text(ctx, 'GENERATEUR - INFINI', W * (P ? 0.97 : 0.88), ny + px * 1.2, H * 0.0026, '#8fd0ff', { align: 'right' });
-      this.button(ctx, 'ROCKET SHOP', W / 2, H * 0.92, px, () => { this.overlay = 'shop'; }, { color: '#fdfd02' });
-      this.text(ctx, document.body.classList.contains('cc-touch') ? 'TAP A LEVEL' : 'CLICK A LEVEL    F1: BINDS    TAB: SETTINGS', W / 2, H * 0.85, H * 0.0024, '#bdbdbd', { align: 'center' });
-      this.text(ctx, CC.CONFIG.version.toUpperCase(), W * 0.985, game.ads && game.ads.enabled() ? H * 0.875 : H * 0.955, H * 0.0018, '#808080', { align: 'right' });
+      this.dim(ctx, W, H, 0.5);
+      const col = CC.CONFIG.hud.colors, T = -(this.offsetY || 0), HH = this.fullH || H, P = this.portrait, touch = this.isTouch();
+      const Y = (f) => T + HH * f, banner = touch && P && game.ads && game.ads.enabled() ? HH * 0.075 : 0;
+      this.text(ctx, 'COLD IMPACT', W / 2, Y(P ? 0.07 : 0.07), this.fitPx(['COLD IMPACT'], W * (P ? 0.86 : 0.6), HH * (P ? 0.009 : 0.0125)), col.white, { align: 'center', skew: -0.22 });
+      const tag = 'PILOTE. FROLE. PULVERISE.';
+      this.text(ctx, tag, W / 2, Y(P ? 0.135 : 0.2), this.fitPx([tag], W * 0.8, HH * 0.003), col.yellow, { align: 'center' });
+      const rec = game.save.endless && game.save.endless.best, maxStars = CC.Gen.difficultyIds().length * CC.CONFIG.challenge.maps * 3;
+      const stars = CC.Gen.difficultyIds().reduce((a, d) => a + game.challengeStars(d), 0);
+      const items = [
+        ['CLASSIQUE', rec ? 'RECORD ' + rec + ' M' : 'VA LE PLUS LOIN POSSIBLE', col.green, () => game.startEndless()],
+        ['DÉFI', stars + ' / ' + maxStars + ' ETOILES', '#8fd0ff', () => { this.overlay = 'defi'; }, true],
+        ['BOUTIQUE', 'APPARENCES DE ROQUETTE', col.yellow, () => { this.overlay = 'shop'; }],
+      ];
+      const bw = W * (P ? 0.84 : 0.42), bh = HH * (P ? 0.14 : 0.165), gap = HH * (P ? 0.035 : 0.03);
+      const top = P ? Y(0.24) : Y(0.29);
+      const lp = this.fitPx(items.map((it) => it[0]), bw * 0.8, bh * 0.06);   // même taille pour les trois libellés
+      items.forEach((it, i) => this.bigButton(ctx, W / 2 - bw / 2, top + i * (bh + gap), bw, bh, it[0], it[1], it[2], it[3], it[4], lp));
+      const foot = T + HH - banner - HH * (P ? 0.05 : 0.07);
+      if (!touch) this.text(ctx, 'F1: TOUCHES    TAB: REGLAGES', W / 2, foot, HH * 0.0024, '#bdbdbd', { align: 'center' });
+      this.text(ctx, CC.CONFIG.version.toUpperCase(), W * 0.97, foot + HH * 0.035, HH * 0.0018, '#808080', { align: 'right' });
     }
 
-    /* v030 : menu principal en portrait sur téléphone — toute la hauteur de l'écran (avant : bande 16:9 centrée, lignes de
-     * ~14 px), une ligne par niveau de ≥ 44 points, record sous le nom, boutique en bas, bannière d'exemple tout en bas. */
-    drawMenuPortrait(ctx, game, W, H) {
-      this.dim(ctx, W, H, 0.5);
-      const col = CC.CONFIG.hud.colors, T = -(this.offsetY || 0), HH = this.fullH || H;
-      const banner = game.ads && game.ads.enabled() ? HH * 0.075 : 0;
-      this.text(ctx, 'COLD IMPACT', W / 2, T + HH * 0.04, this.fitPx(['COLD IMPACT'], W * 0.86, HH * 0.009), col.white, { align: 'center', skew: -0.22 });
-      this.text(ctx, 'STEER. FLY CLOSE. HIT THE TARGET.', W / 2, T + HH * 0.1, this.fitPx(['STEER. FLY CLOSE. HIT THE TARGET.'], W * 0.9, HH * 0.003), col.yellow, { align: 'center' });
-      const best = game.save.best, n = CC.Levels.length + 1;
-      const top = T + HH * 0.14, bottom = T + HH - banner - HH * 0.12, rowH = (bottom - top) / n;
-      const x0 = W * 0.05, w = W * 0.9;
-      const names = CC.Levels.map((lv, i) => (i + 1) + '  ' + lv.name).concat([n + '  MISSIONS']);
-      const px = this.fitPx(names, w * 0.62, rowH * 0.05), sub = px * 0.6;
-      const row = (i, name, info, open, color, action) => {
-        const y = top + i * rowH + rowH * 0.18;
-        if (open) this.button(ctx, name, x0 + px * 3, y, px, action, { align: 'left', hitW: w, color, box: true });
-        else { ctx.fillStyle = 'rgba(255,255,255,0.03)'; ctx.fillRect(x0, y - px * 2, w, Math.max(px * 11, 44 * this.pixelRatio())); this.text(ctx, name, x0 + px * 3, y, px, '#5a5a5a'); }
-        this.text(ctx, info, x0 + w - px * 3, y + px * 1.6, sub, open ? (info.startsWith('--') ? '#8a8a8a' : '#cfcfcf') : '#6a6a6a', { align: 'right' });
-      };
-      CC.Levels.forEach((lv, i) => {
-        const open = game.isUnlocked(i), b = best[lv.id];
-        row(i, names[i], b ? U.formatTime(b.time) : open ? '--:--,--' : 'LOCKED', open, null, () => game.startLevel(i));
+    // v033 : gros bouton encadré avec un sous-titre ; `stars` : petite étoile devant le sous-titre
+    bigButton(ctx, x, y, w, h, label, sub, color, action, stars, labelPx) {
+      const idx = this.buttons.length, touch = this.isTouch();
+      const hot = !touch && this.mouse.x >= x && this.mouse.x <= x + w && this.mouse.y >= y && this.mouse.y <= y + h;
+      if (hot) this.hover = idx;
+      this.buttons.push({ x, y, w, h, action });
+      ctx.fillStyle = hot ? 'rgba(255,255,255,0.16)' : 'rgba(8,10,14,0.74)'; ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = color; ctx.globalAlpha = 0.18; ctx.fillRect(x, y, w * 0.025, h); ctx.globalAlpha = 1;
+      ctx.strokeStyle = color; ctx.lineWidth = Math.max(2, h * 0.03); ctx.strokeRect(x, y, w, h);
+      const lp = labelPx || this.fitPx([label], w * 0.8, h * 0.06), sp = this.fitPx([sub + '    '], w * 0.8, h * 0.022);
+      const block = lp * 7 + h * 0.1 + sp * 7, y0 = y + (h - block) / 2;
+      this.text(ctx, label, x + w / 2, y0, lp, hot ? CC.CONFIG.hud.colors.yellow : color, { align: 'center', skew: -0.18 });
+      const sy = y0 + lp * 7 + h * 0.1;
+      if (stars) {
+        const sw = CC.Font.measure(sub, sp), sx = x + w / 2 - sw / 2;
+        this.star(ctx, sx - sp * 6, sy + sp * 3.5, sp * 4, true, '#fdfd02');
+        this.text(ctx, sub, sx + sp * 0.5, sy, sp, '#dcdcdc', {});
+      } else this.text(ctx, sub, x + w / 2, sy, sp, '#dcdcdc', { align: 'center' });
+    }
+
+    // v033 : étoile à cinq branches (pleine ou en creux)
+    star(ctx, cx, cy, r, filled, color) {
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); }
+      ctx.closePath();
+      if (filled) { ctx.fillStyle = color; ctx.fill(); }
+      else { ctx.strokeStyle = 'rgba(200,200,200,0.55)'; ctx.lineWidth = Math.max(1, r * 0.16); ctx.stroke(); }
+    }
+    // v033 : coupe de trophée (BRONZE / ARGENT / OR), grisée tant qu'elle n'est pas gagnée
+    trophy(ctx, cx, cy, s, color, won) {
+      ctx.fillStyle = won ? color : 'rgba(120,120,120,0.35)';
+      ctx.beginPath(); ctx.moveTo(cx - s * 0.5, cy - s * 0.5); ctx.lineTo(cx + s * 0.5, cy - s * 0.5); ctx.lineTo(cx + s * 0.3, cy + s * 0.05); ctx.lineTo(cx - s * 0.3, cy + s * 0.05); ctx.closePath(); ctx.fill();
+      ctx.fillRect(cx - s * 0.07, cy + s * 0.05, s * 0.14, s * 0.25); ctx.fillRect(cx - s * 0.28, cy + s * 0.3, s * 0.56, s * 0.12);
+      ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = Math.max(1, s * 0.08);
+      for (const e of [-1, 1]) { ctx.beginPath(); ctx.arc(cx + e * s * 0.5, cy - s * 0.3, s * 0.16, e < 0 ? Math.PI * 0.5 : -Math.PI * 0.5, e < 0 ? Math.PI * 1.5 : Math.PI * 0.5, e > 0); ctx.stroke(); }
+    }
+
+    /* v033 : écran DÉFI — onglets FACILE / MOYEN / DIFFICILE / IMPOSSIBLE (20 cartes numérotées chacune, 1 à 3 étoiles,
+     * trophées à 10, 20 et 40 étoiles) et NIVEAUX (les 9 niveaux d'origine). MISSIONS LIBRES : l'ancien générateur. */
+    drawDefi(ctx, game, W, H) {
+      this.dim(ctx, W, H, 1);
+      const G = CC.Gen, col = CC.CONFIG.hud.colors, T = -(this.offsetY || 0), HH = this.fullH || H, P = this.portrait, touch = this.isTouch();
+      const Y = (f) => T + HH * f, pr = this.pixelRatio(), CH = CC.CONFIG.challenge;
+      this.text(ctx, 'DÉFI', W / 2, Y(0.035), this.fitPx(['DÉFI'], W * 0.4, HH * 0.008), col.white, { align: 'center', skew: -0.2 });
+      const ids = G.difficultyIds(), tabs = ids.concat(['levels']);
+      const tab = this.defiTab && tabs.includes(this.defiTab) ? this.defiTab : 'easy';
+      const lab = (id) => (id === 'levels' ? 'NIVEAUX' : G.Difficulties.get(id).label);
+      const tcol = (id) => (id === 'levels' ? '#cfcfcf' : G.Difficulties.get(id).color);
+      // onglets : une rangée (paysage) ou deux (portrait : FACILE MOYEN DIFFICILE / IMPOSSIBLE NIVEAUX, libellés lisibles)
+      const th = Math.max(HH * (P ? 0.05 : 0.06), touch ? 44 * pr : 0), rowsT = P ? [[0, 1, 2], [3, 4]] : [[0, 1, 2, 3, 4]];
+      const rects = [];
+      rowsT.forEach((row, ri) => row.forEach((ti, ci) => { const tw = W * 0.94 / row.length; rects[ti] = { x: W * 0.03 + ci * tw, y: Y(P ? 0.095 : 0.11) + ri * (th + HH * 0.008), w: tw }; }));
+      const tpx = Math.min(...tabs.map((id, i) => this.fitPx([lab(id)], rects[i].w * 0.84, th * 0.07)));
+      const ty = rects[tabs.length - 1].y;
+      tabs.forEach((id, i) => {
+        const x = rects[i].x, tw = rects[i].w, ty = rects[i].y, on = id === tab;
+        this.buttons.push({ x, y: ty, w: tw, h: th, action: () => { this.defiTab = id; } });
+        ctx.fillStyle = on ? tcol(id) : 'rgba(255,255,255,0.05)'; ctx.globalAlpha = on ? 0.28 : 1; ctx.fillRect(x + 2, ty, tw - 4, th); ctx.globalAlpha = 1;
+        ctx.strokeStyle = on ? tcol(id) : 'rgba(244,244,244,0.3)'; ctx.lineWidth = Math.max(1, th * (on ? 0.05 : 0.02)); ctx.strokeRect(x + 2, ty, tw - 4, th);
+        this.text(ctx, lab(id), x + tw / 2, ty + th / 2 - tpx * 3.5, tpx, on ? tcol(id) : '#bdbdbd', { align: 'center' });
       });
-      row(CC.Levels.length, names[CC.Levels.length], 'INFINI', true, '#8fd0ff', () => { this.overlay = 'missions'; });
-      const shop = 'ROCKET SHOP';
-      this.button(ctx, shop, W / 2, T + HH - banner - HH * 0.08, this.fitPx([shop], W * 0.8, px * 1.1), () => { this.overlay = 'shop'; }, { color: '#fdfd02', box: true });
-      this.text(ctx, CC.CONFIG.version.toUpperCase(), W * 0.97, T + HH - banner - HH * 0.022, px * 0.5, '#808080', { align: 'right' });
+      const areaTop = ty + th + HH * 0.03, areaBot = Y(P ? 0.86 : 0.85);
+      if (tab === 'levels') this.drawDefiLevels(ctx, game, W, areaTop, areaBot);
+      else {
+        const stars = game.challengeStars(tab), D = G.Difficulties.get(tab);
+        // total d'étoiles et trophées
+        const spx = this.fitPx(['00 / 60'], W * 0.22, HH * 0.0034), sy = areaTop;
+        this.star(ctx, W * 0.06 + spx * 3, sy + spx * 3.5, spx * 4.2, true, col.yellow);
+        this.text(ctx, stars + ' / ' + CH.maps * 3, W * 0.06 + spx * 9, sy, spx, col.white, {});
+        const names = ['BRONZE', 'ARGENT', 'OR'], tc = ['#d08a4a', '#d0d8e0', '#ffd23a'], ts = spx * 10;
+        CH.trophies.forEach((need, i) => {
+          const cx = W * (P ? 0.6 : 0.62) + i * W * (P ? 0.13 : 0.1), won = stars >= need;
+          this.trophy(ctx, cx, sy + ts * 0.35, ts, tc[i], won);
+          this.text(ctx, won ? names[i] : String(need), cx, sy + ts * 0.95, spx * 0.6, won ? tc[i] : '#8a8a8a', { align: 'center' });
+        });
+        // grille des cartes
+        const cols = P ? 4 : 5, rows = Math.ceil(CH.maps / cols), gTop = sy + ts * 1.55, gh = areaBot - gTop;
+        const cw = W * 0.94 / cols, chh = Math.min(gh / rows, cw * 1.05), gx = W * 0.03, npx = this.fitPx(['20'], cw * 0.5, chh * 0.05);
+        for (let n = 1; n <= CH.maps; n++) {
+          const c = (n - 1) % cols, rr = Math.floor((n - 1) / cols), x = gx + c * cw + 3, y = gTop + rr * chh + 3, w = cw - 6, h = chh - 6;
+          const open = game.challengeOpen(tab, n), rec = game.challengeRec(tab, n);
+          ctx.fillStyle = open ? (rec ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.04)') : 'rgba(255,255,255,0.015)'; ctx.fillRect(x, y, w, h);
+          ctx.strokeStyle = open ? D.color : 'rgba(120,120,120,0.35)'; ctx.globalAlpha = open ? (rec ? 1 : 0.6) : 1; ctx.lineWidth = Math.max(1, h * 0.025); ctx.strokeRect(x, y, w, h); ctx.globalAlpha = 1;
+          if (open) this.buttons.push({ x, y, w, h, action: () => game.startChallenge(tab, n) });
+          this.text(ctx, String(n), x + w / 2, y + h * 0.18, npx, open ? col.white : '#505050', { align: 'center' });
+          const sr = Math.min(w * 0.12, h * 0.12);
+          for (let k = 0; k < 3; k++) this.star(ctx, x + w / 2 + (k - 1) * sr * 2.3, y + h * 0.74, sr, rec && rec.s > k, col.yellow);
+        }
+      }
+      // pied : missions libres (générateur à graine), retour
+      const by = Y(P ? 0.915 : 0.905), bpx = this.fitPx(['MISSIONS LIBRES'], W * (P ? 0.36 : 0.2), HH * 0.0034);
+      this.button(ctx, 'MISSIONS LIBRES', W * (P ? 0.29 : 0.38), by, bpx, () => { this.overlay = 'missions'; }, { box: true, hitW: W * (P ? 0.44 : 0.24), color: '#8fd0ff' });
+      this.button(ctx, this.key('RETOUR', 'ESC'), W * (P ? 0.76 : 0.62), by, bpx, () => { this.overlay = null; }, { box: true, hitW: W * (P ? 0.36 : 0.18) });
+    }
+
+    // v033 : les 9 niveaux d'origine (onglet NIVEAUX du DÉFI) : une ligne par niveau, record à droite, cadenas sinon
+    drawDefiLevels(ctx, game, W, top, bottom) {
+      const best = game.save.best, n = CC.Levels.length, rowH = (bottom - top) / n, x0 = W * 0.05, w = W * 0.9;
+      const names = CC.Levels.map((lv, i) => (i + 1) + '  ' + lv.name);
+      const px = this.fitPx(names, w * 0.6, rowH * 0.055), sub = px * 0.65;
+      CC.Levels.forEach((lv, i) => {
+        const open = game.isUnlocked(i), b = best[lv.id], y = top + i * rowH + rowH * 0.2;
+        if (open) this.button(ctx, names[i], x0 + px * 3, y, px, () => game.startLevel(i), { align: 'left', hitW: w, box: true });
+        else { ctx.fillStyle = 'rgba(255,255,255,0.03)'; ctx.fillRect(x0, y - px * 2, w, Math.max(px * 11, 44 * this.pixelRatio())); this.text(ctx, names[i], x0 + px * 3, y, px, '#5a5a5a'); }
+        const info = b ? U.formatTime(b.time) : open ? '--:--,--' : 'VERROUILLE';
+        this.text(ctx, info, x0 + w - px * 3, y + px * 1.6, sub, open ? (b ? '#cfcfcf' : '#8a8a8a') : '#6a6a6a', { align: 'right' });
+      });
     }
 
     // v030 : bannière publicitaire d'exemple, en bas du menu principal
@@ -172,7 +250,7 @@
         const D = G.Difficulties.get(h.d) || G.Difficulties.get('easy'), lbl = h.seed + '  ' + D.label + '  ' + U.formatTime(h.t);
         this.button(ctx, lbl, W / 2, sy + HH * (0.115 + i * 0.058), fit(lbl, 0.7, HH * 0.0028), () => game.requestMission(h.d, h.seed), { box: true, hitW: W * (P ? 0.84 : 0.5), color: '#cfcfcf' });
       });
-      this.button(ctx, this.key('RETOUR', 'ESC'), W / 2, Y(0.93), fit('RETOUR (ESC)', 0.5, HH * 0.004), () => { this.overlay = null; this.closeSeedInput(); }, { box: touch });
+      this.button(ctx, this.key('RETOUR', 'ESC'), W / 2, Y(0.93), fit('RETOUR (ESC)', 0.5, HH * 0.004), () => { this.overlay = game.state === 'MENU' ? 'defi' : null; this.closeSeedInput(); }, { box: touch });   // v033 : retour à l'écran DÉFI
       if (this.diffChoice && G.Difficulties.has(this.diffChoice) && this.seedChoice != null) {   // lien partagé : difficulté suggérée
         this.text(ctx, 'MISSION PARTAGEE : ' + G.Difficulties.get(this.diffChoice).label, W / 2, Y(0.19), fit('MISSION PARTAGEE : IMPOSSIBLE', 0.6, HH * 0.0024), '#8fd0ff', { align: 'center' });
       }
@@ -241,10 +319,10 @@
         rows.push(['GRAPHICS: ' + this.graphicsLabel(game), () => this.cycleGraphics(game)]);
         rows.push(['SAMPLE ADS: ' + (s.ads === false ? 'OFF' : 'ON'), () => { s.ads = s.ads === false; game.applySettings(); }]);
       }
-      if (game.generated && game.mission) rows.splice(rows.findIndex((r) => r[0].startsWith('RESTART')) + 1, 0, ['NOUVELLE MISSION', () => { game.resume(); game.requestMission(game.mission.difficulty); }]);   // v032
+      if (game.generated && game.mission && !game.mission.challenge) rows.splice(rows.findIndex((r) => r[0].startsWith('RESTART')) + 1, 0, ['NOUVELLE MISSION', () => { game.resume(); game.requestMission(game.mission.difficulty); }]);   // v032
       rows.push(['MAIN MENU', () => game.toMenu()]);
       if (game.generated && game.mission) {   // v032 : graine visible (partage, défi)
-        const m = game.mission, t = 'GRAINE ' + m.seed + '  ' + m.label + '  ' + m.biome;
+        const m = game.mission, t = m.challenge ? 'DÉFI ' + m.label + '  CARTE ' + m.challenge.n + '/' + CC.CONFIG.challenge.maps : 'GRAINE ' + m.seed + '  ' + m.label + '  ' + m.biome;
         const pT2 = this.portrait ? -(this.offsetY || 0) : 0, pH2 = this.portrait ? (this.fullH || H) : H;
         this.text(ctx, t, W / 2, pT2 + pH2 * (touch ? 0.145 : 0.29), this.fitPx([t], W * 0.9, H * 0.0028), CC.CONFIG.hud.colors.yellow, { align: 'center' });
       }
@@ -273,6 +351,7 @@
     }
 
     drawResults(ctx, game, W, H) {
+      if (game.results && (game.results.endless || game.results.challenge)) { this.drawResultsV33(ctx, game, W, H); return; }
       this.dim(ctx, W, H, 0.5);
       const r = game.results, col = CC.CONFIG.hud.colors;
       // v030 : en portrait sur téléphone, toute la hauteur de l'écran et des boutons ≥ 44 points bien espacés
@@ -298,6 +377,47 @@
       const top = Y(full ? 0.48 : 0.63), gap = full ? HH * 0.09 : H * 0.08;
       const bpx = full ? this.fitPx(labels, W * 0.78, px) : px;
       labels.forEach((l, i) => this.button(ctx, l, W / 2, top + i * gap, i === 0 && acts[0][1] === '#8fd0ff' && !full ? px * 0.8 : bpx, acts[i][0], { color: acts[i][1] || undefined, box: acts[i][1] === '#8fd0ff' || undefined, hitW: full ? W * 0.84 : undefined }));
+    }
+
+    /* v033 : résultats du mode CLASSIQUE (distance, record, cause) et du DÉFI (étoiles, temps visé pour la suivante,
+     * trophée gagné). Plein écran en portrait ; le premier bouton (REJOUER) est le plus visible. */
+    drawResultsV33(ctx, game, W, H) {
+      this.dim(ctx, W, H, 0.62);
+      const r = game.results, col = CC.CONFIG.hud.colors, full = this.portrait && this.isTouch();
+      const T = full ? -(this.offsetY || 0) : 0, HH = full ? (this.fullH || H) : H, Y = (f) => T + HH * f;
+      const fit = (t, w, m) => this.fitPx([t], W * w, m);
+      const ads = game.ads, via = (fn) => () => (ads ? ads.beforeContinue(fn) : fn());
+      const acts = [];
+      if (r.endless) {
+        this.text(ctx, r.title, W / 2, Y(0.12), fit(r.title, 0.9, HH * 0.009), col.white, { align: 'center', skew: -0.2 });
+        const rl = r.newRecord || r.firstRun ? 'NOUVEAU RECORD !' : 'RECORD ' + r.best + ' M';
+        this.text(ctx, rl, W / 2, Y(0.25), fit(rl, 0.8, HH * 0.005), r.newRecord || r.firstRun ? col.yellow : '#cfcfcf', { align: 'center' });
+        const l2 = 'PALIER ' + r.stage.label + '    CAUSE : ' + r.cause;
+        this.text(ctx, l2, W / 2, Y(0.33), fit(l2, 0.9, HH * 0.003), '#dcdcdc', { align: 'center' });
+        const l3 = 'STYLE ' + U.formatInt(r.style) + '    TEMPS ' + U.formatTime(r.time);
+        this.text(ctx, l3, W / 2, Y(0.39), fit(l3, 0.9, HH * 0.003), '#bdbdbd', { align: 'center' });
+        acts.push(['REJOUER', col.yellow, via(() => game.restartLevel())], ['MENU', null, via(() => game.toMenu())]);
+      } else {
+        const c = r.challenge, D = CC.Gen.Difficulties.get(c.diff), ttl = 'CARTE ' + c.n + ' TERMINÉE';
+        this.text(ctx, ttl, W / 2, Y(0.08), fit(ttl, 0.9, HH * 0.008), col.white, { align: 'center', skew: -0.2 });
+        this.text(ctx, 'DÉFI ' + D.label, W / 2, Y(0.165), fit('DÉFI IMPOSSIBLE', 0.6, HH * 0.0032), D.color, { align: 'center' });
+        const sr = Math.min(W * 0.07, HH * 0.045);
+        for (let k = 0; k < 3; k++) this.star(ctx, W / 2 + (k - 1) * sr * 2.6, Y(0.27), sr, c.stars > k, col.yellow);
+        const l1 = 'TEMPS ' + U.formatTime(r.time) + '    MEILLEUR ' + U.formatTime(c.best);
+        this.text(ctx, l1, W / 2, Y(0.35), fit(l1, 0.9, HH * 0.0034), col.white, { align: 'center' });
+        const l2 = c.next ? (c.stars + 1) + ' ETOILES EN ' + U.formatTime(c.next) : 'PARFAIT !';
+        this.text(ctx, l2, W / 2, Y(0.41), fit(l2, 0.8, HH * 0.003), c.next ? '#cfcfcf' : col.yellow, { align: 'center' });
+        if (c.trophyAfter > c.trophyBefore) {
+          const tn = ['BRONZE', 'ARGENT', 'OR'][c.trophyAfter - 1], tl = 'NOUVEAU TROPHÉE : ' + tn;
+          this.text(ctx, tl, W / 2, Y(0.465), fit(tl, 0.9, HH * 0.0034), ['#d08a4a', '#d0d8e0', '#ffd23a'][c.trophyAfter - 1], { align: 'center' });
+        }
+        acts.push(['REJOUER', col.yellow, via(() => game.restartLevel())]);
+        if (c.n < CC.CONFIG.challenge.maps) acts.push(['CARTE SUIVANTE', D.color, via(() => game.startChallenge(c.diff, c.n + 1))]);
+        acts.push(['DÉFI', '#8fd0ff', via(() => { game.toMenu(); this.overlay = 'defi'; this.defiTab = c.diff; })], ['MENU', null, via(() => game.toMenu())]);
+      }
+      const top = Y(r.endless ? 0.5 : 0.54), gap = HH * (full ? 0.095 : 0.1);
+      const bpx = this.fitPx(acts.map((a) => a[0]), W * (full ? 0.7 : 0.3), HH * 0.0045);
+      acts.forEach((a, i) => this.button(ctx, a[0], W / 2, top + i * gap, bpx, a[2], { color: a[1] || undefined, box: true, hitW: W * (full ? 0.84 : 0.4) }));
     }
 
     drawSettings(ctx, game, W, H) {
