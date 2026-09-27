@@ -457,3 +457,18 @@ tous les 3 niveaux au plus, récompensée « CASH X2 »). Outil de mesure : `too
 **Vérification :** 9 niveaux au pilote automatique : temps et STYLE identiques à v029 au centième ; AUTOMAP 3 difficultés
 terminées ; aucune erreur. Téléphone simulé : qualité MEDIUM choisie, menus / pause / résultats sans chevauchement,
 publicités (délais, récompense unique, fermeture) ; ordinateur : HIGH, rendu d'origine.
+
+## v031 — boutique : 2,29 € ou une minute de publicité par cosmétique
+
+**Changements (à la demande d'Hugo) :** plus d'argent gagné en jouant (écran de résultats sans gain ni « CASH X2 », menu sans
+solde) ; tous les cosmétiques au même prix (`shop.priceCents` = 229) ; fiche du cosmétique choisi avec deux gros boutons :
+BUY 2,29 EUR (redirection vers le lien Stripe `shop.stripeLink`, à renseigner) et WATCH 1 MIN AD (4 annonces d'exemple de
+15 s, sans pouvoir passer ; retour dans la boutique ensuite) ; retour de paiement `?paid=1&utm_content=<cosmétique>` →
+cosmétique débloqué, équipé, remerciement, adresse nettoyée ; sélection au clic (plus au survol) ; bouton BACK tactile.
+Permission VIBRATE Android : le projet de l'application n'est ni dans le dépôt ni sur le Mac — à ajouter dans son
+AndroidManifest.xml.
+
+**Vérification (téléphone simulé et ordinateur) :** achat sans lien → message ; lien renseigné → redirection vers
+`<lien>?client_reference_id=bedon&utm_content=bedon&utm_source=coldimpact` ; minute de publicité regardée → cosmétique
+débloqué et équipé, retour dans la boutique ; `?paid=1&utm_content=croissant` → CROISSANT débloqué, équipé, enregistré,
+adresse nettoyée ; aucune erreur. Pilote automatique : voir ci-dessous (gameplay inchangé).

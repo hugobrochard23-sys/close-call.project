@@ -52,6 +52,12 @@
       else if (this.overlay === 'shop') { this.buttons = []; if (!this.shop) this.shop = new CC.Shop(this); this.shop.draw(ctx, game, W, H); }
       else if (this.overlay === 'ad' && game.ads) { this.buttons = []; game.ads.draw(ctx, game, W, H, this); }
       if (game.state === 'MENU' && !this.overlay && game.ads) this.drawMenuBanner(ctx, game, W, H);
+      if (game.notice) {   // v031 : message passager (achat confirmé au retour du paiement)
+        const T = -(this.offsetY || 0), HH = this.fullH || H, px = this.fitPx([game.notice], W * 0.86, HH * 0.004);
+        ctx.fillStyle = 'rgba(10,40,14,0.9)'; ctx.fillRect(W * 0.04, T + HH * 0.012, W * 0.92, px * 13);
+        ctx.strokeStyle = CC.CONFIG.hud.colors.green; ctx.lineWidth = Math.max(1, px * 0.5); ctx.strokeRect(W * 0.04, T + HH * 0.012, W * 0.92, px * 13);
+        this.text(ctx, game.notice, W / 2, T + HH * 0.012 + px * 3, px, CC.CONFIG.hud.colors.green, { align: 'center' });
+      }
       if (game.state === 'BOOT') { this.dim(ctx, W, H, 1); this.text(ctx, 'LOADING...', W / 2, H / 2, H * 0.004, col.white, { align: 'center' }); }
     }
 
@@ -78,7 +84,7 @@
       const ny = H * (0.275 + CC.Levels.length * rowStep);
       this.button(ctx, (CC.Levels.length + 1) + '  AUTOMAP', W * (P ? 0.07 : 0.3), ny, px, () => { this.overlay = 'difficulty'; }, { align: 'left', color: '#8fd0ff' });
       this.text(ctx, 'RANDOM - 3 DIFFICULTIES', W * (P ? 0.97 : 0.88), ny + px * 1.2, H * 0.0026, '#8fd0ff', { align: 'right' });
-      this.button(ctx, 'ROCKET SHOP   ' + CC.Skins.formatPrice(game.save.cash), W / 2, H * 0.92, px, () => { this.overlay = 'shop'; }, { color: '#fdfd02' });
+      this.button(ctx, 'ROCKET SHOP', W / 2, H * 0.92, px, () => { this.overlay = 'shop'; }, { color: '#fdfd02' });
       this.text(ctx, document.body.classList.contains('cc-touch') ? 'TAP A LEVEL' : 'CLICK A LEVEL    F1: BINDS    TAB: SETTINGS', W / 2, H * 0.85, H * 0.0024, '#bdbdbd', { align: 'center' });
       this.text(ctx, CC.CONFIG.version.toUpperCase(), W * 0.985, game.ads && game.ads.enabled() ? H * 0.875 : H * 0.955, H * 0.0018, '#808080', { align: 'right' });
     }
@@ -107,7 +113,7 @@
         row(i, names[i], b ? U.formatTime(b.time) : open ? '--:--,--' : 'LOCKED', open, null, () => game.startLevel(i));
       });
       row(CC.Levels.length, names[CC.Levels.length], 'RANDOM', true, '#8fd0ff', () => { this.overlay = 'difficulty'; });
-      const shop = 'ROCKET SHOP  ' + CC.Skins.formatPrice(game.save.cash);
+      const shop = 'ROCKET SHOP';
       this.button(ctx, shop, W / 2, T + HH - banner - HH * 0.08, this.fitPx([shop], W * 0.8, px * 1.1), () => { this.overlay = 'shop'; }, { color: '#fdfd02', box: true });
       this.text(ctx, CC.CONFIG.version.toUpperCase(), W * 0.97, T + HH - banner - HH * 0.022, px * 0.5, '#808080', { align: 'right' });
     }
@@ -211,14 +217,9 @@
       this.text(ctx, 'TIME  ' + U.formatTime(r.time), W / 2, Y(full ? 0.25 : 0.36), px, col.white, { align: 'center' });
       this.text(ctx, 'STYLE ' + U.formatInt(r.style), W / 2, Y(full ? 0.3 : 0.43), px, col.white, { align: 'center' });
       if (r.bestTime) this.text(ctx, 'BEST  ' + U.formatTime(r.bestTime) + (r.newRecord ? '  NEW RECORD!' : ''), W / 2, Y(full ? 0.35 : 0.5), px * 0.72, r.newRecord ? col.yellow : '#bdbdbd', { align: 'center' });
-      if (r.cash) {
-        const cash = 'CASH +' + CC.Skins.formatPrice(r.cash * (r.doubled ? 2 : 1)) + '   BALANCE ' + CC.Skins.formatPrice(game.save.cash);
-        this.text(ctx, cash, W / 2, Y(full ? 0.395 : 0.565), Math.min(px * 0.66, fit(cash, px)), col.yellow, { align: 'center' });
-      }
-      // v030 : publicité récompensée facultative (exemple) — gain doublé, une fois par résultat
+      // v031 : plus d'argent gagné en jouant (les cosmétiques se débloquent dans la boutique : paiement ou publicité)
       const ads = game.ads, via = (fn) => () => (ads ? ads.beforeContinue(fn) : fn());
       const labels = [], acts = [];
-      if (ads && ads.enabled() && r.cash && !r.doubled) { labels.push('WATCH AD: CASH X2 (+' + CC.Skins.formatPrice(r.cash) + ')'); acts.push([() => ads.rewarded(() => { r.doubled = true; game.save.cash += r.cash; game.writeSave(); }), '#8fd0ff']); }
       labels.push(this.key('RETRY', 'CLICK')); acts.push([via(() => game.restartLevel()), col.yellow]);
       if (game.generated) { labels.push('NEW MAP'); acts.push([via(() => { this.overlay = 'difficulty'; }), null]); }
       else if (game.levelIndex < CC.Levels.length - 1) { labels.push(this.key('NEXT LEVEL', 'N')); acts.push([via(() => game.startLevel(game.levelIndex + 1)), null]); }

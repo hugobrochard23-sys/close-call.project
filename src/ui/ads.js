@@ -36,12 +36,14 @@
     }
     shownFor(n) { return this.shown === n; }
 
-    // récompensée : `grant` appelé seulement si la publicité a été regardée jusqu'au bout
-    rewarded(grant) { this.open('rewarded', null, grant); }
+    // récompensée : `grant` appelé seulement si la publicité a été regardée jusqu'au bout ; `seconds` : durée (v031 : une
+    // minute pour débloquer un cosmétique, faite d'annonces de `adSegment` s qui s'enchaînent)
+    rewarded(grant, seconds) { this.open('rewarded', null, grant, seconds); }
 
-    open(kind, then, grant) {
+    open(kind, then, grant, seconds) {
       const g = this.game;
-      this.cur = { kind, t: 0, then, grant, done: false, c: CREATIVES[Math.floor(Math.random() * CREATIVES.length)] };
+      const c0 = Math.floor(Math.random() * CREATIVES.length);
+      this.cur = { kind, t: 0, then, grant, done: false, seconds, c0, c: CREATIVES[c0], back: g.ui.overlay };   // v031 : on revient où l'on était (boutique)
       this.lastAd = this.now();
       g.ui.overlay = 'ad';
       this.duck(true);
@@ -50,7 +52,7 @@
     close(watched) {
       const A = this.cur, g = this.game;
       if (!A) return;
-      this.cur = null; g.ui.overlay = null;
+      this.cur = null; g.ui.overlay = A.back === 'shop' ? 'shop' : null;
       this.duck(false);
       if (A.kind === 'rewarded' && watched && A.grant) A.grant();
       if (A.then) A.then();
@@ -97,7 +99,12 @@
     draw(ctx, game, W, H, ui) {
       const A = this.cur;
       if (!A) return;
-      const T = -(ui.offsetY || 0), HH = ui.fullH || H, c = A.c, col = CC.CONFIG.hud.colors;
+      const T = -(ui.offsetY || 0), HH = ui.fullH || H, col = CC.CONFIG.hud.colors;
+      // v031 : une longue publicité (1 min) enchaîne plusieurs annonces : « AD 2/4 »
+      const seg = CC.CONFIG.shop.adSegment, total0 = A.seconds || (A.kind === 'rewarded' ? this.cfg.rewardTime : this.cfg.interstitialTime);
+      const nSeg = A.seconds ? Math.max(1, Math.round(total0 / seg)) : 1, iSeg = Math.min(nSeg - 1, Math.floor(A.t / seg));
+      if (nSeg > 1) A.c = CREATIVES[(A.c0 + iSeg) % CREATIVES.length];
+      const c = A.c;
       ctx.fillStyle = '#060608'; ctx.fillRect(0, T, W, HH);
       const cw = Math.min(W * 0.86, HH * 0.9), ch = Math.min(HH * 0.62, cw * 1.1), cx = (W - cw) / 2, cy = T + HH * 0.12;
       ctx.fillStyle = c.bg; ctx.fillRect(cx, cy, cw, ch);
@@ -108,7 +115,8 @@
       const lab = ui.fitPx(['SAMPLE AD - FICTIONAL ADVERTISER - NO LINK'], W * 0.92, Math.max(H * 0.0026, HH * 0.0022));
       ui.text(ctx, 'SAMPLE AD - FICTIONAL ADVERTISER - NO LINK', W / 2, cy - HH * 0.035, lab, '#9a9a9a', { align: 'center' });
       // barre de progression + commandes
-      const total = A.kind === 'rewarded' ? this.cfg.rewardTime : this.cfg.interstitialTime;
+      const total = total0;
+      if (nSeg > 1) ui.text(ctx, 'AD ' + (iSeg + 1) + '/' + nSeg, cx, cy - HH * 0.07, ui.fitPx(['AD 1/4'], W * 0.3, Math.max(H * 0.0026, HH * 0.0022)), '#cfcfcf', {});
       const k = U.clamp(A.t / total, 0, 1);
       ctx.fillStyle = '#333'; ctx.fillRect(cx, cy + ch + HH * 0.02, cw, HH * 0.01);
       ctx.fillStyle = col.yellow; ctx.fillRect(cx, cy + ch + HH * 0.02, cw * k, HH * 0.01);

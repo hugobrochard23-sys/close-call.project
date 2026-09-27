@@ -5,7 +5,7 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v030',
+  version: 'v031',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
@@ -165,11 +165,15 @@ CC.CONFIG = {
   },
 
   // Boutique de cosmétiques (CHOIX v007). Montants en centimes d'euro, pour éviter les arrondis flottants.
-  economy: {
-    startCash: 500,              // solde offert au premier lancement (pour pouvoir tester la boutique tout de suite)
-    levelBase: 60,               // gain fixe par niveau terminé
-    perStylePoint: 0.05,         // gain proportionnel aux points de STYLE
-    recordBonus: 100,            // bonus pour un nouveau record de temps
+  // v031 (Hugo) : plus d'argent gagné en jouant ; chaque cosmétique se débloque en payant (lien de paiement Stripe) ou en
+  // regardant une minute de publicité en entier. Au retour du paiement, Stripe renvoie vers le jeu (réglage du lien dans le
+  // Dashboard : redirection vers l'adresse du jeu + « ?paid=1&session_id={CHECKOUT_SESSION_ID} ») en y ajoutant
+  // utm_content = identifiant du cosmétique ; le jeu le débloque et l'équipe (src/ui/shop.js).
+  shop: {
+    priceCents: 229,             // prix unique de tous les cosmétiques (2,29 €)
+    stripeLink: '',              // lien de paiement Stripe, ex. 'https://buy.stripe.com/xxxx' — À RENSEIGNER
+    adSeconds: 60,               // ou une minute de publicité, sans pouvoir la passer
+    adSegment: 15,               // la minute est faite de 4 annonces de 15 s qui s'enchaînent
   },
 
   // Missiles anti-aériens des tanks et hélicoptères (CHOIX v020, Hugo). Chaque paire [début, fin] est interpolée selon la

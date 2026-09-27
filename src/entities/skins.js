@@ -3,7 +3,6 @@
  * Chaque fiche est purement déclarative : couleurs, dimensions et pièces rapportées lues par CC.Models.rocket().
  * Prix en centimes d'euro (pas de flottants dans la sauvegarde). */
 (function () {
-  const PRICE = { base: 0, common: 299, rare: 499, ultra: 699 };
   const TIER_LABEL = { base: 'STOCK', common: 'COMMUN', rare: 'RARE', ultra: 'ULTRA RARE' };
 
   // Aides de construction de pièces rapportées (repère local : +Z = nez, x/y = travers).
@@ -161,7 +160,7 @@
 
   const byId = {};
   for (const s of list) {
-    s.price = PRICE[s.tier] || 0;
+    s.price = s.tier === 'base' ? 0 : CC.CONFIG.shop.priceCents;   // v031 : prix unique (l'ancienne grille PRICE ne sert plus)
     s.tierLabel = TIER_LABEL[s.tier] || 'COMMUN';
     s.c = Object.assign({ body: '#c4c6c9', nose: '#c4c6c9', tip: '#e02a1c', band: '#f3cf00', fin: '#5d6065', nozzle: '#3d3f43' }, s.c);
     s.dims = Object.assign({ r: 0.1, len: 0.86, noseLen: 0.3, noseR: 0.012, fins: 4, finH: 0.2, finW: 0.02, finPos: -0.33, scale: 1 }, s.dims || {});
@@ -173,7 +172,6 @@
     list,
     byId,
     get(id) { return byId[id] || byId.stock; },
-    price(tier) { return PRICE[tier] || 0; },
     // "2,99 €" (format français, comme le reste de l'interface)
     formatPrice(cents) { return Math.floor(cents / 100) + ',' + String(Math.round(cents % 100)).padStart(2, '0') + ' EUR'; },
   };

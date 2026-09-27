@@ -58,6 +58,8 @@
       // v023 : volumes enregistrés (SOUND / MUSIC sur OFF) appliqués dès le démarrage, avant même que le son soit créé
       this.audio.setVolumes(CC.CONFIG.audio.master, this.settings.music, this.settings.sfx);
       this.applyCosmetic();
+      // v031 : retour d'un paiement Stripe (?paid=1&utm_content=<cosmétique>) → cosmétique débloqué, message dans le menu
+      if (!this.testMode && CC.Shop.handleReturn) { const msg = CC.Shop.handleReturn(this); if (msg) { this.notice = msg; this.noticeT = 6; } }
       this.state = 'BOOT'; this.paused = false;
       this.runTime = 0; this.lastSpeed = 0; this.acc = 0; this.fps = 60; this.flash = 0;
       this.shoulder = CC.Models.shoulderLauncher(); this.shoulder.visible = false; this.camera.add(this.shoulder);
@@ -117,7 +119,6 @@
       this.save = s || { best: {} };
       this.save.best = this.save.best || {};
       // Boutique (v007) : solde en centimes, cosmétiques possédés, cosmétique équipé.
-      if (typeof this.save.cash !== 'number') this.save.cash = CC.CONFIG.economy.startCash;
       this.save.owned = this.save.owned || {};
       this.save.owned.stock = true;
       if (!this.save.owned[this.save.equipped]) this.save.equipped = 'stock';
@@ -133,10 +134,10 @@
 
     // ---------- cosmétiques ----------
     applyCosmetic() { this.rocket.setSkin(CC.Skins.get(this.save.equipped)); }
-    buyCosmetic(id) {
+    // v031 : débloque un cosmétique (paiement Stripe confirmé par le retour, ou minute de publicité regardée) et l'équipe
+    unlockCosmetic(id) {
       const s = CC.Skins.byId[id];
-      if (!s || this.save.owned[id] || this.save.cash < s.price) return false;
-      this.save.cash -= s.price;
+      if (!s || this.save.owned[id]) return false;
       this.save.owned[id] = true;
       this.save.equipped = id;
       this.applyCosmetic(); this.writeSave();
@@ -391,9 +392,6 @@
       const r = { title: this.level.mode === 'targets' ? 'ALL TARGETS DESTROYED' : 'TARGET DESTROYED', time: this.runTime, style: this.style.total, newRecord: false };
       if (!best || this.runTime < best.time) { this.save.best[id] = { time: this.runTime, style: this.style.total }; r.newRecord = !!best || true; }
       r.bestTime = this.save.best[id].time;
-      const E = CC.CONFIG.economy;
-      r.cash = Math.round(E.levelBase + r.style * E.perStylePoint + (r.newRecord ? E.recordBonus : 0));
-      this.save.cash += r.cash;
       this.results = r; this.state = 'RESULTS';
       if (this.ads) this.ads.onLevelEnd();
       if (!this.settings.tutorialDone) this.settings.tutorialDone = true;   // v030 : premier niveau terminé → plus de tutoriel
@@ -535,6 +533,7 @@
 
     tick(dt) {
       if (this.ads) this.ads.update(dt);
+      if (this.noticeT > 0 && (this.noticeT -= dt) <= 0) this.notice = null;
       if (!this.paused && this.state !== 'BOOT') this.update(dt);
       else { this.input.poll(0); this.rig.update(0); }
       this.render(performance.now() / 1000);

@@ -162,17 +162,27 @@ et `tools/compare.js` comme les niveaux fixes (`?test=1&gen=hard&seed=1234`).
 
 ### Boutique de cosmétiques (ROCKET SHOP)
 
-Le menu principal ouvre une boutique : 20 apparences de roquette, à acheter avec le solde gagné en jouant.
+Le menu principal ouvre une boutique : 20 apparences de roquette (plus la roquette d'origine, offerte). **Depuis la v031,
+on ne gagne plus d'argent en jouant** : chaque cosmétique se débloque **en payant 2,29 €** (tous au même prix) **ou en
+regardant une minute de publicité en entier** (4 annonces de 15 s ; fermer avant la fin ne débloque rien).
 
-| Catégorie | Prix | Fiches |
-|---|---|---|
-| STOCK | offert | la roquette d'origine |
-| COMMUN (7) | 2,99 € | LE GAMIN, MONSIEUR BEDON, FUSEE V, MINUTEMEC, HACHETTE VOLANTE, CROQUETTE, BAGUETTE |
-| RARE (8) | 4,99 € | TRIDENTIN, POISSON VOLANT, GARDIEN DE PAIX, TITANITE, SATANETTE, GROSSE BERTHE, CROISSANT, CHATON |
-| ULTRA RARE (5) | 6,99 € | TSARINI, MAMAN DES BOMBES, BOMBE H, COLIS EXPRESS, CAILLOU |
+| Catégorie | Fiches |
+|---|---|
+| STOCK (offerte) | la roquette d'origine |
+| COMMUN (7) | LE GAMIN, MONSIEUR BEDON, FUSEE V, MINUTEMEC, HACHETTE VOLANTE, CROQUETTE, BAGUETTE |
+| RARE (8) | TRIDENTIN, POISSON VOLANT, GARDIEN DE PAIX, TITANITE, SATANETTE, GROSSE BERTHE, CROISSANT, CHATON |
+| ULTRA RARE (5) | TSARINI, MAMAN DES BOMBES, BOMBE H, COLIS EXPRESS, CAILLOU |
 
-Solde : 5 € offerts au premier lancement, puis 60 centimes par niveau terminé + 0,05 par point de STYLE + 1 € par nouveau record
-(environ 2 à 3 € par niveau réussi). **Les prix sont fictifs : rien n'est encaissé, le solde vit dans la sauvegarde locale.**
+**Paiement (Stripe).** Le bouton BUY ouvre le lien de paiement Stripe réglé dans `CC.CONFIG.shop.stripeLink`
+(`src/config.js`, vide pour l'instant : le bouton affiche alors « PAYMENT LINK NOT SET YET »). Le jeu y ajoute
+`client_reference_id` et `utm_content` = identifiant du cosmétique. Dans le Dashboard Stripe, régler le lien sur
+**Après le paiement → Rediriger vers** : `https://hugobrochard23-sys.github.io/cold-impact.project/?paid=1&session_id={CHECKOUT_SESSION_ID}`.
+Stripe recopie `utm_content` dans cette adresse : au retour, le jeu débloque et équipe le cosmétique, affiche un
+remerciement et nettoie l'adresse. Limite : sans serveur, le paiement n'est pas vérifié auprès de Stripe (recopier
+l'adresse de retour suffirait à débloquer) — à renforcer par une vérification de `session_id` côté serveur.
+**Google Play** : dans une application Android publiée sur le Play Store, vendre un contenu numérique par un lien externe
+n'est permis que dans les programmes de Google (facturation alternative / offres externes, avec frais) ; sinon il faut la
+facturation Google Play.
 
 Les noms s'inspirent librement de gros engins historiques sans en reprendre un seul ; cinq fiches sont des fantaisies
 (baguette, croissant, chaton, colis, caillou). Un cosmétique change les couleurs, les proportions du corps et du nez,
