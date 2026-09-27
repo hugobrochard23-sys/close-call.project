@@ -5,7 +5,7 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v031',
+  version: 'v032',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
@@ -177,7 +177,8 @@ CC.CONFIG = {
   },
 
   // Missiles anti-aériens des tanks et hélicoptères (CHOIX v020, Hugo). Chaque paire [début, fin] est interpolée selon la
-  // menace du niveau : 0 (CITY) → 1 (NIGHT FOREST) ; AUTOMAP : aaByDifficulty. Toujours moins maniables que la roquette.
+  // menace du niveau : 0 (CITY) → 1 (NIGHT FOREST) ; missions générées (v032) : enemyReaction du profil de difficulté
+  // (src/world/gen/profiles.js), aaByDifficulty n'est plus qu'un secours. Toujours moins maniables que la roquette.
   aa: {
     range: [90, 140],            // m : portée de tir (le tireur doit voir la roquette : pas à travers un bâtiment)
     frontCos: 0.26,              // cos 75° : le tireur doit être devant la roquette (jamais de tir dans le dos)

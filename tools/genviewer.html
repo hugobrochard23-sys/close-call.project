@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>COLD IMPACT — visionneuse du générateur</title>
+<style>
+  body { margin: 0; background: #111; color: #ddd; font: 12px monospace; }
+  header { padding: 8px 12px; background: #1c1c1c; position: sticky; top: 0; z-index: 2; }
+  header a { color: #8fd0ff; margin-right: 10px; }
+  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; padding: 8px; }
+  .cell { background: #000; border: 1px solid #333; }
+  .cell canvas { width: 100%; display: block; }
+  .cell div { padding: 3px 5px; line-height: 1.35; }
+  .bad { border-color: #f44; }
+</style>
+</head>
+<body>
+<!-- Outil de développement : dessine des dizaines de plans de mission (vue de dessus) pour repérer les cartes absurdes,
+     répétitives ou mal équilibrées. Paramètres : ?diff=hard&n=24&seed0=1000&biome=urban -->
+<header id="head"></header>
+<div id="grid"></div>
+<script src="../src/config.js"></script>
+<script src="../src/core/util.js"></script>
+<script src="../src/world/gen/core.js"></script>
+<script src="../src/world/gen/profiles.js"></script>
+<script src="../src/world/gen/biomes.js"></script>
+<script src="../src/world/gen/layout.js"></script>
+<script src="../src/world/gen/templates.js"></script>
+<script src="../src/world/gen/mission.js"></script>
+<script src="../src/world/gen/features.js"></script>
+<script src="../src/world/gen/nav.js"></script>
+<script src="../src/world/gen/validate.js"></script>
+<script src="../src/world/gen/generator.js"></script>
+<script src="../src/world/gen/debugdraw.js"></script>
+<script>
+  const P = new URLSearchParams(location.search), G = CC.Gen;
+  const diff = P.get('diff') || 'medium', n = +(P.get('n') || 24), seed0 = +(P.get('seed0') || 1000), biome = P.get('biome') || undefined;
+  document.getElementById('head').innerHTML = G.difficultyIds().map((d) => `<a href="?diff=${d}&n=${n}&seed0=${seed0}${biome ? '&biome=' + biome : ''}">${d}</a>`).join('') +
+    ' | ' + G.Biomes.ids().map((b) => `<a href="?diff=${diff}&n=${n}&seed0=${seed0}&biome=${b}">${b}</a>`).join('') + ` | <b>${diff}</b> ${biome || ''}`;
+  const grid = document.getElementById('grid');
+  let i = 0;
+  const next = () => {
+    if (i >= n) return;
+    const seed = seed0 + i * 7919; i++;
+    const cell = document.createElement('div'); cell.className = 'cell';
+    const c = document.createElement('canvas'); c.width = 460; c.height = 620; cell.appendChild(c);
+    const info = document.createElement('div'); cell.appendChild(info); grid.appendChild(cell);
+    try {
+      const t0 = performance.now();
+      const plan = G.generate(seed, diff, { biome, keepNav: true });
+      const ms = performance.now() - t0;
+      G.drawPlan(c.getContext('2d'), plan, { x: 0, y: 0, w: c.width, h: c.height });
+      const s = plan.score, st = plan.stats;
+      if (!plan.valid) cell.classList.add('bad');
+      info.innerHTML = `seed ${seed} · ${plan.biome.id} · ${plan.env.id} · essai ${plan.attempt + 1}<br>score ${s.difficultyScore} · route ${s.routeLength} m · expo ${s.exposure} · couloirs ${s.corridors}<br>` +
+        `bât ${st.buildings} · arbres ${st.trees} · obst ${st.obstacles} · tanks ${st.tanks} · sam ${st.sams} · héli ${st.helis}<br>` +
+        `cibles ${plan.targets.map((t) => t.kind + '/' + t.setup).join(', ')}<br>essence ${plan.fuel} s · virage ${plan.analysis.maxTurnRate} · ${ms.toFixed(0)} ms`;
+    } catch (e) { info.textContent = 'seed ' + seed + ' : ' + e.message; cell.classList.add('bad'); }
+    setTimeout(next, 0);
+  };
+  next();
+</script>
+</body>
+</html>

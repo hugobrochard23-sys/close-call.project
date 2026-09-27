@@ -25,6 +25,7 @@
       this.testMode = P.has('test');
       this.useAutopilot = P.has('autopilot');
       this.debug = P.has('showfps');
+      this.genDebug = P.has('gendebug');                 // v032 : vue de débogage du générateur de missions (touche G)
       this.showHud = P.get('hud') !== '0';
       U.rng.reseed(parseInt(P.get('seed') || '1234', 10));
 
@@ -243,17 +244,40 @@
       if (!this.testMode) { this.input.requestLock(); this.audio.init(); this.audio.resume(); if (this.audio.music) this.audio.music.start(); }
     }
 
-    /* Carte aléatoire (v007) : graine tirée à chaque appel → une carte différente à chaque clic.
-     * Une graine explicite est acceptée (banc de test : rejouer la même carte à l'identique). */
-    startGenerated(diffId, seed) {
-      if (seed === undefined || seed === null) seed = ((Math.random() * 0x7fffffff) | 0);
-      const L = CC.GeneratedLevel(diffId, seed);
+    /* v032 : mission générée (src/world/gen/) — graine tirée au hasard, ou donnée (seed partagée, carte du jour, banc de
+     * test) : même graine + même difficulté = même carte. Seuls la graine, la difficulté et quelques statistiques sont
+     * sauvegardés ; la carte, elle, est reconstruite à chaque fois. */
+    startGenerated(diffId, seed, opts) {
+      opts = opts || {};
+      if (seed === undefined || seed === null) seed = CC.Gen.randomSeed();
+      const t0 = performance.now();
+      const plan = CC.Gen.generate(seed, diffId, { keepNav: !!this.genDebug, biome: opts.biome || (this.testMode ? this.params.get('biome') : null) });
+      const t1 = performance.now();
+      const L = CC.Gen.toLevel(plan);
       this.loadLevelFrom(L, -1);
+      const t2 = performance.now();
       this.generated = true;
+      this.mission = Object.assign({}, L.mission, { daily: opts.daily || null, genMs: Math.round(t1 - t0), buildMs: Math.round(t2 - t1), attempt: plan.attempt });
       this.restartLevel();
-      this.centerMsg = 'GENERATED MAP  ' + (L.difficulty || '').toUpperCase() + '  SEED ' + seed;
-      this.centerMsgT = 2.6;
+      // brief de mission : graine, zone, difficulté, cibles (quelques secondes au lanceur)
+      const m = this.mission;
+      this.centerMsg = (opts.daily ? 'MISSION DU JOUR  ' : 'MISSION ') + seed + '  -  ' + m.biome + '  -  ' + m.label;
+      this.centerMsgT = 3.4;
       if (!this.testMode) { this.input.requestLock(); this.audio.init(); this.audio.resume(); if (this.audio.music) this.audio.music.start(); }
+    }
+    // Écran « GÉNÉRATION... » affiché une image avant le calcul (sinon le jeu semble figé pendant la construction)
+    requestMission(diffId, seed, opts) {
+      this.pendingMission = { diffId, seed, opts, frames: 0 };
+      this.ui.overlay = 'generating';
+      this.audio.init(); this.audio.resume();
+    }
+    runPendingMission() {
+      const pm = this.pendingMission;
+      if (!pm || ++pm.frames < 2) return;
+      this.pendingMission = null;
+      try { this.startGenerated(pm.diffId, pm.seed, pm.opts); this.ui.overlay = null; } catch (e) {
+        console.error(e); this.ui.overlay = 'missions'; this.notice = 'GENERATION FAILED - TRY ANOTHER SEED'; this.noticeT = 4;
+      }
     }
 
     restartLevel() {
@@ -367,6 +391,7 @@
     aaSalvo() {
       const L = this.level;
       if (!L) return false;
+      if (L.aaSalvo !== undefined) return L.aaSalvo;                 // v032 : profil de la mission générée
       return L.generated ? L.difficulty === 'hard' : this.levelIndex >= CC.Levels.length - 3;
     }
 
@@ -376,6 +401,7 @@
     aaThreat() {
       const L = this.level;
       if (!L) return 0;
+      if (L.aaThreat !== undefined) return L.aaThreat;               // v032 : profil de la mission générée (0 → 1)
       if (L.generated) return CC.CONFIG.aaByDifficulty[L.difficulty] !== undefined ? CC.CONFIG.aaByDifficulty[L.difficulty] : 0.5;
       return CC.Levels.length > 1 ? U.clamp(this.levelIndex / (CC.Levels.length - 1), 0, 1) : 0;
     }
@@ -392,12 +418,29 @@
       const r = { title: this.level.mode === 'targets' ? 'ALL TARGETS DESTROYED' : 'TARGET DESTROYED', time: this.runTime, style: this.style.total, newRecord: false };
       if (!best || this.runTime < best.time) { this.save.best[id] = { time: this.runTime, style: this.style.total }; r.newRecord = !!best || true; }
       r.bestTime = this.save.best[id].time;
+      if (this.generated && this.mission) this.recordMission(r);
       this.results = r; this.state = 'RESULTS';
       if (this.ads) this.ads.onLevelEnd();
       if (!this.settings.tutorialDone) this.settings.tutorialDone = true;   // v030 : premier niveau terminé → plus de tutoriel
       this.writeSave();
       this.input.exitLock();
       this.telemetry.event('results', { time: r.time, style: r.style });
+    }
+
+    /* v032 : historique léger des missions (graine, difficulté, temps) + record par graine et par carte du jour.
+     * Aucune carte n'est stockée : la graine suffit à la reconstruire. */
+    recordMission(r) {
+      const m = this.mission, S = this.save, key = m.difficulty + ':' + m.seed;
+      S.missions = (S.missions || []).filter((x) => x.k !== key);
+      S.missions.unshift({ k: key, seed: m.seed, d: m.difficulty, b: m.biome, t: +r.time.toFixed(2), s: Math.round(r.style), at: new Date().toISOString().slice(0, 10) });
+      S.missions.length = Math.min(S.missions.length, 30);
+      S.seedBest = S.seedBest || {};
+      const prev = S.seedBest[key];
+      r.seedBest = prev === undefined ? r.time : Math.min(prev, r.time); r.seedRecord = prev === undefined || r.time < prev;
+      S.seedBest[key] = +r.seedBest.toFixed(2);
+      const keys = Object.keys(S.seedBest);
+      if (keys.length > 200) delete S.seedBest[keys[0]];               // au plus 200 records de graines
+      if (m.daily) { S.daily = S.daily || {}; const d = S.daily[m.daily]; if (d === undefined || r.time < d) S.daily[m.daily] = +r.time.toFixed(2); }
     }
 
     toMenu() {
@@ -415,6 +458,7 @@
     onPointerLost() { if (!this.testMode && !this.ui.overlay && ['AIM', 'FLIGHT', 'IMPACT', 'CRASHED', 'RESPAWN'].includes(this.state)) this.paused = true; }
 
     onKey(k) {
+      if (typeof document !== 'undefined' && document.activeElement && document.activeElement.tagName === 'INPUT') return;   // saisie d'une graine
       this.audio.init(); this.audio.resume();
       const inGame = ['AIM', 'FLIGHT', 'IMPACT', 'CRASHED', 'RESPAWN'].includes(this.state);
       if (k === 'Escape') {
@@ -432,6 +476,7 @@
       } else if (k === 'KeyN' && this.state === 'RESULTS' && !this.generated && this.levelIndex < CC.Levels.length - 1) {
         this.startLevel(this.levelIndex + 1);
       } else if (k === 'KeyH') { this.showHud = !this.showHud; }
+      else if (k === 'KeyG' && (this.generated || this.state === 'MENU')) { this.genDebug = !this.genDebug; }   // v032 : vue de débogage du générateur
     }
 
     // ---------- boucle ----------
@@ -464,6 +509,10 @@
             this.lastSpeed = rk.speed;
             const killY = this.level.killY !== undefined ? this.level.killY : -60;
             if (rk.pos.y < killY || rk.pos.length() > 4000) this.onRocketCrash('outOfBounds', rk.pos.clone(), null);
+            // v032 : roquette immobilisée (posée en glissant sur un toit, sans essence) → comptée comme un crash, sinon
+            // la partie ne peut plus avancer
+            this.stallT = rk.speed < 3 && this.flightTime > 1 ? (this.stallT || 0) + dt : 0;
+            if (rk.active && this.stallT > 1.5) { this.stallT = 0; this.onRocketCrash('stalled', rk.pos.clone(), null); }
           }
           this.runTime += dt;
           break;
@@ -534,6 +583,7 @@
     tick(dt) {
       if (this.ads) this.ads.update(dt);
       if (this.noticeT > 0 && (this.noticeT -= dt) <= 0) this.notice = null;
+      if (this.pendingMission) this.runPendingMission();
       if (!this.paused && this.state !== 'BOOT') this.update(dt);
       else { this.input.poll(0); this.rig.update(0); }
       this.render(performance.now() / 1000);
@@ -558,6 +608,9 @@
       this.quality.apply(this.quality.initial());
       this.watchVisibility();
       this.toMenu();
+      // v032 : lien partagé ?mission=<graine>&diff=<difficulté> → écran du générateur avec cette graine
+      const ms = CC.Gen.parseSeed(this.params.get('mission'));
+      if (ms !== null) { this.ui.overlay = 'missions'; this.ui.seedChoice = ms; this.ui.diffChoice = this.params.get('diff'); }
       const Q = CC.CONFIG.quality;
       let last = performance.now(), fpsAcc = 0, fpsN = 0;
       const loop = (now) => {
@@ -592,11 +645,8 @@
       const lv = Math.max(0, Math.min(CC.Levels.length - 1, parseInt(P.get('level') || '1', 10) - 1));
       this.telemetry.enabled = true;
       // ?gen=easy|medium|hard&seed=N : carte aléatoire reproductible (enregistrable comme les niveaux fixes)
-      if (P.get('gen')) {
-        this.loadLevelFrom(CC.GeneratedLevel(P.get('gen'), parseInt(P.get('seed') || '4242', 10)), -1);
-        this.generated = true;
-        this.restartLevel();
-      } else this.startLevel(lv);
+      if (P.get('gen')) this.startGenerated(P.get('gen'), parseInt(P.get('seed') || '4242', 10));
+      else this.startLevel(lv);
       const self = this;
       CC.harness = {
         ready: true, fps,

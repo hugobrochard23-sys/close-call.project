@@ -84,12 +84,13 @@ ensuite elle ne pousse que si **Espace** est maintenue, et chaque seconde de pou
 rouge sous 25 %). Réservoir vide : moteur coupé, la roquette plane puis tombe. Le réservoir est plein à chaque tir et sa taille
 baisse avec la difficulté (la jauge est plus courte) :
 
-| Niveau | CITY | BRICKWORKS | CANYON | CAVE | WOODS | CONSTRUCTION | NIGHT FOREST | AUTOMAP facile / moyen / difficile |
-|---|---|---|---|---|---|---|---|---|
-| Essence (s) | 23 | 20 | 18 | 16 | 14 | 12 | 11 | 15 / 16 / 18 |
-| Réserve restante au pilote automatique (s) | 13,8 | 15,8 | 8,6 | 6,5 | 5,8 | 6,1 | 3,2 | 7,5 / 5,5 / 3,9 |
+| Niveau | CITY | BRICKWORKS | CANYON | CAVE | WOODS | CONSTRUCTION | NIGHT FOREST |
+|---|---|---|---|---|---|---|---|
+| Essence (s) | 23 | 20 | 18 | 16 | 14 | 12 | 11 |
+| Réserve restante au pilote automatique (s) | 13,8 | 15,8 | 8,6 | 6,5 | 5,8 | 6,1 | 3,2 |
 
-Sur AUTOMAP les cartes difficiles sont plus longues : le réservoir est plus grand, mais la marge est plus faible.
+Missions générées (v032) : le réservoir est calculé pour la plus longue approche de la carte, avec une marge qui baisse
+avec la difficulté (×1,9 FACILE → ×1,18 IMPOSSIBLE).
 Réglages : `rocket.freeBoost`, `rocket.fuelDefault` dans `src/config.js`, `fuel` dans chaque fiche de niveau.
 
 **Caméra de vol (v010).** La caméra suit la roquette mais pas la visée : elle se réaligne peu à peu derrière la trajectoire
@@ -98,7 +99,7 @@ indique la direction visée.
 
 **Missiles anti-aériens (v020, v021).** Les tanks et les hélicoptères tirent sur la roquette quand ils la voient (jamais à travers
 un bâtiment), entre 45 m et 90 à 140 m, et seulement s'ils sont devant elle (jamais de tir dans le dos). NIGHT FOREST a 2 tanks
-de garde (ils tirent et se détruisent, mais ne comptent pas dans l'objectif : la cible reste la maison). La menace monte de CITY (0) à NIGHT FOREST (1) ; AUTOMAP : 0,3 / 0,6 / 0,95.
+de garde (ils tirent et se détruisent, mais ne comptent pas dans l'objectif : la cible reste la maison). La menace monte de CITY (0) à NIGHT FOREST (1) ; missions générées : selon le profil de difficulté (≈ 0,25 → 1).
 Avec elle : tirs plus rapprochés (5 s → 1,6 s), visée plus juste (erreur 6 m → 0,3 m), anticipation de la trajectoire,
 missiles plus rapides (50 → 68 m/s). Ils restent moins maniables que la roquette (virage 0,5 → 1,1 rad/s contre 1,5 à 1,8)
 et plus lents qu'elle à pleine poussée : on les sème en virant franchement, et ils explosent sur les murs.
@@ -136,29 +137,46 @@ Chaque niveau reconstruit une séquence de la vidéo, avec l'interface (HUD) qu'
 | 7 | NIGHT FOREST | 79,3–89,1 s | B (SCORE) | score | maison |
 | 8 | TRENCH RUN | création (v023, façon Star Wars) | C | style | hélicoptère qui s'enfuit dans une tranchée de 20 m, 19 obstacles, 9 tourelles |
 | 9 | NIGHT CANYON | création (v023) | C | style | hélicoptère qui s'enfuit dans un canyon de nuit, convoi de 5 tanks en salves |
-| 10 | AUTOMAP | hors vidéo | C | cibles | généré : 2 à 4 cibles selon la difficulté |
+| 10 | MISSIONS | générateur (v032) | C | cibles | carte générée : 2 à 4 cibles selon la difficulté |
 
-**Progression (v023)** : un niveau ne s'ouvre qu'une fois le précédent terminé (AUTOMAP toujours libre) ; le menu pause
+**Progression (v023)** : un niveau ne s'ouvre qu'une fois le précédent terminé (MISSIONS toujours libre) ; le menu pause
 propose NEXT LEVEL quand le suivant est ouvert. Niveaux 1 et 3 : flèches vertes le long du chemin ; niveau 2 (v027) et suivants : repère rouge
-permanent sur la cible. Salves anti-aériennes (2 missiles rapprochés, tirs groupés) sur les 3 derniers niveaux et AUTOMAP
-difficile ; les missiles ennemis accélèrent après le tir (on les voit partir). Essence réduite d'environ 15 %.
+permanent sur la cible. Salves anti-aériennes (2 missiles rapprochés, tirs groupés) sur les 3 derniers niveaux et les missions
+DIFFICILE / IMPOSSIBLE ; les missiles ennemis accélèrent après le tir (on les voit partir). Essence réduite d'environ 15 %.
 
-### Carte aléatoire (8e carte : AUTOMAP)
+### Générateur de missions (v032 : ligne MISSIONS du menu)
 
-La dernière carte du menu n'est pas un niveau fixe. Un clic ouvre le choix de difficulté, puis la carte est **construite à la volée**
-(≈ 45 ms : tracé de rue sinueux, pâtés d'immeubles, portiques, passerelles, vitres à briser, caisses, lasers, lampadaires,
-points d'accroche, cibles, routes du pilote automatique).
+La dernière ligne du menu ouvre le **GÉNÉRATEUR DE MISSIONS** : on choisit **FACILE, MOYEN, DIFFICILE ou IMPOSSIBLE**,
+l'écran « GÉNÉRATION... » s'affiche, et une carte entière est **construite à la volée** (≈ 0,1 à 0,4 s sur ordinateur)
+à partir d'une **graine** : même graine + même difficulté = même carte pour tout le monde. Rien n'est stocké à part la
+graine, la difficulté, le temps (dernières missions, record par graine, record de la carte du jour).
 
-| Difficulté | Cibles | Longueur | Largeur de rue | Immeubles | Obstacles | Ennemis | Ambiance |
-|---|---|---|---|---|---|---|---|
-| FACILE | 2 | 520 m | 60 m | 16–40 m | rares | aucun | plein jour |
-| MOYEN | 3 | 720 m | 48 m | 24–62 m | modérés | 1 soldat | coucher de soleil |
-| DIFFICILE | 4 | 940 m | 38 m | 32–92 m | denses, lasers rouges | 3 soldats | nuit étoilée |
+- **8 familles de cartes** : zone urbaine, industrielle, militaire, rurale, montagneuse (vallées, arches, ponts, neige),
+  désertique (dunes, avant-postes, puits de pétrole), portuaire (quais, grues, conteneurs, mer), mixte (plusieurs
+  familles en bandes) ; **9 ambiances** (jour, couvert, brume de chaleur, aube, crépuscule, nuit, clair de lune,
+  brouillard, neige).
+- **Cibles variées** et toujours marquées en rouge : char, camion, hélicoptère (sur un toit ou en patrouille), maison,
+  station radar, dépôt de carburant, poste de commandement — à découvert, derrière des murs, dans un hangar, sous un
+  filet, au fond d'une cour ou d'une ruelle. Il faut parfois contourner pour s'aligner sur l'entrée.
+- **Défenses** placées sur les vraies trajectoires d'approche (lignes de vue calculées) : tanks, lance-missiles (nouveaux,
+  tourelle qui suit la roquette), hélicoptères en patrouille. Tirs croisés en IMPOSSIBLE, défenses espacées en FACILE.
+- **Mission du jour** (même carte pour tous à une date donnée, DIFFICILE), **graine au choix** (un nombre ou un mot),
+  **dernières missions** rejouables, graine affichée en pause et à l'écran de résultats (**NOUVELLE MISSION** enchaîne
+  une autre carte de même difficulté). Lien partageable : `?mission=83927451&diff=hard`.
+- Chaque carte est **validée avant d'être montrée** (aucune superposition, départ libre, chaque cible atteignable par
+  une trajectoire vérifiée, virages faisables, essence suffisante, difficulté conforme) ; sinon une autre est tirée,
+  toujours de façon déterministe.
 
-Chaque appel tire une graine différente (affichée brièvement au début de la partie). **R** recommence la même carte ;
-repasser par AUTOMAP en construit une autre. Les meilleurs temps sont enregistrés par difficulté.
-Les cartes générées produisent aussi leurs routes de pilote automatique : elles sont donc jouables par `tools/record.js`
-et `tools/compare.js` comme les niveaux fixes (`?test=1&gen=hard&seed=1234`).
+| Difficulté | Cibles | Défenses | Missiles ennemis simultanés | Cibles protégées | Marge de passage | Réserve d'essence |
+|---|---|---|---|---|---|---|
+| FACILE | 2 (visent sans tirer) | 1–2 tanks | 2 | à découvert | 3,6 m | ×1,9 |
+| MOYEN | 3 (visent sans tirer) | 2–4 tanks, 1 hélicoptère | 3 | murs, filets | 2,8 m | ×1,6 |
+| DIFFICILE | 3–4 | 4–6 tanks, 1 lance-missiles, 1–2 hélicoptères, salves | 4 | hangars, cours, ruelles | 2,2 m | ×1,35 |
+| IMPOSSIBLE | 4 | 7–9 tanks, 2–3 lance-missiles, 2–3 hélicoptères rapides, salves | 7 | entrées étroites, à contourner | 1,7 m | ×1,18 |
+
+Détails, architecture, tests et résultats : [analysis/GENERATOR.md](analysis/GENERATOR.md). Touche **G** en mission : vue
+de débogage (plan, danger, lignes de vue, score, temps de génération). Banc de test : `?test=1&autopilot=1&gen=hard&seed=1234`
+(les missions produisent aussi leurs routes de pilote automatique, donc `tools/record.js` et `tools/genplay.js` les jouent).
 
 ### Boutique de cosmétiques (ROCKET SHOP)
 
@@ -207,7 +225,9 @@ cold-impact/
 │   ├── systems/          camera.js (1re personne → poursuite), style.js (combos et messages de style)
 │   ├── rendering/        textures.js (pixel-art procédural), particles.js (voxels instanciés), postfx.js (vignette, aberration, tramage, bloom)
 │   ├── world/            builder.js (géométrie fusionnée, murs percés, terrains, tunnel),
-│   │                     levels/ (7 niveaux + generated.js : carte aléatoire)
+│   │                     levels/ (9 niveaux + generated.js : fiche d'une mission générée),
+│   │                     gen/ (v032 : générateur de missions — graine, profils, biomes, disposition, gabarits,
+│   │                     mission, navigation, validation, construction ; voir analysis/GENERATOR.md)
 │   ├── input/            input.js (souris/clavier + pilote automatique de test)
 │   ├── ui/               font.js (police pixel originale), hud.js (3 variantes), menu.js, shop.js (boutique)
 │   └── audio/            audio.js (sons et musique synthétisés, Web Audio)

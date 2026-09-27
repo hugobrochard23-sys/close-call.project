@@ -24,3 +24,14 @@ body.cc-touch { touch-action: none; align-items: flex-start; justify-content: fl
 }
 .cc-pause::before { left: 17px; }
 .cc-pause::after { right: 17px; }
+
+/* v032 : saisie d'une graine (générateur de missions) — champ au-dessus du jeu, style du HUD */
+#cc-seedbox {
+  position: fixed; z-index: 20; left: 50%; top: 26%; transform: translate(-50%, -50%); display: none; gap: 10px; align-items: center;
+  padding: 12px 14px; background: #101014; border: 3px solid #fdfd02; box-shadow: 0 0 0 2px #1a1a1a; font: bold 16px monospace; color: #fdfd02;
+}
+#cc-seedbox input {
+  width: 13ch; padding: 8px; font: bold 20px monospace; text-transform: uppercase; background: #000; color: #f4f4f4; border: 2px solid #8a8a8a;
+  -webkit-user-select: text; user-select: text; touch-action: auto;
+}
+#cc-seedbox button { min-width: 44px; min-height: 44px; font: bold 16px monospace; background: #1a1a1a; color: #f4f4f4; border: 2px solid #f4f4f4; }

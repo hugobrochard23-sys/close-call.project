@@ -472,3 +472,52 @@ AndroidManifest.xml.
 `<lien>?client_reference_id=bedon&utm_content=bedon&utm_source=coldimpact` ; minute de publicité regardée → cosmétique
 débloqué et équipé, retour dans la boutique ; `?paid=1&utm_content=croissant` → CROISSANT débloqué, équipé, enregistré,
 adresse nettoyée ; aucune erreur. Pilote automatique : voir ci-dessous (gameplay inchangé).
+
+## v032 — générateur de missions procédural (quatre difficultés, graines, carte du jour)
+
+**Changements (à la demande d'Hugo) :** la carte aléatoire AUTOMAP est remplacée par un **générateur de missions** complet
+(`src/world/gen/`, architecture et règles : [GENERATOR.md](GENERATOR.md)) :
+- graine → flux aléatoires déterministes par couche → profil de difficulté (11 paramètres variés par carte) → famille de
+  carte (8 : urbaine, industrielle, militaire, rurale, montagneuse, désertique, portuaire, mixte) et ambiance (9) →
+  disposition (grille, organique, vallée) → lanceur → cibles et mises en situation (à découvert, murs, hangar, filet, cour,
+  ruelle, toit, en vol) → gabarits de zones (grammaire : îlots, tours, chantiers, entrepôts, usines, parcs à cuves et à
+  conteneurs, compounds militaires, fermes, hameaux, forêts, avant-postes, puits de pétrole, quais à grues…) → obstacles de
+  parcours → décor → navigation 3D (couloirs A*, alignement en goutte d'eau, arrondi des virages) → défenses placées sur
+  les couloirs réels (lignes de vue) → hélicoptères en patrouille → validation (géométrie, jeu, cohérence, lisibilité ;
+  réparation ou nouvel essai déterministe, carte « desserrée » après 5 refus) → score de carte (plage par difficulté) ;
+- construction avec le système visuel existant (façades, toits équipés, vitrines, conifères, rochers, relief, nuages,
+  cibles et ennemis détaillés) + 4 nouveaux modèles (station radar à antenne tournante, dépôt de carburant, poste de
+  commandement, lance-missiles sol-air dont la rampe suit la roquette) et 4 textures (sable, eau, tôle, grillage) ;
+- hélicoptères : patrouilles (orbite, circuit, points de passage) lissées, cap dans le sens du vol, face à la roquette
+  quand elle approche ; tanks et lance-missiles : même IA de tourelle qu'avant ;
+- menu **GÉNÉRATEUR DE MISSIONS** (FACILE / MOYEN / DIFFICILE / IMPOSSIBLE, mission du jour, graine au choix — nombre ou
+  mot —, dernières missions), écran **GÉNÉRATION...**, brief de mission, graine en pause et aux résultats, **NOUVELLE
+  MISSION**, lien partageable `?mission=<graine>&diff=<difficulté>` ; sauvegarde légère (30 dernières missions, record par
+  graine, record de la carte du jour) ; accents É/È dans la police ;
+- vue de débogage (touche **G**, `?gendebug=1`) ; outils `tools/gentest.js` (Node), `tools/genviewer.html`,
+  `tools/genplay.js` ; plafond de missiles ennemis simultanés par difficulté (`aaMaxAlive`), cibles désarmées en
+  FACILE / MOYEN (elles visent sans tirer), entrée finale sans défense en FACILE / MOYEN.
+
+**Défauts trouvés en jouant et corrigés :** virages mesurés sur des zigzags de grille (fenêtre ±20 m) ; approches qui
+arrivaient de travers sur la porte (allée d'approche réservée + manœuvre d'alignement au-dessus des toits) ; crashs du
+pilote automatique sur le bord des filets de camouflage (descente plus douce vers les entrées basses, ralliement direct
+seulement si la cible est visible) ; bases militaires vides (enceintes grillagées, miradors, dépôts) ; en MOYEN, char-cible
+tirant de face pendant la plongée finale (0/3 au pilote automatique) ; arcs de virage qui traversaient le relief en
+montagne (le relief est désormais testé par les vérifications exactes) ; générations de plusieurs secondes en montagne
+(recherche bornée, champ de danger limité aux couloirs).
+
+**Vérification :**
+- `node tools/gentest.js 100 all --determinism` (400 cartes) : **0 erreur, 0 carte injouable, 400 dans la plage de
+  difficulté**, 1,03 à 1,2 essai en moyenne, même graine = même carte (vérifié), aucune paire de cartes quasi identique
+  (distance de signature, relief compris). Génération (Node, Mac) : moyenne 70 ms FACILE · 136 MOYEN · 293 DIFFICILE ·
+  440 IMPOSSIBLE, pire cas 1,8 s. Scores : FACILE 13–25 · MOYEN 25–49 · DIFFICILE 46–70 · IMPOSSIBLE 67–85.
+  Moyennes FACILE → IMPOSSIBLE : bâtiments 21 → 87, obstacles 4,5 → 69, tanks 1 → 9, lance-missiles 0 → 3,
+  hélicoptères 0 → 2,5, approche 446 → 802 m, exposition aux tirs 1,5 → 26 tireurs·s.
+- Pilote automatique sur 40 missions complètes (`tools/genplay.js`, graines 61000…) : **FACILE 10/10 et MOYEN 10/10 sans
+  aucun crash** (1 tir par cible, 16 s et 29 s) ; DIFFICILE 10/10 (1,6 tir par cible, 34 missiles ennemis par mission) ;
+  IMPOSSIBLE 8/10 (2,2 tirs par cible, 76 missiles ennemis) — les 2 missions ratées se terminent 4/4 sans aucun crash
+  quand les ennemis ne tirent pas : difficulté de combat, pas de carte cassée. Génération + construction en jeu : 0,1 à
+  0,3 s (première mission : jusqu'à 0,9 s, textures et shaders à créer).
+- Les 9 niveaux fixes terminés au pilote automatique, sans crash, temps et STYLE inchangés (CITY 14,90 s, 847).
+- Menus vérifiés sur ordinateur et téléphone simulé (375 × 812) : générateur, génération, brief, pause (graine,
+  NOUVELLE MISSION), résultats (graine, record de la graine, NOUVELLE MISSION, MISSIONS) ; rendu des 8 familles de cartes.

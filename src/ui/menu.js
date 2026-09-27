@@ -48,7 +48,8 @@
       if (this.overlay === 'settings') this.drawSettings(ctx, game, W, H);
       else if (this.overlay === 'binds') this.drawBinds(ctx, game, W, H);
       // Surcouches exclusives : elles repartent d'une liste de boutons vide (aucun clic ne doit passer au travers).
-      else if (this.overlay === 'difficulty') { this.buttons = []; this.drawDifficulty(ctx, game, W, H); }
+      else if (this.overlay === 'missions' || this.overlay === 'difficulty') { this.buttons = []; this.drawMissions(ctx, game, W, H); }
+      else if (this.overlay === 'generating') { this.buttons = []; this.drawGenerating(ctx, game, W, H); }
       else if (this.overlay === 'shop') { this.buttons = []; if (!this.shop) this.shop = new CC.Shop(this); this.shop.draw(ctx, game, W, H); }
       else if (this.overlay === 'ad' && game.ads) { this.buttons = []; game.ads.draw(ctx, game, W, H, this); }
       if (game.state === 'MENU' && !this.overlay && game.ads) this.drawMenuBanner(ctx, game, W, H);
@@ -59,6 +60,7 @@
         this.text(ctx, game.notice, W / 2, T + HH * 0.012 + px * 3, px, CC.CONFIG.hud.colors.green, { align: 'center' });
       }
       if (game.state === 'BOOT') { this.dim(ctx, W, H, 1); this.text(ctx, 'LOADING...', W / 2, H / 2, H * 0.004, col.white, { align: 'center' }); }
+      if (game.genDebug && game.level && game.level.plan && CC.Gen.drawDebugOverlay && !this.overlay) CC.Gen.drawDebugOverlay(ctx, game, W, H, this);   // v032
     }
 
     drawMenu(ctx, game, W, H) {
@@ -80,10 +82,10 @@
         // colonne assez à droite : un temps enregistré ("0:12,27   STYLE 1.234") ne doit pas toucher le nom du niveau
         this.text(ctx, info, W * (P ? 0.97 : 0.88), y + px * 1.2, H * 0.0026, b ? '#cfcfcf' : '#7a7a7a', { align: 'right' });
       });
-      // v007 : dernière carte = carte aléatoire (le clic ouvre le choix de difficulté)
+      // v032 : dernière ligne = générateur de missions (infini, 4 difficultés)
       const ny = H * (0.275 + CC.Levels.length * rowStep);
-      this.button(ctx, (CC.Levels.length + 1) + '  AUTOMAP', W * (P ? 0.07 : 0.3), ny, px, () => { this.overlay = 'difficulty'; }, { align: 'left', color: '#8fd0ff' });
-      this.text(ctx, 'RANDOM - 3 DIFFICULTIES', W * (P ? 0.97 : 0.88), ny + px * 1.2, H * 0.0026, '#8fd0ff', { align: 'right' });
+      this.button(ctx, (CC.Levels.length + 1) + '  MISSIONS', W * (P ? 0.07 : 0.3), ny, px, () => { this.overlay = 'missions'; }, { align: 'left', color: '#8fd0ff' });
+      this.text(ctx, 'GENERATEUR - INFINI', W * (P ? 0.97 : 0.88), ny + px * 1.2, H * 0.0026, '#8fd0ff', { align: 'right' });
       this.button(ctx, 'ROCKET SHOP', W / 2, H * 0.92, px, () => { this.overlay = 'shop'; }, { color: '#fdfd02' });
       this.text(ctx, document.body.classList.contains('cc-touch') ? 'TAP A LEVEL' : 'CLICK A LEVEL    F1: BINDS    TAB: SETTINGS', W / 2, H * 0.85, H * 0.0024, '#bdbdbd', { align: 'center' });
       this.text(ctx, CC.CONFIG.version.toUpperCase(), W * 0.985, game.ads && game.ads.enabled() ? H * 0.875 : H * 0.955, H * 0.0018, '#808080', { align: 'right' });
@@ -100,7 +102,7 @@
       const best = game.save.best, n = CC.Levels.length + 1;
       const top = T + HH * 0.14, bottom = T + HH - banner - HH * 0.12, rowH = (bottom - top) / n;
       const x0 = W * 0.05, w = W * 0.9;
-      const names = CC.Levels.map((lv, i) => (i + 1) + '  ' + lv.name).concat([n + '  AUTOMAP']);
+      const names = CC.Levels.map((lv, i) => (i + 1) + '  ' + lv.name).concat([n + '  MISSIONS']);
       const px = this.fitPx(names, w * 0.62, rowH * 0.05), sub = px * 0.6;
       const row = (i, name, info, open, color, action) => {
         const y = top + i * rowH + rowH * 0.18;
@@ -112,7 +114,7 @@
         const open = game.isUnlocked(i), b = best[lv.id];
         row(i, names[i], b ? U.formatTime(b.time) : open ? '--:--,--' : 'LOCKED', open, null, () => game.startLevel(i));
       });
-      row(CC.Levels.length, names[CC.Levels.length], 'RANDOM', true, '#8fd0ff', () => { this.overlay = 'difficulty'; });
+      row(CC.Levels.length, names[CC.Levels.length], 'INFINI', true, '#8fd0ff', () => { this.overlay = 'missions'; });
       const shop = 'ROCKET SHOP';
       this.button(ctx, shop, W / 2, T + HH - banner - HH * 0.08, this.fitPx([shop], W * 0.8, px * 1.1), () => { this.overlay = 'shop'; }, { color: '#fdfd02', box: true });
       this.text(ctx, CC.CONFIG.version.toUpperCase(), W * 0.97, T + HH - banner - HH * 0.022, px * 0.5, '#808080', { align: 'right' });
@@ -126,25 +128,83 @@
       else { const h = H * 0.08; game.ads.drawBanner(ctx, this, W * 0.745, H * 0.905, W * 0.24, h); }   // à droite du bouton de la boutique
     }
 
-    /* Choix de difficulté de la carte aléatoire (v007). */
-    drawDifficulty(ctx, game, W, H) {
+    /* v032 : GÉNÉRATEUR DE MISSIONS — quatre difficultés, mission du jour, graine choisie ou aléatoire, dernières missions.
+     * Plein écran (portrait comme paysage), boutons encadrés ≥ 44 points sur écran tactile. */
+    drawMissions(ctx, game, W, H) {
       this.dim(ctx, W, H, 1);
-      const col = CC.CONFIG.hud.colors, px = H * 0.0042;
-      this.text(ctx, 'GENERATED MAP', W / 2, H * 0.17, H * 0.009, col.white, { align: 'center', skew: -0.2 });
-      this.text(ctx, 'PICK A DIFFICULTY - THE MAP IS BUILT INSTANTLY', W / 2, H * 0.25, H * 0.0026, '#c8c8c8', { align: 'center' });
-      ['easy', 'medium', 'hard'].forEach((id, i) => {
-        const D = CC.GEN_DIFFS[id], y = H * (0.4 + i * 0.12);
-        const info = D.kinds.length + ' TARGETS   ' + D.length + ' M OF STREET   ' + (D.soldiers ? D.soldiers + ' HOSTILE' + (D.soldiers > 1 ? 'S' : '') : 'NO HOSTILES');
-        if (this.portrait) {   // v017 : en vertical, la description passe sous le bouton
-          this.button(ctx, D.label, W / 2, y - H * 0.02, px, () => { this.overlay = null; game.startGenerated(id); });
-          this.text(ctx, info, W / 2, y + H * 0.045, H * 0.0024, '#bdbdbd', { align: 'center' });
+      const G = CC.Gen, col = CC.CONFIG.hud.colors, T = -(this.offsetY || 0), HH = this.fullH || H;
+      const touch = this.isTouch(), P = this.portrait;
+      const fit = (t, w, m) => this.fitPx([t], W * w, m);
+      const Y = (f) => T + HH * f;
+      this.text(ctx, 'COLD IMPACT', W / 2, Y(0.04), fit('COLD IMPACT', 0.5, HH * 0.004), '#bdbdbd', { align: 'center', skew: -0.22 });
+      this.text(ctx, 'GÉNÉRATEUR DE MISSIONS', W / 2, Y(0.085), fit('GÉNÉRATEUR DE MISSIONS', 0.9, HH * (P ? 0.006 : 0.0085)), col.white, { align: 'center', skew: -0.2 });
+      const seedTxt = this.seedChoice !== undefined && this.seedChoice !== null ? 'GRAINE ' + this.seedChoice : 'GRAINE ALEATOIRE - CHAQUE MISSION EST UNIQUE';
+      this.text(ctx, seedTxt, W / 2, Y(0.16), fit(seedTxt, 0.9, HH * 0.0026), this.seedChoice != null ? col.yellow : '#c8c8c8', { align: 'center' });
+      // quatre difficultés
+      const ids = G.difficultyIds(), top = 0.22, gap = P ? 0.1 : 0.095;
+      const bpx = this.fitPx(ids.map((id) => '  ' + G.Difficulties.get(id).label + '  '), W * (P ? 0.5 : 0.28), HH * 0.0048);
+      ids.forEach((id, i) => {
+        const D = G.Difficulties.get(id), y = Y(top + i * gap);
+        const go = () => { const sd = this.seedChoice != null ? this.seedChoice : null; game.requestMission(id, sd); };
+        if (P) {
+          this.button(ctx, D.label, W / 2, y, bpx, go, { color: D.color, box: true, hitW: W * 0.84 });
+          const bh = Math.max(bpx * 11, touch ? 44 * this.pixelRatio() : 0);   // hauteur réelle du bouton (≥ 44 points au doigt)
+          this.text(ctx, D.blurb, W / 2, y - bpx * 2 + bh + bpx * 0.8, fit(D.blurb, 0.84, HH * 0.0021), '#a8a8a8', { align: 'center' });
         } else {
-          this.button(ctx, D.label, W / 2, y, px, () => { this.overlay = null; game.startGenerated(id); });
-          this.text(ctx, info, W / 2 + W * 0.13, y, H * 0.0026, '#bdbdbd', { align: 'left' });
+          this.button(ctx, D.label, W * 0.36, y, bpx, go, { color: D.color, box: true, hitW: W * 0.26 });
+          this.text(ctx, D.blurb, W * 0.51, y + bpx * 1.2, HH * 0.0024, '#b8b8b8', { align: 'left' });
         }
       });
-      this.button(ctx, this.key('BACK', 'ESC'), W / 2, H * 0.85, px, () => { this.overlay = null; });
+      // mission du jour
+      const dl = G.daily(), dD = G.Difficulties.get(dl.difficulty), done = game.save.daily && game.save.daily[dl.id];
+      const dy = Y(top + 4 * gap + 0.02);
+      const dLabel = 'MISSION DU JOUR  ' + dl.label + '  ' + dD.label;
+      this.button(ctx, dLabel, W / 2, dy, fit(dLabel, 0.8, HH * 0.0034), () => game.requestMission(dl.difficulty, dl.seed, { daily: dl.id }), { color: '#8fd0ff', box: true, hitW: W * (P ? 0.84 : 0.6) });
+      this.text(ctx, 'GRAINE ' + dl.seed + (done !== undefined ? '   RECORD ' + U.formatTime(done) : '   MEME CARTE POUR TOUS'), W / 2, dy + HH * 0.042, fit('GRAINE 000000000   MEME CARTE POUR TOUS', 0.8, HH * 0.0022), '#9ab8cc', { align: 'center' });
+      // graine : saisir / revenir à l'aléatoire
+      const sy = dy + HH * 0.095, spx = fit('CHOISIR UNE GRAINE', P ? 0.36 : 0.22, HH * 0.003);
+      this.button(ctx, 'CHOISIR UNE GRAINE', W * (P ? 0.29 : 0.4), sy, spx, () => this.openSeedInput(game), { box: true, hitW: W * (P ? 0.44 : 0.24) });
+      this.button(ctx, 'ALEATOIRE', W * (P ? 0.76 : 0.62), sy, spx, () => { this.seedChoice = null; }, { box: true, hitW: W * (P ? 0.36 : 0.14), color: this.seedChoice == null ? '#7a7a7a' : undefined });
+      // dernières missions jouées (rejouer une graine)
+      const hist = (game.save.missions || []).slice(0, P ? 3 : 2);
+      if (hist.length) this.text(ctx, 'DERNIERES MISSIONS', W / 2, sy + HH * 0.075, fit('DERNIERES MISSIONS', 0.5, HH * 0.0024), '#8a8a8a', { align: 'center' });
+      hist.forEach((h, i) => {
+        const D = G.Difficulties.get(h.d) || G.Difficulties.get('easy'), lbl = h.seed + '  ' + D.label + '  ' + U.formatTime(h.t);
+        this.button(ctx, lbl, W / 2, sy + HH * (0.115 + i * 0.058), fit(lbl, 0.7, HH * 0.0028), () => game.requestMission(h.d, h.seed), { box: true, hitW: W * (P ? 0.84 : 0.5), color: '#cfcfcf' });
+      });
+      this.button(ctx, this.key('RETOUR', 'ESC'), W / 2, Y(0.93), fit('RETOUR (ESC)', 0.5, HH * 0.004), () => { this.overlay = null; this.closeSeedInput(); }, { box: touch });
+      if (this.diffChoice && G.Difficulties.has(this.diffChoice) && this.seedChoice != null) {   // lien partagé : difficulté suggérée
+        this.text(ctx, 'MISSION PARTAGEE : ' + G.Difficulties.get(this.diffChoice).label, W / 2, Y(0.19), fit('MISSION PARTAGEE : IMPOSSIBLE', 0.6, HH * 0.0024), '#8fd0ff', { align: 'center' });
+      }
     }
+
+    // Écran de génération (une image avant le calcul, puis lancement immédiat)
+    drawGenerating(ctx, game, W, H) {
+      this.dim(ctx, W, H, 0.96);
+      const pm = game.pendingMission, T = -(this.offsetY || 0), HH = this.fullH || H;
+      const D = pm && CC.Gen.Difficulties.get(pm.diffId);
+      this.text(ctx, 'GÉNÉRATION...', W / 2, T + HH * 0.44, this.fitPx(['GÉNÉRATION...'], W * 0.8, HH * 0.009), '#f4f4f4', { align: 'center', skew: -0.2 });
+      if (D) this.text(ctx, D.label + (pm.seed != null ? '   GRAINE ' + pm.seed : ''), W / 2, T + HH * 0.54, this.fitPx(['IMPOSSIBLE   GRAINE 0000000000'], W * 0.8, HH * 0.0032), D.color, { align: 'center' });
+    }
+
+    // Saisie d'une graine : petit champ de texte (le clavier du téléphone s'ouvre) ; un mot est aussi une graine
+    openSeedInput(game) {
+      let box = document.getElementById('cc-seedbox');
+      if (!box) {
+        box = document.createElement('div'); box.id = 'cc-seedbox';
+        box.innerHTML = '<span>GRAINE</span><input id="cc-seed" maxlength="14" autocomplete="off" spellcheck="false" enterkeyhint="go"><button id="cc-seed-ok">OK</button><button id="cc-seed-x">X</button>';
+        document.body.appendChild(box);
+        const ok = () => { const v = CC.Gen.parseSeed(document.getElementById('cc-seed').value); if (v !== null) this.seedChoice = v; this.closeSeedInput(); };
+        document.getElementById('cc-seed-ok').onclick = ok;
+        document.getElementById('cc-seed-x').onclick = () => this.closeSeedInput();
+        document.getElementById('cc-seed').onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') ok(); if (e.key === 'Escape') this.closeSeedInput(); };
+      }
+      box.style.display = 'flex';
+      const inp = document.getElementById('cc-seed');
+      inp.value = this.seedChoice != null ? String(this.seedChoice) : '';
+      setTimeout(() => inp.focus(), 30);
+    }
+    closeSeedInput() { const box = document.getElementById('cc-seedbox'); if (box) { box.style.display = 'none'; const i = document.getElementById('cc-seed'); if (i) i.blur(); } }
 
     // v022 : son et musique coupés / remis d'un geste (le volume précédent est conservé) ; sur écran tactile, pas de
     // rappel de touches clavier et des boutons plus gros
@@ -181,7 +241,13 @@
         rows.push(['GRAPHICS: ' + this.graphicsLabel(game), () => this.cycleGraphics(game)]);
         rows.push(['SAMPLE ADS: ' + (s.ads === false ? 'OFF' : 'ON'), () => { s.ads = s.ads === false; game.applySettings(); }]);
       }
+      if (game.generated && game.mission) rows.splice(rows.findIndex((r) => r[0].startsWith('RESTART')) + 1, 0, ['NOUVELLE MISSION', () => { game.resume(); game.requestMission(game.mission.difficulty); }]);   // v032
       rows.push(['MAIN MENU', () => game.toMenu()]);
+      if (game.generated && game.mission) {   // v032 : graine visible (partage, défi)
+        const m = game.mission, t = 'GRAINE ' + m.seed + '  ' + m.label + '  ' + m.biome;
+        const pT2 = this.portrait ? -(this.offsetY || 0) : 0, pH2 = this.portrait ? (this.fullH || H) : H;
+        this.text(ctx, t, W / 2, pT2 + pH2 * (touch ? 0.145 : 0.29), this.fitPx([t], W * 0.9, H * 0.0028), CC.CONFIG.hud.colors.yellow, { align: 'center' });
+      }
       if (touch) {   // v030 : pleine hauteur de l'écran, police ajustée à la largeur, un bouton ≥ 44 points par ligne
         const T = this.portrait ? -(this.offsetY || 0) : 0, HH = this.portrait ? (this.fullH || H) : H;
         const top = T + HH * 0.2, gap = Math.min(HH * 0.085, (HH * 0.74) / rows.length);
@@ -221,7 +287,12 @@
       const ads = game.ads, via = (fn) => () => (ads ? ads.beforeContinue(fn) : fn());
       const labels = [], acts = [];
       labels.push(this.key('RETRY', 'CLICK')); acts.push([via(() => game.restartLevel()), col.yellow]);
-      if (game.generated) { labels.push('NEW MAP'); acts.push([via(() => { this.overlay = 'difficulty'; }), null]); }
+      if (game.generated && game.mission) {   // v032 : enchaîner une nouvelle mission de même difficulté, ou changer
+        labels.push('NOUVELLE MISSION'); acts.push([via(() => game.requestMission(game.mission.difficulty)), null]);
+        labels.push('MISSIONS'); acts.push([via(() => { this.overlay = 'missions'; }), null]);
+        const m = game.mission, t = 'GRAINE ' + m.seed + '  ' + m.label + (r.seedBest !== undefined ? '   RECORD ' + U.formatTime(r.seedBest) : '');
+        this.text(ctx, t, W / 2, Y(full ? 0.405 : 0.555), this.fitPx([t], W * 0.9, H * 0.0028), r.seedRecord ? col.yellow : '#bdbdbd', { align: 'center' });
+      }
       else if (game.levelIndex < CC.Levels.length - 1) { labels.push(this.key('NEXT LEVEL', 'N')); acts.push([via(() => game.startLevel(game.levelIndex + 1)), null]); }
       labels.push(this.key('MAIN MENU', 'ESC')); acts.push([via(() => game.toMenu()), null]);
       const top = Y(full ? 0.48 : 0.63), gap = full ? HH * 0.09 : H * 0.08;

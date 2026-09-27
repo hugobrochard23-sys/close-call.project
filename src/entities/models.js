@@ -539,5 +539,6 @@
     return s;
   };
 
+  M.kit = { lam, basic, box, cyl, cylX, cylZ, profileX, plateY };   // v032 : pièces partagées avec models_gen.js
   CC.Models = M;
 })();

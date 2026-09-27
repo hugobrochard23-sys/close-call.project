@@ -9,6 +9,7 @@
     facadeDark: [12, 14], storefront: [8, 4.2], brick: [2.6, 2.6], planks: [2, 2], grass: [4, 4], rock: [6, 6], hazard: [1.2, 1.2],
     metal: [2, 2], tankGreen: [2, 2], camo: [3, 3], blueFloor: [2, 2], cream: [2, 2], bark: [1.2, 2.4],
     houseWall: [2, 2], roofBrown: [1.5, 1.5], white: [2, 2], dirt: [4, 4], rail: [1, 1], asphalt: [4, 4],
+    sand: [4, 4], water: [6, 6], corrugated: [2.4, 2.6], chainlink: [2, 2],   // v032 : générateur de missions
   };
 
   function make(name, w, h, draw) {
@@ -95,6 +96,28 @@
       for (let k = 0; k < 40; k++) px(g, Math.floor(r() * w), Math.floor(r() * h), '#2f6a20');
     },
     dirt: (g, w, h, r) => { noiseFill(g, w, h, r, '#3b2f28', 14); },
+    // v032 : sable (grain, rides de vent), eau (reflets en bandes), tôle ondulée (conteneurs, teinte par sommet), grillage
+    sand: (g, w, h, r) => {
+      noiseFill(g, w, h, r, '#c8ab7c', 12);
+      for (let y = 3; y < h; y += 8) for (let x = 0; x < w; x++) if (((x + y * 3) % 11) < 6) px(g, x, (y + Math.round(Math.sin(x * 0.4) * 1.2) + h) % h, '#b89a6c');
+      for (let k = 0; k < 20; k++) px(g, Math.floor(r() * w), Math.floor(r() * h), '#dcc496');
+    },
+    water: (g, w, h, r) => {
+      noiseFill(g, w, h, r, '#1f3a4a', 6);
+      for (let k = 0; k < 14; k++) { const x = Math.floor(r() * w), y = Math.floor(r() * h), l = 3 + Math.floor(r() * 6); g.fillStyle = r() < 0.5 ? '#3a5a6a' : '#2c4a5a'; g.fillRect(x, y, l, 1); }
+    },
+    corrugated: (g, w, h, r) => {
+      noiseFill(g, w, h, r, '#d8d8d8', 8);
+      for (let x = 0; x < w; x += 3) { g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(x, 0, 1, h); g.fillStyle = 'rgba(255,255,255,0.18)'; g.fillRect(x + 1, 0, 1, h); }
+      g.fillStyle = 'rgba(0,0,0,0.3)'; g.fillRect(0, 0, w, 1); g.fillRect(0, h - 1, w, 1);
+      for (let k = 0; k < 6; k++) { g.fillStyle = 'rgba(90,50,30,0.25)'; g.fillRect(Math.floor(r() * w), Math.floor(r() * h), 2, 3); }   // rouille
+    },
+    chainlink: (g, w, h) => {
+      g.clearRect(0, 0, w, h);
+      g.fillStyle = '#9aa0a4';
+      for (let i = 0; i < w; i++) { px(g, i, i % h, '#9aa0a4'); px(g, w - 1 - i, i % h, '#9aa0a4'); }
+      g.fillRect(0, 0, w, 1);
+    },
     rock: (g, w, h, r) => {
       noiseFill(g, w, h, r, '#3a302d', 10);                    // MESURÉ #332826 (paroi éclairée : base un peu plus claire)
       for (let k = 0; k < 26; k++) {

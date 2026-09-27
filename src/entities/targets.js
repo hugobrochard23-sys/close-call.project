@@ -6,6 +6,24 @@
   const _v = new V(), _v2 = new V(), _w = new V(), _w2 = new V(), _z = new V(0, 0, 1);
 
   const _oq = new THREE.Quaternion(), _op = new V();
+  // v032 : modèles des cibles du générateur de missions (src/entities/models_gen.js)
+  const GEN_MODELS = { radar: () => CC.Models.radar(), fuel: () => CC.Models.fuel(), command: () => CC.Models.command(), sam: () => CC.Models.sam() };
+  // Boucle fermée lissée (Catmull-Rom centripète simplifiée, 6 points par côté) : virages d'hélicoptère sans angle vif
+  function smoothLoop(P) {
+    if (P.length < 3) return P;
+    const out = [], n = P.length;
+    for (let i = 0; i < n; i++) {
+      const p0 = P[(i - 1 + n) % n], p1 = P[i], p2 = P[(i + 1) % n], p3 = P[(i + 2) % n];
+      for (let k = 0; k < 6; k++) {
+        const t = k / 6, t2 = t * t, t3 = t2 * t;
+        out.push(new V(
+          0.5 * (2 * p1.x + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+          0.5 * (2 * p1.y + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
+          0.5 * (2 * p1.z + (-p0.z + p2.z) * t + (2 * p0.z - 5 * p1.z + 4 * p2.z - p3.z) * t2 + (-p0.z + 3 * p1.z - 3 * p2.z + p3.z) * t3)));
+      }
+    }
+    return out;
+  }
   const SOLID = (b) => b.kind === 'solid' || b.kind === 'brick';
   // v030 : met à jour la boîte en place (les hélicoptères la recalculent à chaque image)
   function obbFrom(obj, size, center, out) {
@@ -25,7 +43,7 @@
       // design : variante de teinte par char (tirée de la position : stable d'une partie à l'autre)
       const vr = Math.abs(Math.round(pos[0] * 7 + pos[2] * 3)) % 3;
       this.model = type === 'tank' ? CC.Models.tank(vr) : type === 'heli' ? CC.Models.helicopter(false) : type === 'heliCamo' ? CC.Models.helicopter(true)
-        : type === 'truck' ? CC.Models.truck() : CC.Models.house();
+        : type === 'truck' ? CC.Models.truck() : GEN_MODELS[type] ? GEN_MODELS[type]() : CC.Models.house();   // v032 : radar, dépôt, poste, lance-missiles
       this.ph = (vr + 1) * 1.7 + pos[0] * 0.13;             // phase propre (micro-mouvements désynchronisés)
       this.object.add(this.model);
       this.object.position.fromArray(pos);
@@ -33,6 +51,7 @@
       this.base = new V().fromArray(pos);
       this.size = this.model.userData.size; this.center = this.model.userData.center;
       this.detectRange = opts.detectRange || 45;       // ESTIMATION
+      this.unarmed = !!opts.unarmed;                   // v032 : cible qui vise (tourelle) mais ne tire pas (missions FACILE / MOYEN)
       this.drift = opts.drift || 0; this.driftSpeed = opts.driftSpeed || 0.35;
       this.alert = CC.Models.alertSprite(); this.alert.visible = false;
       this.alert.position.set(0, this.size[1] + 1.2, 0); this.object.add(this.alert);
@@ -43,6 +62,18 @@
       this.tw = 0; this.recT = 9; this.puffT = 0; this.dustT = 0; this.fireIdx = 0;
       // v023 : cible qui s'enfuit — suit `opts.path` à `opts.fleeSpeed` m/s dès que la roquette est tirée, puis fait du
       // surplace au bout ; revient au départ quand le niveau recommence
+      // v032 : patrouille d'hélicoptère (générateur de missions) — boucle fermée lissée parcourue en continu à patrolSpeed m/s
+      if (opts.patrol && opts.patrol.length > 1) {
+        this.patrol = smoothLoop(opts.patrol.map((p) => new V().fromArray(p)));
+        this.patrolLen = 0; for (let i = 0; i < this.patrol.length; i++) this.patrolLen += this.patrol[i].distanceTo(this.patrol[(i + 1) % this.patrol.length]);
+        this.patrolSpeed = opts.patrolSpeed || 8; this.patrol0 = ((opts.patrolPhase || 0) % 1) * this.patrolLen; this.patrolDist = this.patrol0;
+        let rad = 0; const c = new V(); for (const p of this.patrol) c.add(p); c.divideScalar(this.patrol.length);
+        for (const p of this.patrol) rad = Math.max(rad, p.distanceTo(c));
+        this.patrolRadius = rad;
+        this.placeOnPatrol();
+        this.object.position.copy(this.base);
+        this.object.rotation.y = this.yaw = this.yaw0 = this.pathYaw;
+      }
       if (opts.path) {
         this.path = opts.path.map((p) => new V().fromArray(p));
         this.fleeSpeed = opts.fleeSpeed || 30; this.fleeDist = 0;
@@ -59,6 +90,14 @@
       this.base.copy(a).addScaledVector(seg, len > 0 ? Math.min(1, d / len) : 0);
       if (len > 0) this.pathYaw = Math.atan2(-seg.x, -seg.z);   // le nez dans le sens de la fuite (atteint avec inertie)
     }
+    placeOnPatrol() {
+      const P = this.patrol, n = P.length;
+      let d = ((this.patrolDist % this.patrolLen) + this.patrolLen) % this.patrolLen, i = 0;
+      while (i < n - 1 && d > P[i].distanceTo(P[i + 1])) { d -= P[i].distanceTo(P[i + 1]); i++; }
+      const a = P[i], b = P[(i + 1) % n], seg = _v.subVectors(b, a), len = seg.length();
+      this.base.copy(a).addScaledVector(seg, len > 0 ? Math.min(1, d / len) : 0);
+      if (len > 0) this.pathYaw = Math.atan2(-seg.x, -seg.z);
+    }
     updateObb() { this.object.updateMatrixWorld(true); this.obb = obbFrom(this.object, this.size, this.center, this.obb); }
 
     update(dt, game) {
@@ -66,11 +105,14 @@
       if (!this.alive) { if (this.wreck) this.updateWreck(dt, game); return; }
       const rk = game.rocket && game.rocket.active ? game.rocket : null;
       if (this.path && game.state === 'FLIGHT' && rk && this.fleeDist < this.pathLen) { this.fleeDist += this.fleeSpeed * dt; this.placeOnPath(); }
+      if (this.patrol) { this.patrolDist += this.patrolSpeed * dt; this.placeOnPatrol(); }
       if (this.type === 'heli' || this.type === 'heliCamo') this.updateHeli(dt, game, rk);
-      if (this.type === 'tank') this.updateTank(dt, game, rk);
+      if (this.type === 'tank' || this.type === 'sam') this.updateTank(dt, game, rk);
+      if (this.type === 'radar') this.model.userData.dish.rotation.y += dt * 1.1;
+      if (this.model.userData.beacon) this.model.userData.beacon.visible = (this.t + this.ph) % 1.4 < 0.15;
       if (this.type === 'heli' || this.type === 'heliCamo') this.updateObb();
       // tirs anti-aériens : tanks et hélicoptères, sauf une cible qui s'enfuit (v023 : elle fuit, elle ne se bat pas)
-      if (rk && game.state === 'FLIGHT' && !this.path && (this.type === 'tank' || this.type === 'heli' || this.type === 'heliCamo')) this.updateAA(dt, game, rk);
+      if (rk && game.state === 'FLIGHT' && !this.path && !this.unarmed && (this.type === 'tank' || this.type === 'sam' || this.type === 'heli' || this.type === 'heliCamo')) this.updateAA(dt, game, rk);
       if (this.alert.visible) this.alert.position.y = this.size[1] + 1.2 + Math.sin(this.t * 6) * 0.1;
     }
 
@@ -101,7 +143,8 @@
       // cap : vers la fuite ; sinon vers la roquette repérée (< 170 m) ; sinon cap d'origine avec une légère errance
       let want = this.yaw0 + 0.12 * Math.sin(t * 0.2 + ph), maxW = 0.55;
       if (this.path && this.pathYaw !== undefined && this.hv.lengthSq() > 4) { want = this.pathYaw; maxW = 2.2; }
-      else if (rk && rk.pos.distanceTo(pos) < 170) { const d = _w.subVectors(rk.pos, pos); want = Math.atan2(-d.x, -d.z); }
+      else if (rk && rk.pos.distanceTo(pos) < (this.patrol ? 120 : 170)) { const d = _w.subVectors(rk.pos, pos); want = Math.atan2(-d.x, -d.z); }
+      else if (this.patrol && this.hv.lengthSq() > 4) { want = this.pathYaw; maxW = 1.4; }   // v032 : en patrouille, nez dans le sens du vol
       let diff = want - this.yaw; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
       const tw = U.clamp(diff * 2.2, -maxW, maxW);
       this.yawW += U.clamp(tw - this.yawW, -1.6 * dt, 1.6 * dt);
@@ -151,10 +194,11 @@
         const local = this.object.worldToLocal(_v2.copy(rk.pos));
         want = Math.atan2(-(local.x - turret.position.x), -(local.z - turret.position.z));
         const horiz = Math.hypot(local.x, local.z);
-        pitch = U.clamp(Math.atan2(local.y - 2.0, horiz), -0.09, 0.55);
+        const el = ud.elev || [-0.09, 0.55];                              // v032 : lance-missiles → rampe plus relevée
+        pitch = U.clamp(Math.atan2(local.y - 2.0, horiz), el[0], el[1]);
         maxW = 2.2;
       } else {
-        want = 0.55 * Math.sin(t * 0.21 + this.ph); pitch = 0.03 + 0.02 * Math.sin(t * 0.3 + this.ph); maxW = 0.35;
+        want = 0.55 * Math.sin(t * 0.21 + this.ph); pitch = (ud.elev ? ud.elev[0] + 0.25 : 0.03) + 0.02 * Math.sin(t * 0.3 + this.ph); maxW = 0.35;
       }
       let diff = want - turret.rotation.y; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
       this.aimErr = Math.abs(diff);
@@ -183,20 +227,20 @@
     // Design : effets de tir (point de départ du missile, éclair de bouche, recul, son, secousse si la roquette est proche)
     firePoint(out) {
       const ud = this.model.userData;
-      if (this.type === 'tank') { ud.muzzle.updateWorldMatrix(true, false); return ud.muzzle.getWorldPosition(out); }
+      if (ud.muzzle) { ud.muzzle.updateWorldMatrix(true, false); return ud.muzzle.getWorldPosition(out); }
       const fp = ud.firePoints[this.fireIdx++ % ud.firePoints.length];
       return this.model.localToWorld(out.copy(fp));
     }
     onFire(game, from, rk) {
       const dir = _w.subVectors(rk.pos, from).normalize();
-      if (this.type === 'tank') {
+      if (this.type === 'tank' || this.type === 'sam') {
         this.recT = 0;
         const ud = this.model.userData, q = new THREE.Quaternion();
         ud.muzzle.getWorldQuaternion(q);
         const bore = new V(0, 0, -1).applyQuaternion(q);
         game.effects.muzzleFlash(from.clone(), bore, 1);
         game.effects.dustKick(this.object.position.clone().addScaledVector(bore, 3).setY(this.object.position.y + 0.1), null, 0.8);
-        game.audio.play('tankFire', from);
+        game.audio.play(this.type === 'sam' ? 'heliFire' : 'tankFire', from);
       } else {
         game.effects.muzzleFlash(from.clone(), dir.clone(), 0.45);
         game.audio.play('heliFire', from);
@@ -212,7 +256,7 @@
       this.aaCool = (this.aaCool || 0) - dt;
       // point de tir de gameplay (inchangé : visibilité, portée, trajectoire) ; le départ visuel se fait à la bouche du canon
       const from = _v2.copy(this.obb.c);
-      if (this.type === 'tank') from.addScaledVector(this.obb.uy, this.obb.hy + 0.9); else from.addScaledVector(this.obb.uy, -(this.obb.hy + 0.6));
+      if (this.type === 'tank' || this.type === 'sam') from.addScaledVector(this.obb.uy, this.obb.hy + 0.9); else from.addScaledVector(this.obb.uy, -(this.obb.hy + 0.6));
       const to = _v.subVectors(rk.pos, from);
       const dist = to.length();
       if (dist > L(A.range) || dist < A.minRange) { this.aaSeen = 0; return; }
@@ -231,7 +275,8 @@
         const joins = salvo && !this.burst && game.aaVolleyT !== undefined && now - game.aaVolleyT < 0.15 && this.aaCool < A.volleyJoin;
         if (!joins) return;
       }
-      if (game.missiles.filter((m) => m.alive).length >= (salvo ? A.maxAliveSalvo : A.maxAlive)) return;
+      const cap = game.level && game.level.aaMaxAlive ? game.level.aaMaxAlive : salvo ? A.maxAliveSalvo : A.maxAlive;   // v032 : plafond du profil de mission
+      if (game.missiles.filter((m) => m.alive).length >= cap) return;
       if (!salvo) this.aaCool = L(A.cooldown);
       else if (this.burst > 0) { this.burst--; this.aaCool = this.burst > 0 ? A.salvoGap : L(A.cooldown) * A.salvoRest; }
       else { this.burst = A.salvoCount - 1; this.aaCool = A.salvoGap; game.aaVolleyT = now; }
@@ -333,6 +378,7 @@
       if (this.wreck && CC.game) this.clearWreck(CC.game);
       this.alive = true; this.object.visible = true; this.alert.visible = false; this.aaCool = 0; this.aaSeen = 0; this.burst = 0;
       if (this.path) { this.fleeDist = 0; this.placeOnPath(); this.object.position.copy(this.base); this.yaw0 = this.pathYaw; }
+      if (this.patrol) { this.patrolDist = this.patrol0; this.placeOnPatrol(); this.object.position.copy(this.base); this.yaw0 = this.pathYaw; }
       this.yaw = this.yaw0; this.yawW = 0; this.object.rotation.y = this.yaw; this.prevPos = null; this.hv.set(0, 0, 0); this.ha.set(0, 0, 0);
       this.tw = 0; this.recT = 9;
     }

@@ -101,7 +101,9 @@
       this.drawMissileWarning(game);
       if (lite) this.drawTutorial(game, W, H);
       const msg = game.centerMsg || (lite && game.state === 'AIM' ? 'TAP TO FIRE    HOLD: BOOST' : null);
-      if (msg && !game.paused) this.text(msg, 0.5 * W, C.center.y * H, C.center.px, '#101010', { align: 'center', outline: '#f0f0f0' });   // v024 : pas par-dessus le menu pause
+      // v032 : réduit si le message dépasse la largeur de l'écran (brief de mission long, téléphone en portrait)
+      const cpx = msg ? Math.min(C.center.px, 0.94 * W / Math.max(1, CC.Font.measure(msg, this.refH))) : 0;
+      if (msg && !game.paused) this.text(msg, 0.5 * W, C.center.y * H, cpx, '#101010', { align: 'center', outline: '#f0f0f0' });   // v024 : pas par-dessus le menu pause
     }
 
     /* v030 : tutoriel du premier vol (écran tactile, jusqu'au premier niveau terminé) : trois consignes courtes, une à la

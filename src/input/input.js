@@ -128,7 +128,8 @@
       this.game = game; this.level = level;
       const rt = level.routes ? level.routes[Math.min(game.targetsDone || 0, level.routes.length - 1)] : level.route;
       this.route = (rt || []).map((p) => new V().fromArray(p));
-      this.actions = (level.routeActions || []).map((a) => Object.assign({}, a));   // copie : état propre à chaque tentative
+      const ra = level.routeActionsPer ? level.routeActionsPer[Math.min(game.targetsDone || 0, level.routeActionsPer.length - 1)] : level.routeActions;   // v032 : une liste par route
+      this.actions = (ra || []).map((a) => Object.assign({}, a));   // copie : état propre à chaque tentative
       this.idx = 0; this.t = 0; this.fired = false;
       this.yaw = 0; this.pitch = 0;
       this.lookAhead = level.lookAhead || 14;
@@ -156,13 +157,17 @@
         let target = this.pointAhead(rk.pos, la);
         // phase finale : viser directement la cible vivante la plus proche si elle est devant (cibles mobiles)
         // (uniquement la cible visée par cette route : la plus proche de son dernier point)
-        let goal = null, gd = 18;
-        for (const t of g.targets) { if (!t.alive || t.guard) continue; const d = t.obb.c.distanceTo(R[R.length - 1]); if (d < gd) { gd = d; goal = t; } }
-        const mover = g.targets.find((t) => t.alive && !t.guard && t.path);   // v023 : cible qui s'enfuit → poursuite dès qu'elle est à portée
+        let goal = null, gd = Infinity;
+        for (const t of g.targets) { if (!t.alive || t.guard) continue; const d = t.obb.c.distanceTo(R[R.length - 1]) - (t.patrolRadius || 0); if (d < 18 && d < gd) { gd = d; goal = t; } }
+        let mover = g.targets.find((t) => t.alive && !t.guard && t.path);   // v023 : cible qui s'enfuit → poursuite dès qu'elle est à portée
+        if (!mover && goal && goal.patrol) mover = goal;                      // v032 : hélicoptère en patrouille (générateur)
         if (mover) goal = mover;
         if (goal) {
-          const to = new V().subVectors(goal.obb.c, rk.pos);
-          if (to.length() < (this.level.terminalRange || 40) && to.angleTo(rk.vel) < 1.0 && (mover || this.idx >= R.length - 3)) target = goal.obb.c.clone();
+          const to = new V().subVectors(goal.obb.c, rk.pos), tl = to.length();
+          // v032 : pas de ralliement direct si un obstacle masque la cible (hangar, filet, cour) : on suit la route
+          const hidden = this.level.generated && tl > 3 && g.world.blocked(rk.pos, to.clone().divideScalar(tl), tl - 3, (b) => b.kind === 'solid' || b.kind === 'brick');
+          if (tl < (this.level.terminalRange || 40) && to.angleTo(rk.vel) < 1.0 && (mover || this.idx >= R.length - 3) && !hidden) target = goal.obb.c.clone();
+          else if (goal.patrol && this.idx >= R.length - 2 && !hidden) target = goal.obb.c.clone();   // v032 : cible en patrouille dépassée → demi-tour vers elle
         }
         const desired = new V().subVectors(target, rk.pos).normalize();
         const vDir = rk.vel.clone().normalize();
