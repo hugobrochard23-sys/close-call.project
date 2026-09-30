@@ -352,7 +352,12 @@
       slab(-46, 2 * hw - 18, 88, 'rock', '#9aa0aa', { collide: true });              // le plateau sous la piste
       b.box({ p: [T.cx(m), ym - 120, -m], s: [2600, 2, len + 4], mat: 'basic:#e8eef8', collide: false, shadow: false });   // mer de nuages très loin au-dessous
     } else if (zone === 'chute' || zone === 'tour') {
-      slab(-1, 300, 2, 'asphalt', '#9a9a9a');
+      // la ville très loin en dessous : plan non éclairé (les tours géantes le plongeraient dans l'ombre) avec rues, places et parcs
+      slab(-1, 420, 2, 'basic:#8e939e', undefined, { shadow: false });
+      const rr = U.makeRng(Math.floor(m / 40) * 131 + 7);
+      for (let i = -3; i <= 3; i++) if (rr() < 0.8) b.box({ p: [T.cx(m) + i * 50 + rr() * 12, ym - 0.05, -m], s: [rr() < 0.3 ? 14 : 8, 0.1, len], r: [pitch, 0, 0], mat: 'basic:#b6bac4', collide: false, shadow: false });
+      if (Math.floor(m / 20) % 3 === 0) { b.box({ p: [T.cx(m), ym - 0.04, -m], s: [420, 0.1, 9], mat: 'basic:#b6bac4', collide: false, shadow: false }); }
+      if (rr() < 0.3) b.box({ p: [T.cx(m) + (rr() - 0.5) * 240, ym - 0.03, -m], s: [rr() * 50 + 30, 0.1, len * 0.8], mat: 'basic:#6f8f5a', collide: false, shadow: false });
     } else if (zone === 'eau') {
       slab(-1, 2 * (T.vol(m) + 60), 2, 'sand', '#8aa8a0');
       b.box({ p: [T.cx(m), -3.6, -m], s: [2 * (T.vol(m) + 80), 0.4, len], mat: 'water', collide: false, shadow: false });      // la surface, vue d'en dessous

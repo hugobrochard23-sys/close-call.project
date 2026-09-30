@@ -20,9 +20,9 @@
     draw(g, w, h, rng);
     const tex = new THREE.CanvasTexture(c);
     tex.magFilter = THREE.NearestFilter;
-    tex.minFilter = THREE.NearestMipmapLinearFilter;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;   // v036 : fini le scintillement des façades vues de loin / de biais (le rendu de près reste en pixels : magFilter Nearest)
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.anisotropy = 4;
+    tex.anisotropy = 8;
     tex.canvasSource = c;
     return tex;
   }
