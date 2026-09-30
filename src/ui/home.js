@@ -81,14 +81,14 @@
   Home.icon = ICON;
 
   // bouton rond d'icône avec libellé dessous (accueil)
-  function roundBtn(ui, ctx, cx, cy, r, icon, label, color, action, badge) {
+  function roundBtn(ui, ctx, cx, cy, r, icon, label, color, action, badge, slotW, labelPx) {
     const on = inRect(ui, cx - r, cy - r, 2 * r, 2 * r + r * 0.9);
     const y0 = cy - r;
     pxRect(ctx, cx - r, y0, 2 * r, 2 * r, on ? 'rgba(255,255,255,0.22)' : 'rgba(8,12,20,0.78)', color, Math.round(r * 0.28), Math.max(2, r * 0.07));
     if (icon === 'star') ui.star(ctx, cx, cy, r * 0.6, true, color);
     else if (icon === 'trophy') ui.trophy(ctx, cx, cy - r * 0.05, r * 1.1, color, true);
     else ICON[icon](ctx, cx, cy, r * 0.55, color);
-    const px = Math.max(ui.fitPx([label], r * 3.4, r * 0.075), Math.min(1.5, r * 0.06));
+    const px = labelPx || ui.fitPx([label], Math.max(r * 2.2, (slotW || r * 3.4) * 0.96), r * 0.075);   // le libellé tient dans sa case : jamais de chevauchement entre icônes
     text(ui, ctx, label, cx, cy + r + r * 0.18, px, '#dfe6f0', { align: 'center' });
     if (badge) { ctx.fillStyle = RED; ctx.beginPath(); ctx.arc(cx + r * 0.8, cy - r * 0.8, r * 0.26, 0, 6.283); ctx.fill(); }
     hit(ui, cx - r * 1.05, y0 - r * 0.05, r * 2.1, r * 2.3, action);
@@ -153,9 +153,10 @@
     const items = [['target', 'MISSIONS', ORANGE, () => { ui.overlay = 'quests'; }], ['trophy', 'PROGRES', GOLD, () => { ui.overlay = 'progress'; }],
       ['star', 'DEFIS', '#8fd0ff', () => { ui.overlay = 'defi'; }], ['rocket', 'BOUTIQUE', GREEN, () => { ui.overlay = 'shop'; }]];
     const r = u * (P ? 0.085 : 0.105);
+    const slot = P ? W * 0.235 : r * 3.3, lpx = Math.min.apply(null, items.map((it) => ui.fitPx([it[1]], Math.max(r * 2.2, slot * 0.96), r * 0.075)));   // même taille pour les quatre libellés
     items.forEach((it, i) => {
-      if (P) roundBtn(ui, ctx, W * (0.14 + i * 0.24), Y(0.925) - r * 0.2, r, it[0], it[1], it[2], it[3]);
-      else roundBtn(ui, ctx, W - margin - r * 1.4 - (i % 2) * (r * 3.0), Y(0.3 + Math.floor(i / 2) * 0.33), r, it[0], it[1], it[2], it[3]);
+      if (P) roundBtn(ui, ctx, W * (0.14 + i * 0.24), Y(0.925) - r * 0.2, r, it[0], it[1], it[2], it[3], false, W * 0.235, lpx);
+      else roundBtn(ui, ctx, W - margin - r * 1.5 - (i % 2) * (r * 3.4), Y(0.3 + Math.floor(i / 2) * 0.33), r, it[0], it[1], it[2], it[3], false, r * 3.3, lpx);
     });
     if (!touch) text(ui, ctx, 'ESPACE OU CLIC : LANCER    F1 : TOUCHES', W / 2, Y(0.975), ui.fitPx(['ESPACE OU CLIC : LANCER    F1 : TOUCHES'], W * 0.8, u * 0.0032), '#8a96a8', { align: 'center' });
     text(ui, ctx, CC.CONFIG.version.toUpperCase(), W - margin, Y(0.985), u * 0.0022, '#5d6878', { align: 'right' });
