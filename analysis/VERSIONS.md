@@ -548,3 +548,27 @@ montagne (le relief est désormais testé par les vérifications exactes) ; gén
 - Menus vérifiés sur ordinateur et téléphone simulé (375 × 812) : accueil, DÉFI (onglets, grille, NIVEAUX), partie
   CLASSIQUE, résultats CLASSIQUE et DÉFI ; aucune erreur dans la console.
 
+
+## v034 — refonte mobile : le lanceur est le bouton « jouer », progression, récompenses
+
+Détail complet (audit, conception, vérification) : [REFONTE_MOBILE.md](REFONTE_MOBILE.md).
+
+**Ajouts :**
+- `src/entities/pad.js` : le LANCEUR (accueil du mode CLASSIQUE) — plate-forme, rail incliné, brides, pylônes à feux, fond de baie à
+  bandes lumineuses, vapeur, halo ; séquence toucher → charge (0,9 s) → allumage → travelling ; rechargement quand on revient.
+- `src/systems/camera.js` : mode `pad`, passage lanceur → poursuite (`startHandoff`), boost = champ élargi + « punch » + recul.
+- `src/systems/progress.js` : XP, niveaux, rangs, décors ouverts par niveau, 3 missions (9 types) renouvelées à chaque vol.
+- `src/world/collect.js` : éclats (traînées sur la trajectoire sûre), étoile dorée, ×2 ; un objet `Points` par tronçon.
+- `src/rendering/shadow.js` : ombre portée de la roquette (repère de hauteur).
+- `src/entities/drone.js` : drone, obstacle mobile (palier MOYEN et plus).
+- `src/ui/home.js` : accueil, missions, progression, réglages, offre de continuer, écran de récompenses animé.
+- Revive (publicité récompensée), XP ×2 (publicité récompensée), politique d'interstitielle (`ads.js`, `CC.CONFIG.ads`).
+- Sons (charge, allumage, éclat, étoile, ×2, XP, niveau, mission, boost, bouclier, clac) et vibrations (motif de charge, allumage, éclat, niveau…).
+
+**Modifiés :** HUD CLASSIQUE épuré (score, essence en segments, record, journal, éclats, mission), pause en français, boutique et
+publicités en français, `endless.js` (score, décors par niveau, éclats, drones), `game.js` (états `LAUNCH`, `REVIVE`, accueil = lanceur,
+`goHome`), entrées tactiles (le lancement part au toucher), `rocket.js` (départ du rail, bouclier), config (`pad`, `score`, `cells`,
+`progress`, `shadow`, `boost`, `revive`, `ads`).
+
+**Supprimés (CLASSIQUE) :** menu à trois boutons, bannière, tir à l'épaule, chrono, vitesse, essence chiffrée, STYLE affiché, palier
+permanent, rappel de touches.

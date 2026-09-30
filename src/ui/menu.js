@@ -66,7 +66,7 @@
         ctx.strokeStyle = CC.CONFIG.hud.colors.green; ctx.lineWidth = Math.max(1, px * 0.5); ctx.strokeRect(W * 0.04, T + HH * 0.012, W * 0.92, px * 13);
         this.text(ctx, game.notice, W / 2, T + HH * 0.012 + px * 3, px, CC.CONFIG.hud.colors.green, { align: 'center' });
       }
-      if (game.state === 'BOOT') { this.dim(ctx, W, H, 1); this.text(ctx, 'LOADING...', W / 2, H / 2, H * 0.004, col.white, { align: 'center' }); }
+      if (game.state === 'BOOT') { this.dim(ctx, W, H, 1); this.text(ctx, 'CHARGEMENT...', W / 2, H / 2, H * 0.004, col.white, { align: 'center' }); }
       if (game.genDebug && game.level && game.level.plan && CC.Gen.drawDebugOverlay && !this.overlay) CC.Gen.drawDebugOverlay(ctx, game, W, H, this);   // v032
       // v034 : fondu au noir (retour à l'accueil : le temps de bâtir un nouveau couloir, puis la scène réapparaît)
       const fa = game.pendingHome ? 1 : game.fadeIn > 0 ? Math.min(1, game.fadeIn / 0.45) : 0;

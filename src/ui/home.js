@@ -88,7 +88,7 @@
     if (icon === 'star') ui.star(ctx, cx, cy, r * 0.6, true, color);
     else if (icon === 'trophy') ui.trophy(ctx, cx, cy - r * 0.05, r * 1.1, color, true);
     else ICON[icon](ctx, cx, cy, r * 0.55, color);
-    const px = ui.fitPx([label], r * 2.3, r * 0.08);
+    const px = Math.max(ui.fitPx([label], r * 3.4, r * 0.075), Math.min(1.5, r * 0.06));
     text(ui, ctx, label, cx, cy + r + r * 0.18, px, '#dfe6f0', { align: 'center' });
     if (badge) { ctx.fillStyle = RED; ctx.beginPath(); ctx.arc(cx + r * 0.8, cy - r * 0.8, r * 0.26, 0, 6.283); ctx.fill(); }
     hit(ui, cx - r * 1.05, y0 - r * 0.05, r * 2.1, r * 2.3, action);
@@ -152,10 +152,10 @@
     // 4. icônes secondaires (paysage : colonne à droite ; portrait : rangée en bas)
     const items = [['target', 'MISSIONS', ORANGE, () => { ui.overlay = 'quests'; }], ['trophy', 'PROGRES', GOLD, () => { ui.overlay = 'progress'; }],
       ['star', 'DEFIS', '#8fd0ff', () => { ui.overlay = 'defi'; }], ['rocket', 'BOUTIQUE', GREEN, () => { ui.overlay = 'shop'; }]];
-    const r = u * (P ? 0.085 : 0.075);
+    const r = u * (P ? 0.085 : 0.105);
     items.forEach((it, i) => {
       if (P) roundBtn(ui, ctx, W * (0.14 + i * 0.24), Y(0.925) - r * 0.2, r, it[0], it[1], it[2], it[3]);
-      else roundBtn(ui, ctx, W - margin - r - (i % 2) * (r * 2.6), Y(0.32 + Math.floor(i / 2) * 0.32), r, it[0], it[1], it[2], it[3]);
+      else roundBtn(ui, ctx, W - margin - r * 1.4 - (i % 2) * (r * 3.0), Y(0.3 + Math.floor(i / 2) * 0.33), r, it[0], it[1], it[2], it[3]);
     });
     if (!touch) text(ui, ctx, 'ESPACE OU CLIC : LANCER    F1 : TOUCHES', W / 2, Y(0.975), ui.fitPx(['ESPACE OU CLIC : LANCER    F1 : TOUCHES'], W * 0.8, u * 0.0032), '#8a96a8', { align: 'center' });
     text(ui, ctx, CC.CONFIG.version.toUpperCase(), W - margin, Y(0.985), u * 0.0022, '#5d6878', { align: 'right' });

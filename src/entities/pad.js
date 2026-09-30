@@ -133,7 +133,7 @@
       this.group.position.copy(this.origin); this.group.visible = true;
       this.cradle.rotation.x = this.pitch;
       this.halo.position.set(-1.9, 0.2, -0.2);
-      this.mode = 'reload'; this.reloadT = 0; this.charge = 0; this.t = 0; this.fireT = 9;
+      this.mode = 'reload'; this.reloadT = 0; this.charge = 0; this.t = 0; this.fireT = 9; this.clunked = false;
       for (const c of this.clamps) c.arm.rotation.z = 0;
       this.deflMat.emissive.setRGB(0, 0, 0);
       const rk = this.game.rocket;
@@ -185,6 +185,10 @@
       const amp = ch * ch * 0.014;
       this.shake.set((U.fx() - 0.5) * amp, (U.fx() - 0.5) * amp, (U.fx() - 0.5) * amp * 0.6);
       rk.pos.copy(this.origin); rk.pos.y += Math.sin(t * 1.7) * 0.004 * (1 - ch); rk.pos.add(this.shake);
+      if (this.mode === 'reload') {   // rechargement : la roquette descend du haut, se pose dans le rail (courbe qui ralentit à l'arrivée)
+        const k = U.clamp(this.reloadT / this.cfg.reloadTime, 0, 1), e = 1 - Math.pow(1 - k, 3);
+        rk.pos.y += 2.6 * (1 - e) * (1 - e); rk.pos.x -= 0.25 * (1 - e) * (1 - e);
+      }
       rk.fwd.copy(this.dir);
       rk.mesh.visible = true;
       // flamme de veille : petite au repos, grandit avec la charge (cônes de la tuyère) — mise à jour du maillage (assiette fixe)
@@ -252,8 +256,12 @@
         if (this.mode === 'charge') st.m.color.lerp(_b.set(1, 0.4, 0.12), ch * 0.5);
         if (this.mode === 'fired') st.m.color.multiplyScalar(Math.max(0.25, 1 - this.fireT * 1.2));
       }
-      // brides : s'ouvrent quand la roquette part
-      const open = this.mode === 'fired' ? U.smooth(0, 0.18, this.fireT) : 0;
+      // brides : s'ouvrent quand la roquette part ; au rechargement elles se referment sur la roquette qui se pose
+      let open = this.mode === 'fired' ? U.smooth(0, 0.18, this.fireT) : 0;
+      if (this.mode === 'reload') {
+        const k = U.clamp(this.reloadT / C.reloadTime, 0, 1); open = 1 - U.smooth(0.7, 0.92, k);
+        if (k > 0.9 && !this.clunked) { this.clunked = true; g.audio.play('clunk'); this.vent(3, 1, 1.4); if (CC.Haptics) CC.Haptics.tick('button'); g.rig.shake = Math.max(g.rig.shake, 0.18); }
+      }
       for (const c of this.clamps) c.arm.rotation.z = c.s * -1.1 * open;
       // déflecteur : rougeoie puis refroidit
       const heat = this.mode === 'fired' ? Math.max(0, 1 - this.fireT / 2.2) : ch * 0.7;

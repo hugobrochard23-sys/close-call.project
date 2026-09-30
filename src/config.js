@@ -228,6 +228,8 @@ CC.CONFIG = {
     targetGap: [200, 300],       // m entre deux cibles à détruire
     threat: [0.2, 0.45, 0.75, 1],        // menace des tirs ennemis par palier (bornes de CC.CONFIG.aa)
     tanks: [0, 1, 2, 3],         // chars ennemis par tronçon et par palier
+    drones: [0, 1, 2, 3],        // v034 : drones (obstacle mobile) par tronçon et par palier
+    droneSpeed: [4.5, 4.0, 3.4, 2.9],   // s par aller-retour d'un drone, par palier (plus court = plus vif)
     maxMissiles: [2, 2, 3, 4],   // missiles ennemis en vol en même temps, par palier
   },
 

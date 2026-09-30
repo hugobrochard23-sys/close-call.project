@@ -171,6 +171,22 @@
       T.nextObstacle = d + Math.max(used, 0) + gap * r.between([0.75, 1.3]);
     }
 
+    // v034 : drones (paliers MOYEN et plus) — obstacle mobile : il balaie le couloir sur un rail rouge ; toujours loin des obstacles
+    // fixes et des cibles, à une altitude tirée au sort (on passe dessus, dessous, ou quand il est de l'autre côté)
+    const nD = cfg.drones[st];
+    for (let i = 0; i < nD; i++) {
+      const d = d0 + cfg.chunkLen * (i + r.between([0.25, 0.75])) / Math.max(1, nD);
+      if (!free(d, 55)) continue;
+      const half = T.half(d), y = r.between([6, 22]), amp = Math.max(4, (half - 3.2) * r.between([0.75, 1])), period = r.between(cfg.droneSpeed[0] === undefined ? [3, 4.5] : [cfg.droneSpeed[Math.min(st, cfg.droneSpeed.length - 1)] * 0.85, cfg.droneSpeed[Math.min(st, cfg.droneSpeed.length - 1)] * 1.15]);
+      const yaw = T.yawAcross(d) * Math.PI / 180, across = [Math.cos(yaw), -Math.sin(yaw)];
+      const p = T.at(d, 0, y);
+      const dr = new CC.Drone(p, across, amp, period, r() * 6.283);
+      b.entity(dr); b.targets.push(dr);
+      // rail lumineux rouge en travers (le danger se lit de loin : le rail montre où il passera)
+      b.box({ p: T.at(d, 0, y), s: [2 * amp + 2.6, 0.07, 0.07], r: [0, T.yawAcross(d), 0], mat: 'basic:#ff3b2e', collide: false, shadow: false });
+      busy.push(d);
+    }
+
     // chars ennemis (paliers MOYEN et plus) : au pied des parois, tournés vers la roquette qui arrive. Leur modèle est
     // détaillé (≈ 1,7 ms chacun) : ils sont créés un par image après le tronçon (Run.update), bien avant d'être visibles.
     const tanks = [], nT = cfg.tanks[st];

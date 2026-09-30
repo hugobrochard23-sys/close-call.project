@@ -397,7 +397,7 @@
       S.endless = S.endless || { best: 0, runs: 0 };
       S.endless.runs = (S.endless.runs || 0) + 1;
       if (dist > (S.endless.best || 0)) S.endless.best = dist;
-      const causes = { wall: 'MUR', hazard: 'LASER', cable: 'CABLE', missile: 'MISSILE', altitude: 'TROP HAUT', outOfBounds: 'CHUTE', stalled: 'PANNE SECHE' };
+      const causes = { wall: 'MUR', hazard: 'LASER', cable: 'CABLE', missile: 'MISSILE', drone: 'DRONE', altitude: 'TROP HAUT', outOfBounds: 'CHUTE', stalled: 'PANNE SECHE' };
       this.results = Object.assign(res, { endless: true, time: this.runTime, stage: run.stageLabel(), cause: causes[this.crashKind] || 'CRASH', style: this.style.total, runStats: run.stats, xpDoubled: false, t: 0 });
       this.state = 'RESULTS'; this.centerMsg = null;
       if (this.ads) this.ads.onRunEnd(this.results);
@@ -527,6 +527,7 @@
     }
 
     onTargetHit(t, rocket) {
+      if (t.hazard) { this.onRocketCrash('drone', rocket.pos.clone(), new V(0, 1, 0)); return; }   // v034 : un drone ne se détruit pas, il détruit
       const c = t.obb.c.clone();
       t.kill(this);
       if (this.endlessRun) {   // v033 : la roquette traverse la cible et continue ; essence rechargée
@@ -565,6 +566,7 @@
 
     onRocketCrash(kind, pos, normal) {
       if (!this.rocket.active) return;
+      if (this.rocket.shieldT > 0 && kind !== 'outOfBounds' && kind !== 'stalled') return;   // v034 : bouclier du revive
       const rk = this.rocket;
       this.lastSpeed = 0; this.crashKind = kind;
       rk.active = false; rk.mesh.visible = false; rk.light.intensity = 0; rk.rope.visible = false; rk.grapple.active = false;

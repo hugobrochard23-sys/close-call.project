@@ -265,6 +265,7 @@
         case 'warnMissile': this.tone('square', 1320, 1320, 0.07, 0.05); this.tone('square', 1320, 1320, 0.07, 0.05, 0.09); break;   // v026 : bip-bip d'alerte
         case 'warnFuel': this.tone('triangle', 880, 880, 0.12, 0.12); this.tone('triangle', 587, 587, 0.12, 0.2, 0.15); break;     // v026 : deux notes descendantes
         // v034 : lanceur — verrous qui claquent + sirène de charge ; allumage : détonation sourde, souffle, coup de grave
+        case 'clunk': this.tone('square', 150, 60, 0.28, 0.1); this.noiseHit(700, 'lowpass', 1.2, 0.35, 0.09); this.tone('triangle', 900, 700, 0.06, 0.05, 0.03); break;   // v034 : la roquette se pose dans le rail
         case 'padArm': this.tone('square', 190, 80, 0.32, 0.09); this.noiseHit(1100, 'bandpass', 2, 0.4, 0.06); this.tone('square', 260, 120, 0.2, 0.07, 0.11); this.chargeWhine(CC.CONFIG.pad.chargeTime); break;
         case 'padIgnite': this.explosion(0.55); this.sweep(180, 2600, 'bandpass', 0.9, 0.75, 0.55); this.tone('sine', 62, 28, 0.95, 0.7); this.noiseHit(3500, 'highpass', 0.7, 0.4, 0.09); break;
         // v034 : éclat ramassé — gamme pentatonique montante (param = rang dans la série : plus on enchaîne, plus c'est aigu)

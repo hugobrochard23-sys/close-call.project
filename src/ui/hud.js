@@ -39,7 +39,7 @@
       const W = this.canvas.width, H = this.canvas.height, C = CC.CONFIG.hud, col = C.colors;
       const v = game.level.hud, rk = game.rocket;
       if (game.endlessRun) {   // v034 : mode CLASSIQUE — HUD épuré (score, essence, record, journal, éclats, mission)
-        if (game.state !== 'RESULTS' && !game.paused && game.ui.overlay !== 'revive') { this.drawClassic(game, W, H, C, col, rk); this.drawGameRest(game, W, H, C, col, v, rk, true); }
+        if (game.state !== 'RESULTS' && !game.paused && game.ui.overlay !== 'revive') { this.drawClassic(game, W, H, C, col, rk); this.drawGameRest(game, W, H, C, col, v, rk, document.body.classList.contains('cc-touch')); }
         return;
       }
       // v017 : en vertical, les textes du coin haut droit sont alignés à droite sur le bord (sinon ils débordent)
@@ -142,6 +142,11 @@
         F.draw(ctx, t.sub, W / 2, y + tpx * 12.5, tpx * 0.95, '#ffffff', { align: 'center', outline: '#101010' });
         ctx.globalAlpha = 1;
       }
+      // ---- bureau : rappel des commandes pendant les premiers vols seulement (sur téléphone : le tutoriel gestuel)
+      if (!document.body.classList.contains('cc-touch') && s === 'FLIGHT' && (game.progress.P.launches || 0) <= 3 && game.flightTime < 6) {
+        const hint = 'SOURIS OU ZQSD : DIRIGER    ESPACE : BOOST', hp = Math.min(W * 0.0055, H * 0.0034);
+        F.draw(ctx, hint, W / 2, H * 0.23, Math.min(hp, W * 0.9 / F.measure(hint, 1)), '#ffffff', { align: 'center', outline: '#101010' });
+      }
       // ---- alarme d'altitude
       if (run.altT > 0 && s === 'FLIGHT' && Math.floor(run.altT * 6) % 2 === 0) F.draw(ctx, 'TROP HAUT ! DESCENDS', W / 2, H * 0.3, Math.min(W * 0.0068, H * 0.004), C.colors.red, { align: 'center', outline: '#101010' });
     }
@@ -205,7 +210,7 @@
         ctx.strokeStyle = col.crosshair; ctx.lineWidth = Math.max(1, H / 540);
         ctx.beginPath(); ctx.moveTo(cx - sz, cy - sz); ctx.lineTo(cx + sz, cy + sz); ctx.moveTo(cx + sz, cy - sz); ctx.lineTo(cx - sz, cy + sz); ctx.stroke();
       }
-      if (v !== 'B' && !lite) this.drawPopups(game);   // OBSERVÉ : aucune annonce de style dans les séquences au HUD B
+      if (v !== 'B' && !lite && !game.endlessRun) this.drawPopups(game);   // OBSERVÉ : aucune annonce de style dans les séquences au HUD B
       this.drawIndicators(game);
       this.drawMissileWarning(game);
       if (lite) this.drawTutorial(game, W, H);
