@@ -25,7 +25,7 @@
       let y = hudCfg.y0;
       const used = this.popups.filter((p) => !p.dead).map((p) => p.y);
       if (used.length) { y = Math.min.apply(null, used) - hudCfg.pitch; if (y < hudCfg.yMin) y = Math.max.apply(null, used) + hudCfg.pitch; }
-      const p = { segments, age: 0, y, x: hudCfg.cx + (U.rng() - 0.5) * 2 * hudCfg.jitter, live: !!opts.live, key: opts.key, dead: false };
+      const p = { segments, age: 0, y, x: hudCfg.cx + (U.fx() - 0.5) * 2 * hudCfg.jitter, live: !!opts.live, key: opts.key, dead: false };
       this.popups.push(p);
       if (!opts.live) this.game.audio.play('popup', null, opts.tone || 1);
       return p;

@@ -1,7 +1,9 @@
 # COLD IMPACT
 
 Prototype jouable en HTML/WebGL, inspiré de la bande-annonce du jeu *Dumbfire*.
-On pilote un missile qui ne s'arrête jamais : il suit le réticule, frôle les murs pour gagner du style et doit toucher la cible.
+On pilote un missile qui ne s'arrête jamais : il frôle les murs, ramasse des éclats, détruit des cibles et va le plus loin possible.
+**v034 : jeu pensé pour le téléphone** — la roquette sur son lanceur est le bouton « jouer », progression par XP et niveaux,
+missions, récompenses de fin de partie (voir [analysis/REFONTE_MOBILE.md](analysis/REFONTE_MOBILE.md)).
 
 Tous les assets (textures pixel-art, modèles, police, sons, musique) sont **originaux** et générés par le code.
 Aucun fichier du jeu d'origine n'est utilisé, et le matériel de référence (vidéo, images extraites) n'est pas publié ici.
@@ -122,32 +124,78 @@ publicités d'exemple (bannière, interstitielle, récompensée — annonceurs f
 qui brûlent, chars et hélicoptères détaillés et animés (tourelle à inertie, recul, assiette de vol), façades sans fenêtre
 coupée, toits équipés, forêts de conifères, son du réacteur en couches. Détails et mesures : [analysis/DESIGN_REFONTE.md](analysis/DESIGN_REFONTE.md).
 
-## Modes de jeu (v033)
+## Modes de jeu
 
-Le menu d'accueil n'a plus que **trois gros boutons** (façon *Block Blast*) : **CLASSIQUE**, **DÉFI**, **BOUTIQUE**.
+**L'accueil est le lanceur (v034).** Plus de bouton « JOUER » : la roquette est posée sur son rail, sur une plate-forme au-dessus de la
+rue qu'elle va parcourir. **Toucher la roquette (ou n'importe où hors des icônes, ou Espace / clic sur ordinateur) la lance.** Autour :
+niveau et barre d'XP (haut gauche), engrenage des réglages (haut droite), la mission la plus avancée (bas) et quatre icônes rondes
+— MISSIONS, PROGRES, DEFIS, BOUTIQUE. Analyse, conception et tests : [analysis/REFONTE_MOBILE.md](analysis/REFONTE_MOBILE.md).
 
-### CLASSIQUE — couloir infini
+### CLASSIQUE — couloir infini (le cœur du jeu)
 
-Le but : **faire le plus de mètres possible**, en une seule vie. Le couloir (rue entre des immeubles, canyon, gorge
-enneigée…) est **généré à l'infini** devant la roquette, par tronçons de 200 m construits en quelques millisecondes et
-détruits derrière elle (`src/world/endless.js`). Chaque partie a sa propre graine : jamais deux fois le même couloir.
+Le but : **aller le plus loin possible, en une seule vie, en ramassant, en frôlant et en détruisant**. Le couloir (rue entre des
+immeubles, désert, montagne enneigée, zone industrielle, canyon, ville de nuit) est **généré à l'infini** devant la roquette, par
+tronçons de 200 m construits en quelques millisecondes et détruits derrière elle (`src/world/endless.js`). Chaque partie a sa propre
+graine. **Une partie dure environ une minute** au début.
 
-- **Score** : la distance, en haut de l'écran, avec le record dessous (« NOUVEAU RECORD » dès qu'il est battu).
-- **Paliers de difficulté** tous les 800 m : FACILE → MOYEN → DIFFICILE → IMPOSSIBLE (couloir de 40 m → 18 m de large,
-  virages plus serrés, obstacles plus rapprochés, trous plus petits, chars ennemis de plus en plus précis à partir de MOYEN).
-- **Obstacles** : barrière basse (passer dessus), poutre haute (dessous), pilier (côté libre), vitre géante (on la
-  traverse), passerelle, laser, mur percé d'un trou, slalom, fenêtre entre deux poutres.
-- **Essence** : 14 s au départ, réservoir de 20 s. Elle se recharge en **frôlant** (chaque point de STYLE rapporte de
-  l'essence : « +0,7 S » s'affiche au-dessus de la jauge) et en **détruisant les cibles en route** (dépôts de carburant,
-  camions, chars : +4 s ; la roquette les traverse et continue). Réservoir vide : la roquette plane puis s'écrase.
-- **Zones de décor** tous les 1 000 m : ville, puis désert, neige, zone industrielle, canyon et ville de nuit dans un ordre
-  tiré au sort ; l'ambiance lumineuse glisse d'une zone à l'autre.
-- **Plafond** à 48 m : au-dessus, l'alarme « ALTITUDE! DESCENDS » clignote, puis explosion après 1,5 s.
-- **Fin de partie** : distance, record, palier atteint, cause (MUR, MISSILE, LASER, TROP HAUT, PANNE SECHE), STYLE ;
-  REJOUER relance aussitôt un nouveau couloir.
+**Le lancement (0,9 s).** Un toucher : vibration, clac des verrous, sirène de charge qui monte, feux ambre → rouge, vapeur ; la roquette
+tremble de plus en plus fort, la flamme de veille grossit, la caméra avance ; puis allumage (flash, onde de choc, nuage de vapeur, brides
+qui s'ouvrent, grosse vibration) : la roquette quitte le rail en accélérant et la caméra la suit en travelling jusqu'à la vue de jeu.
+Aucun chargement : le couloir est déjà construit. Détail : `src/entities/pad.js`, réglages : `CC.CONFIG.pad`.
 
-Réglages : `CC.CONFIG.endless` dans `src/config.js`. Banc de test : `?test=1&autopilot=1&endless=<graine>`, et
-`tools/endlessplay.js` (le pilote automatique joue N parties et donne distance, cause du crash, obstacle en cause).
+**Commandes tactiles.** Glisser : diriger. Doigt maintenu 0,4 s : **boost** (le doigt peut alors bouger). Doigt dans la bande gauche ou
+droite : virage sans fin. Dans les 1,8 s qui suivent le lancement, ou 0,6 s après un boost, reposer le doigt relance le boost aussitôt.
+
+**Interface en vol.** Score (haut, gros), jauge d'essence juste dessous (10 segments de 2 s, clignote sous 25 %), record (petit),
+journal (« FROLE +12 »), éclats ramassés et ×2 (haut gauche), mission suivie (bas gauche). Pas de chrono, de vitesse, de chiffres
+d'essence ni de touches clavier à l'écran.
+
+**Score.** Mètres + bonus : frôlement (« FROLE », « RASE-MOTTES », « COLD IMPACT »), cible détruite (+100), éclat (+10), étoile dorée
+(+150), le tout doublé pendant 12 s avec le ×2.
+
+**Essence.** 14 s au départ, réservoir de 20 s. Elle se recharge en **frôlant** (chaque point de bonus de frôlement), en **détruisant les
+cibles en route** (dépôts de carburant, camions : +4 s ; la roquette les traverse et continue) et avec les **étoiles dorées** (+3 s).
+Réservoir vide : la roquette plane puis s'écrase.
+
+**Éclats.** Traînées de cristaux cyan le long de la trajectoire sûre du couloir : les suivre = passer par les trous et sous les poutres.
+Le son monte de note en note quand on enchaîne. Étoile dorée et ×2 : rares.
+
+**Difficulté.** Paliers tous les 800 m : FACILE → MOYEN → DIFFICILE → IMPOSSIBLE (couloir de 40 m → 18 m, virages plus serrés,
+obstacles plus rapprochés, trous plus petits, chars ennemis de plus en plus précis, **drones** qui balaient le couloir à partir de
+MOYEN). Obstacles : barrière basse, poutre haute, pilier, vitre géante, passerelle, laser, mur percé d'un trou, slalom, fenêtre
+entre deux poutres. Plafond à 48 m (alarme « TROP HAUT ! », puis explosion).
+
+**Décors.** Une nouvelle zone tous les 1 000 m ; les décors s'ouvrent avec le niveau du joueur (niveau 1 : ville ; puis désert, montagne,
+industrie, canyon, ville de nuit).
+
+**Fin de partie.** Cause (MUR, MISSILE, LASER, DRONE, TROP HAUT, PANNE SECHE), **offre de continuer** (publicité récompensée, une fois
+par vol, à partir de 180 m), puis l'écran de récompenses : score qui compte, record, distance / éclats / cibles, lignes d'XP, barre
+d'XP qui se remplit (niveau gagné, décor débloqué), missions, et **REJOUER**, qui ramène au lanceur (la roquette suivante descend
+dans le rail en 0,75 s ; un toucher pendant le rechargement est mémorisé).
+
+### Progression (visible en quelques secondes)
+
+- **XP** : score ÷ 10 + missions terminées + primes (premier vol +30, record +25). Chaque vol en rapporte, même raté.
+- **Niveaux** : 80 XP pour le niveau 2, puis +40 par niveau (`CC.CONFIG.progress`). Rangs : RECRUE, PILOTE, AS, CAPITAINE, MAJOR,
+  COMMANDANT, LEGENDE. Écran PROGRES : niveau, XP, décors (verrouillés / ouverts), statistiques.
+- **Missions** : trois en cours, renouvelées à la fin du vol ; types : atteindre une distance, faire un score, survivre, détruire des
+  cibles (au total ou en un vol), utiliser des boosts, ramasser des éclats, frôler les murs, prendre des étoiles dorées. Leur
+  difficulté suit le niveau.
+- Sauvegarde : `save.prog` (aucun serveur, aucune horloge).
+
+Réglages : `CC.CONFIG.endless`, `pad`, `score`, `cells`, `progress`, `boost`, `shadow`, `revive`. Banc de test :
+`?test=1&autopilot=1&endless=<graine>` (le pilote automatique part directement, sans lanceur), et `tools/endlessplay.js`.
+
+### Publicités : la rétention avant la quantité
+
+Les publicités sont des **exemples** (annonceurs fictifs, aucun lien, aucune donnée envoyée ; coupables dans RÉGLAGES). La structure :
+- **Récompensées, choisies par le joueur** : CONTINUER après un crash (la roquette repart 24 m avant, protégée 2,4 s), XP ×2 sur
+  l'écran de fin, cosmétique de la boutique (1 minute).
+- **Interstitielle, rare, jamais en partie** : entre l'écran de fin et le vol suivant, au plus une tous les 3 vols, jamais avant le 4e vol,
+  jamais dans les 150 s qui suivent une publicité (récompensée comprise), jamais après un record ni un niveau gagné, jamais après
+  un vol de moins de 20 s ; fermable après 5 s.
+- **Pas de bannière** sur l'accueil : le lanceur reste la seule invitation.
+Réglages : `CC.CONFIG.ads`, `CC.CONFIG.revive`. Logique : `src/ui/ads.js`.
 
 ### DÉFI — cartes numérotées, étoiles et trophées
 
@@ -262,17 +310,22 @@ cold-impact/
 │   ├── config.js         TOUS les paramètres réglables (GAME_CONFIG), annotés MESURÉ / ESTIMATION / CHOIX
 │   ├── core/             util.js (maths, aléatoire à graine, formats 0:08,27 et 1.315), game.js (boucle, machine à états, banc de test)
 │   ├── physics/          collision.js (boîtes orientées, terrain, tunnel ; balayage de sphère, distances, rayons)
-│   ├── entities/         rocket.js (modèle de vol + capacités), targets.js (cibles, IA, destructibles, lasers),
-│   │                     models.js, skins.js (fiches des 20 cosmétiques + STOCK)
-│   ├── systems/          camera.js (1re personne → poursuite), style.js (combos et messages de style)
-│   ├── rendering/        textures.js (pixel-art procédural), particles.js (voxels instanciés), postfx.js (vignette, aberration, tramage, bloom)
+│   ├── entities/         rocket.js (modèle de vol + capacités + bouclier), targets.js (cibles, IA, destructibles, lasers),
+│   │                     models.js, skins.js (fiches des 20 cosmétiques + STOCK),
+│   │                     pad.js (v034 : le LANCEUR et sa séquence de lancement), drone.js (v034 : obstacle mobile)
+│   ├── systems/          camera.js (lanceur, travelling, poursuite, boost), style.js (combos de frôlement),
+│   │                     progress.js (v034 : XP, niveaux, missions)
+│   ├── rendering/        textures.js (pixel-art procédural), particles.js (voxels instanciés), postfx.js (vignette, aberration, tramage, bloom),
+│   │                     shadow.js (v034 : ombre de la roquette)
 │   ├── world/            builder.js (géométrie fusionnée, murs percés, terrains, tunnel),
 │   │                     levels/ (9 niveaux + generated.js : fiche d'une mission générée),
-│   │                     endless.js (v033 : mode CLASSIQUE, couloir infini par tronçons),
+│   │                     endless.js (v033 : mode CLASSIQUE, couloir infini par tronçons), collect.js (v034 : éclats, étoile, ×2),
 │   │                     gen/ (v032 : générateur de missions — graine, profils, biomes, disposition, gabarits,
 │   │                     mission, navigation, validation, construction ; voir analysis/GENERATOR.md)
-│   ├── input/            input.js (souris/clavier + pilote automatique de test)
-│   ├── ui/               font.js (police pixel originale), hud.js (3 variantes), menu.js, shop.js (boutique)
+│   ├── input/            input.js (souris/clavier + pilote automatique de test), touch.js (gestes), haptics.js (vibrations)
+│   ├── ui/               font.js (police pixel originale), hud.js (3 variantes + HUD épuré du CLASSIQUE), menu.js (routage, pause,
+│   │                     anciens écrans), home.js (v034 : accueil du lanceur, missions, progression, réglages, offre de continuer,
+│   │                     écran de récompenses), shop.js (boutique), ads.js (publicités d'exemple)
 │   └── audio/            audio.js (sons et musique synthétisés, Web Audio)
 ├── assets/lib/           three.min.js (r149)
 ├── tests/                PROTOCOLE.md, reference_measurements.json
@@ -282,8 +335,9 @@ cold-impact/
 └── analysis/             ANALYSE_REFERENCE.md, VERSIONS.md, iterations/vXXX/ (rapports, planches de comparaison)
 ```
 
-Machine à états : `BOOT → MENU → AIM (1re personne) → FLIGHT → IMPACT | CRASHED → RESPAWN → … → RESULTS`,
-plus PAUSE et les surcouches SETTINGS / BINDS.
+Machine à états : `BOOT → MENU (le lanceur) → LAUNCH (charge 0,9 s) → FLIGHT → CRASHED → [REVIVE →] RESULTS → MENU …` pour le CLASSIQUE ;
+`… → AIM (1re personne) → FLIGHT → IMPACT | CRASHED → RESPAWN → … → RESULTS` pour le DÉFI et les niveaux ; plus PAUSE et les
+surcouches (quests, progress, msettings, revive, settings, binds, defi, shop, ad).
 
 ## Systèmes principaux et paramètres
 

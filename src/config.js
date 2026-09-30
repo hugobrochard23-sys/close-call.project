@@ -5,7 +5,7 @@ window.CC = {};
 CC.Levels = [];        // rempli par src/world/levels/*.js, dans l'ordre de chargement
 
 CC.CONFIG = {
-  version: 'v033',
+  version: 'v034',
 
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
@@ -67,8 +67,12 @@ CC.CONFIG = {
     offsetLag: 7,                // lissage du décalage caméra (1/s) : dérive de la roquette à l'écran quand la visée tourne (ESTIMATION)
     rollFromYawRate: 0,          // v019 : 0,16 → 0 (Hugo) : l'horizon ne penche plus en virage
     rollLag: 5,
-    boostZoom: 0.88,             // CHOIX v026 (Hugo) : pendant le boost, angle de vue × 0,88 (léger zoom avant)
+    boostZoom: 0.88,             // CHOIX v026 (Hugo) : pendant le boost, angle de vue × 0,88 (léger zoom avant) ; v034 : gardé pour les modes hors CLASSIQUE
     zoomIn: 3, zoomOut: 2,       // 1/s : vitesse du zoom au boost, puis du retour quand le boost s'arrête
+    boostFov: 1.07,              // v034 : CLASSIQUE — le boost ÉLARGIT l'angle de vue (sensation de vitesse), après un coup de 'punch'
+    boostPunch: 0.10,            // v034 : élargissement bref (fraction) à l'allumage du boost, retombe en ~0,35 s
+    boostPull: 0.55,             // v034 : m dont la caméra recule pendant le boost
+    handoff: 1.05,               // v034 : s pour passer de la vue du lanceur à la caméra de poursuite (travelling)
     launchBlend: 0.45,           // MESURÉ : la caméra rattrape la roquette en ≈ 0,5 s
     near: 0.05, far: 1400,
     eyeHeight: 1.6,
@@ -224,6 +228,8 @@ CC.CONFIG = {
     targetGap: [200, 300],       // m entre deux cibles à détruire
     threat: [0.2, 0.45, 0.75, 1],        // menace des tirs ennemis par palier (bornes de CC.CONFIG.aa)
     tanks: [0, 1, 2, 3],         // chars ennemis par tronçon et par palier
+    drones: [0, 1, 2, 3],        // v034 : drones (obstacle mobile) par tronçon et par palier
+    droneSpeed: [4.5, 4.0, 3.4, 2.9],   // s par aller-retour d'un drone, par palier (plus court = plus vif)
     maxMissiles: [2, 2, 3, 4],   // missiles ennemis en vol en même temps, par palier
   },
 
@@ -248,18 +254,80 @@ CC.CONFIG = {
     autoWindow: 3,
     maxFpsTouch: 60,             // écrans à 120 Hz : le jeu n'en calcule que 60 (batterie, chauffe)
     pausedFps: 20,               // menus et pause : 20 images/s suffisent
+    homeFps: 45,                 // v034 : lanceur (accueil, chargement, écran de fin) : scène vivante, un peu plus fluide
   },
 
   // v030 : publicités d'EXEMPLE (src/ui/ads.js) — annonceurs fictifs, aucune régie ; le joueur peut les couper
+  // v034 : politique « rétention avant quantité » — voir README (section Publicités).
+  //  · récompensées (le joueur choisit) : CONTINUER après un crash, XP ×2 sur l'écran de fin — jamais imposées
+  //  · interstitielle (imposée, rare) : au plus une tous les `interstitialEvery` vols, pas avant `graceRuns` vols, pas moins de
+  //    `minGap` s après une autre publicité (récompensée comprise), jamais après un record ou un niveau gagné, jamais après un
+  //    vol de moins de `minRunTime` s ; elle se place entre l'écran de fin et le vol suivant (jamais pendant une partie)
+  //  · plus de bannière sur l'accueil : le lanceur reste la seule invitation
   ads: {
     enabled: true,
-    interstitialEvery: 3,        // une interstitielle au plus tous les 3 niveaux terminés…
-    minGap: 90,                  // … et jamais moins de 90 s après la précédente
+    interstitialEvery: 3,        // une interstitielle au plus tous les 3 vols terminés…
+    graceRuns: 3,                // … jamais avant le 4e vol (le joueur doit d'abord être accroché)
+    minGap: 150,                 // … et jamais moins de 150 s après la précédente publicité
+    minRunTime: 20,              // s : un vol plus court n'est pas « une partie » (pas de publicité après)
     skipAfter: 5,                // s avant de pouvoir fermer l'interstitielle
     interstitialTime: 15,        // s : fermeture automatique
-    rewardTime: 8,               // s à regarder pour la récompense (gain du niveau doublé)
-    bannerCycle: 8,              // s : rotation des annonceurs de la bannière du menu
+    rewardTime: 8,               // s à regarder pour la récompense (continuer, XP ×2)
+    banner: false,               // v034 : pas de bannière sur l'accueil du lanceur
+    bannerCycle: 8,              // s : rotation des annonceurs de la bannière (si activée)
   },
+
+  // v034 : LANCEUR (accueil du mode CLASSIQUE) — la roquette posée sur son rail est le bouton « jouer »
+  pad: {
+    chargeTime: 0.9,             // s entre l'appui et l'allumage (appuyer deux fois de suite ne raccourcit pas : l'attente fait partie du plaisir)
+    pitchDeg: 7,                 // inclinaison du rail vers le haut
+    cam: [4.9, 0.45, 1.7],       // position de la caméra du lanceur, relative à la roquette (vue de profil, un peu de l'arrière)
+    look: [0.0, -0.13, 0.12],  // point regardé, relatif à la roquette
+    fov: 42,                     // angle de vue vertical du lanceur (°) ; la caméra de jeu, elle, s'élargit en portrait
+    pushIn: 0.16,                // fraction de la distance dont la caméra avance pendant la charge
+    launchSpeed: 14,             // m/s au départ du rail (la poussée fait le reste : accélération visible)
+    freeBoost: 1.0,              // s de poussée gratuite après un lancement depuis le lanceur
+    reloadTime: 0.75,            // s de rechargement du lanceur quand on revient de la partie
+  },
+
+  // v034 : SCORE, ECLATS (collectibles) et bonus du mode CLASSIQUE
+  score: {
+    cell: 10,                    // points par éclat
+    gold: 150,                   // points par étoile dorée
+    target: 100,                 // points par cible détruite
+    multTime: 12,                // s de multiplicateur ×2 (bonus rare)
+  },
+  cells: {
+    spacing: 6.5,                // m entre deux éclats d'une traînée
+    trailLen: [4, 8],            // éclats par traînée
+    trailGap: [55, 110],         // m entre deux traînées
+    goldEvery: [420, 700],       // m entre deux étoiles dorées (+ recharge d'essence)
+    multEvery: [900, 1400],      // m entre deux multiplicateurs ×2
+    goldFuel: 3.0,               // s d'essence d'une étoile dorée
+    radius: 1.7, radiusBig: 2.4, // m : rayon de ramassage (généreux : on est à 60 m/s)
+    size: 1.15,                  // taille d'un éclat (m)
+  },
+
+  // v034 : PROGRESSION — XP, niveaux, missions
+  progress: {
+    xpPerMeter: 0.1,             // 1 XP pour 10 m
+    xpPerBonus: 0.1,             // 1 XP pour 10 points de bonus (éclats, cibles, frôlements)
+    recordXp: 25,                // XP d'un nouveau record
+    firstRunXp: 30,              // XP du tout premier vol
+    levelBase: 80, levelStep: 40,   // XP pour passer du niveau n au suivant : base + step × (n − 1)
+    missionSlots: 3,
+    worlds: { city: 1, desert: 2, snow: 3, industry: 4, canyon: 5, night: 6 },   // niveau qui débloque chaque décor
+    ranks: ['RECRUE', 'PILOTE', 'AS', 'CAPITAINE', 'MAJOR', 'COMMANDANT', 'LEGENDE'],
+  },
+
+  // v034 : ombre portée sous la roquette (repère de hauteur)
+  shadow: { maxDist: 70, minSize: 0.85, growth: 0.085, maxSize: 4.2, opacity: 0.78, fadeDist: 55, stretch: 1.9 },
+
+  // v034 : coup de pouce du bouton de boost (sensation d'accélération)
+  boost: { kickShake: 0.55, ringSize: 3.2, chromatic: 0.0085, speedLines: 26 },
+
+  // v034 : revive (publicité récompensée) — la roquette repart au milieu du couloir, invulnérable un instant
+  revive: { window: 5.5, minDist: 180, shield: 2.4, fuelFrac: 0.55, back: 24 },
 
   test: { fps: 30 },
 };

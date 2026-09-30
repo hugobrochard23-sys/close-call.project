@@ -39,9 +39,10 @@
         game.audio.init(); game.audio.resume();
         const r = el.getBoundingClientRect();
         const x = (e.clientX - r.left) * (el.width / r.width), y = (e.clientY - r.top) * (el.height / r.height) - ((game.ui && game.ui.offsetY) || 0);
-        if (game.ui && (game.state === 'MENU' || game.state === 'RESULTS' || game.paused || game.ui.overlay)) {
+        if (game.ui && (game.state === 'MENU' || game.state === 'RESULTS' || game.state === 'REVIVE' || game.paused || game.ui.overlay)) {
           if (game.ui.click(x, y)) return;
-          if (game.state === 'RESULTS' && e.button === 0) { game.restartLevel(); return; }
+          if (game.state === 'MENU' && game.padMode && !game.ui.overlay && e.button === 0) { game.beginLaunch(); return; }   // v034 : un clic sur le lanceur = lancer
+          if (game.state === 'RESULTS' && e.button === 0 && !(game.results && game.results.endless)) { game.restartLevel(); return; }
           if (game.paused && !game.ui.overlay && e.button === 0) { game.resume(); return; }
           return;
         }
@@ -64,6 +65,12 @@
         this.locked = document.pointerLockElement === el;
         if (was && !this.locked) game.onPointerLost();
       });
+    }
+
+    // v034 : coordonnées d'un point de l'écran dans le repère de l'interface (canvas du HUD)
+    uiCoords(clientX, clientY) {
+      const el = this.el, r = el.getBoundingClientRect(), g = this.game;
+      return { x: (clientX - r.left) * (el.width / r.width), y: (clientY - r.top) * (el.height / r.height) - ((g.ui && g.ui.offsetY) || 0) };
     }
 
     requestLock() { try { const p = this.el.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignoré */ } }

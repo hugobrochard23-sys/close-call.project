@@ -50,13 +50,13 @@
 
   /* Tracé du couloir d'une partie : x du centre et demi-largeur à la distance d (fonctions continues). */
   class Track {
-    constructor(seed) {
+    constructor(seed, zones) {
       const r = G.stream(seed, 'track');
       this.p = [r() * 6.28, r() * 6.28, r() * 6.28, r() * 6.28];
       this.l = [r.between([170, 230]), r.between([75, 105]), r.between([48, 70])];
       this.seed = seed;
       // ordre des zones : la ville d'abord (lisible), puis les autres dans un ordre tiré de la graine, en boucle
-      const rest = ['desert', 'snow', 'industry', 'canyon', 'night'];
+      const rest = ['desert', 'snow', 'industry', 'canyon', 'night'].filter((z) => !zones || zones.includes(z));   // v034 : décors ouverts par le niveau du joueur
       const rz = G.stream(seed, 'zones');
       for (let i = rest.length - 1; i > 0; i--) { const j = Math.floor(rz() * (i + 1)); const t = rest[i]; rest[i] = rest[j]; rest[j] = t; }
       this.zoneOrder = ['city'].concat(rest);
@@ -90,8 +90,8 @@
   E.Track = Track;
 
   /* ---------- fiche de niveau du mode CLASSIQUE ---------- */
-  E.level = function (seed) {
-    const cfg = C(), T = new Track(seed);
+  E.level = function (seed, opts) {
+    const cfg = C(), T = new Track(seed, opts && opts.zones);
     const L = {
       id: 'endless', name: 'CLASSIQUE', hud: 'C', mode: 'endless', endless: true, seed, fuel: cfg.fuelMax,
       killY: -30, lookAhead: 16, terminalRange: 20, fireDelay: 0.35, impactVariant: 'orange',
@@ -100,9 +100,10 @@
       env: T.env(0), track: T,
       aaThreat: cfg.threat[0], aaSalvo: false, aaMaxAlive: cfg.maxMissiles[0],
       route: [[0, 12, 40], [0, cfg.cruise, 0]],
-      build(b) {   // zone de départ (derrière d = 0) : plate-forme du lanceur, mur du fond ; le reste arrive par tronçons
-        b.box({ p: [0, 10.4, 40], s: [6, 0.6, 6], mat: 'hazard' });
-        b.box({ p: [0, 5, 40], s: [1.2, 10, 1.2], mat: 'metal', tint: '#8a9098' });
+      build(b) {   // zone de départ (derrière d = 0) : socle du lanceur, mur du fond ; le reste arrive par tronçons
+        // v034 : le décor du lanceur (dalle, rail, pylônes, feux) est CC.Pad ; ici seulement la collision de la dalle et son pilier
+        b.box({ p: [0, 11.1, 40], s: [2.6, 0.5, 5.2], mat: 'metal', render: false });
+        b.box({ p: [0, 5.45, 40], s: [1.6, 10.9, 1.6], mat: 'metal', tint: '#6a717c' });
         b.box({ p: [0, 40, 64], s: [120, 80, 4], mat: { side: 'facadeDark', top: 'concreteDark' }, tint: '#c8ccd4' });   // fond derrière le lanceur
       },
     };
@@ -170,6 +171,22 @@
       T.nextObstacle = d + Math.max(used, 0) + gap * r.between([0.75, 1.3]);
     }
 
+    // v034 : drones (paliers MOYEN et plus) — obstacle mobile : il balaie le couloir sur un rail rouge ; toujours loin des obstacles
+    // fixes et des cibles, à une altitude tirée au sort (on passe dessus, dessous, ou quand il est de l'autre côté)
+    const nD = cfg.drones[st];
+    for (let i = 0; i < nD; i++) {
+      const d = d0 + cfg.chunkLen * (i + r.between([0.25, 0.75])) / Math.max(1, nD);
+      if (!free(d, 55)) continue;
+      const half = T.half(d), y = r.between([6, 22]), amp = Math.max(4, (half - 3.2) * r.between([0.75, 1])), period = r.between(cfg.droneSpeed[0] === undefined ? [3, 4.5] : [cfg.droneSpeed[Math.min(st, cfg.droneSpeed.length - 1)] * 0.85, cfg.droneSpeed[Math.min(st, cfg.droneSpeed.length - 1)] * 1.15]);
+      const yaw = T.yawAcross(d) * Math.PI / 180, across = [Math.cos(yaw), -Math.sin(yaw)];
+      const p = T.at(d, 0, y);
+      const dr = new CC.Drone(p, across, amp, period, r() * 6.283);
+      b.entity(dr); b.targets.push(dr);
+      // rail lumineux rouge en travers (le danger se lit de loin : le rail montre où il passera)
+      b.box({ p: T.at(d, 0, y), s: [2 * amp + 2.6, 0.07, 0.07], r: [0, T.yawAcross(d), 0], mat: 'basic:#ff3b2e', collide: false, shadow: false });
+      busy.push(d);
+    }
+
     // chars ennemis (paliers MOYEN et plus) : au pied des parois, tournés vers la roquette qui arrive. Leur modèle est
     // détaillé (≈ 1,7 ms chacun) : ils sont créés un par image après le tronçon (Run.update), bien avant d'être visibles.
     const tanks = [], nT = cfg.tanks[st];
@@ -189,9 +206,12 @@
     const pts = [];
     for (let d = d0; d < d1; d += 20) if (gates.every((g) => Math.abs(g.d - d) > 30)) pts.push({ d, lx: 0, y: cfg.cruise });
     // (uniquement les points de ce tronçon, dans l'ordre : la route ne doit jamais revenir en arrière)
-    const route = k < 0 ? [] : pts.concat(gates.filter((g) => g.d >= d0 && g.d < d1)).sort((a, c) => a.d - c.d).map((g) => T.at(g.d, g.lx, g.y));
+    const nodes = pts.concat(gates.filter((g) => g.d >= d0 && g.d < d1)).sort((a, c) => a.d - c.d);
+    const route = k < 0 ? [] : nodes.map((g) => T.at(g.d, g.lx, g.y));
     for (const t of b.targets) t.updateObb();
-    return { k, builder: b, boxes, targets: b.targets, entities: b.entities, route, tanks };
+    // v034 : éclats et bonus le long de la trajectoire sûre (celle du pilote automatique)
+    const collect = k < 0 || !CC.Collect ? null : CC.Collect.build(game, T, b, nodes, d0, d1, r);
+    return { k, builder: b, boxes, targets: b.targets, entities: b.entities, route, tanks, collect };
   }
 
   /* Un obstacle à la distance d. Retourne la longueur de couloir occupée (0 = rien posé). */
@@ -266,6 +286,7 @@
     game.targets = game.targets.filter((t) => !tset.has(t));
     game.entities = game.entities.filter((e) => !eset.has(e));
     game.world.removeBoxes(c.boxes);
+    if (c.collect) c.collect.dispose();
     c.builder.dispose();
   }
 
@@ -276,6 +297,8 @@
       this.chunks = new Map();
       this.dist = 0; this.stage = 0; this.zone = 0;
       this.fuelGain = 0; this.fuelGainT = 0; this.altT = 0;
+      // v034 : points de bonus (éclats, cibles, frôlements), multiplicateur ×2, série d'éclats
+      this.bonus = 0; this.multT = 0; this.chain = 0; this.chainT = 0; this.stats = { cells: 0, gold: 0, targets: 0, close: 0, boosts: 0 };
       this.envFrom = null; this.envT = 1;
       this.pending = [];                                // chars à créer (un par image)
       this.ensure(-1);
@@ -322,12 +345,17 @@
         g.applyEnvironment(L.env);
       }
       if (this.fuelGainT > 0) this.fuelGainT -= dt;
+      if (this.multT > 0) this.multT = Math.max(0, this.multT - dt);
+      if (this.chainT > 0 && (this.chainT -= dt) <= 0) this.chain = 0;
       // plafond : au-dessus, alarme puis explosion (le couloir est le terrain de jeu)
       if (rk.active && g.state === 'FLIGHT') {
         this.altT = rk.pos.y > cfg.ceiling ? this.altT + dt : 0;
         if (this.altT > cfg.ceilingGrace) { this.altT = 0; g.onRocketCrash('altitude', rk.pos.clone(), null); }
       } else this.altT = 0;
     }
+    get mult() { return this.multT > 0 ? 2 : 1; }
+    get score() { return Math.floor(this.dist) + Math.floor(this.bonus); }
+    addBonus(points) { const v = points * this.mult; this.bonus += v; return v; }
     addFuel(s) {
       const rk = this.game.rocket;
       if (!rk.active || s <= 0) return;

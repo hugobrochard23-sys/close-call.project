@@ -49,7 +49,7 @@
       // v017 : téléphone tenu droit → toute la hauteur de la vue (T = haut, HH = hauteur), 2 colonnes, solde sous le titre.
       // Couché : T = 0 et HH = H, les formules redonnent exactement la disposition d'origine.
       const P = ui.portrait, T = P ? -(ui.offsetY || 0) : 0, HH = P ? (ui.fullH || H) : H;
-      ui.text(ctx, 'ROCKET SHOP', W * 0.5, T + HH * (P ? 0.03 : 0.05), ui.fitPx(['ROCKET SHOP'], W * (ui.isTouch() ? 0.56 : 0.9), H * 0.0085), col.white, { align: 'center', skew: -0.2 });   // v031 : place pour BACK à gauche
+      ui.text(ctx, 'BOUTIQUE', W * 0.5, T + HH * (P ? 0.03 : 0.05), ui.fitPx(['BOUTIQUE'], W * (ui.isTouch() ? 0.56 : 0.9), H * 0.0085), col.white, { align: 'center', skew: -0.2 });   // v031 : place pour BACK à gauche
       const offer = CC.Skins.formatPrice(CC.CONFIG.shop.priceCents) + ' OR 1 MIN OF ADS EACH';
       ui.text(ctx, 'COSMETICS FOR THE MISSILE', W * 0.5, T + HH * (P ? 0.085 : 0.118), small, '#bdbdbd', { align: 'center' });
       if (P) ui.text(ctx, offer, W * 0.5, T + HH * 0.115, ui.fitPx([offer], W * 0.9, small), col.yellow, { align: 'center' });
@@ -68,7 +68,7 @@
         ctx.lineWidth = Math.max(1, H / 540);
         ctx.strokeRect(cx, cy, colW, rowH * 0.88);
         icon(ctx, s, cx + colW * 0.1, cy + rowH * 0.4, H * (P ? 0.034 : 0.04));
-        const right = equipped ? 'EQUIPPED' : owned ? 'OWNED' : CC.Skins.formatPrice(s.price);
+        const right = equipped ? 'EQUIPEE' : owned ? 'A TOI' : CC.Skins.formatPrice(s.price);
         const rightX = cx + colW - W * 0.014, nameX = cx + colW * 0.22;
         const avail = rightX - nameX;
         // nom complet si la place le permet, sinon nom court, sinon tronqué
@@ -85,7 +85,7 @@
       const ph = HH * (P ? 0.115 : 0.105), py = T + HH * (P ? 0.87 : 0.875) - (P ? HH * 0.01 : 0), lx = W * 0.05, rx = W * 0.95;
       ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(W * 0.035, py, W * 0.93, ph);
       const owned = !!game.save.owned[s.id], eq = game.save.equipped === s.id;
-      const state = eq ? 'EQUIPPED' : owned ? (ui.isTouch() ? 'OWNED - TAP TO EQUIP' : 'OWNED - CLICK TO EQUIP') : '';
+      const state = eq ? 'EQUIPEE' : owned ? (ui.isTouch() ? 'A TOI - TOUCHE POUR EQUIPER' : 'A TOI - CLIC POUR EQUIPER') : '';
       // message passager (achat, erreur de lien) à la place du nom : dans le panneau, jamais sur la grille
       if (this.flash) ui.text(ctx, fit(this.flash, small, (rx - lx) * (owned ? 0.55 : 0.95)), lx, py + ph * 0.12, small, col.orange, {});
       else ui.text(ctx, fit(s.name + '  -  ' + s.tierLabel, px, (rx - lx) * (owned ? 0.55 : 0.95)), lx, py + ph * 0.1, px, TIER_COLOR[s.tier], {});
@@ -93,12 +93,12 @@
         ui.text(ctx, state, rx, py + ph * 0.1, small, eq ? col.yellow : col.green, { align: 'right' });
         ui.text(ctx, fit(s.tagline, small, rx - lx), lx, py + ph * 0.45, small, '#d8d8d8', {});
       } else {
-        const bw = (rx - lx - W * 0.03) / 2, by = py + ph * 0.42, bpx = ui.fitPx(['BUY ' + CC.Skins.formatPrice(s.price), 'WATCH 1 MIN AD'], bw * 0.85, px);
-        ui.button(ctx, 'BUY ' + CC.Skins.formatPrice(s.price), lx + bw / 2, by, bpx, () => this.buy(game, s.id), { box: true, color: col.yellow, hitW: bw });
-        ui.button(ctx, 'WATCH 1 MIN AD', rx - bw / 2, by, bpx, () => this.watch(game, s.id), { box: true, color: '#8fd0ff', hitW: bw });
+        const bw = (rx - lx - W * 0.03) / 2, by = py + ph * 0.42, bpx = ui.fitPx(['ACHETER ' + CC.Skins.formatPrice(s.price), '1 MIN DE PUB'], bw * 0.85, px);
+        ui.button(ctx, 'ACHETER ' + CC.Skins.formatPrice(s.price), lx + bw / 2, by, bpx, () => this.buy(game, s.id), { box: true, color: col.yellow, hitW: bw });
+        ui.button(ctx, '1 MIN DE PUB', rx - bw / 2, by, bpx, () => this.watch(game, s.id), { box: true, color: '#8fd0ff', hitW: bw });
       }
-      if (!ui.isTouch()) ui.text(ctx, 'ESC: BACK', W * 0.03, T + HH * (P ? 0.03 : 0.06), small * 0.9, '#8a8a8a', {});   // à gauche du titre
-      else ui.button(ctx, 'BACK', W * 0.11, T + HH * (P ? 0.035 : 0.055), ui.fitPx(['BACK'], W * 0.12, small * 1.4), () => { ui.overlay = null; }, { box: true, hitW: W * 0.17 });
+      if (!ui.isTouch()) ui.text(ctx, 'ECHAP : RETOUR', W * 0.03, T + HH * (P ? 0.03 : 0.06), small * 0.9, '#8a8a8a', {});   // à gauche du titre
+      else ui.button(ctx, 'RETOUR', W * 0.11, T + HH * (P ? 0.035 : 0.055), ui.fitPx(['RETOUR'], W * 0.14, small * 1.4), () => { ui.overlay = null; }, { box: true, hitW: W * 0.17 });
     }
 
     pick(game, id) {
@@ -107,7 +107,7 @@
       this.sel = id; this.flash = null;
       if (game.save.owned[id]) {
         game.equipCosmetic(id);
-        this.flash = id === 'stock' ? 'BACK TO THE STOCK MISSILE' : (s.short || s.name) + ' EQUIPPED';
+        this.flash = id === 'stock' ? 'RETOUR A LA ROQUETTE D ORIGINE' : (s.short || s.name) + ' EQUIPEE';
       }
     }
 
@@ -116,18 +116,18 @@
      * retour) et dans client_reference_id (visible dans le Dashboard et les webhooks). */
     buy(game, id) {
       const link = CC.CONFIG.shop.stripeLink;
-      if (!link) { this.flash = 'PAYMENT LINK NOT SET YET (CONFIG: SHOP.STRIPELINK)'; return; }
+      if (!link) { this.flash = 'LIEN DE PAIEMENT NON REGLE (CONFIG SHOP.STRIPELINK)'; return; }
       game.save.pendingPurchase = id; game.writeSave();
       const url = link + (link.indexOf('?') < 0 ? '?' : '&') + 'client_reference_id=' + encodeURIComponent(id) + '&utm_content=' + encodeURIComponent(id) + '&utm_source=coldimpact';
       game.telemetry.event('purchase', { id });
       if (window.top === window) window.location.href = url;          // page du jeu : même onglet, retour automatique
-      else { const w = window.open(url, '_blank'); if (!w) this.flash = 'OPEN THE GAME IN A BROWSER TO PAY'; }   // jeu intégré dans une autre page
+      else { const w = window.open(url, '_blank'); if (!w) this.flash = 'OUVRE LE JEU DANS UN NAVIGATEUR POUR PAYER'; }   // jeu intégré dans une autre page
     }
 
     // Publicité : une minute entière (annonces de 15 s enchaînées) ; fermer avant la fin ne débloque rien
     watch(game, id) {
       const s = CC.Skins.byId[id];
-      game.ads.rewarded(() => { game.unlockCosmetic(id); this.flash = (s.short || s.name) + ' UNLOCKED AND EQUIPPED'; game.audio.play('target'); }, CC.CONFIG.shop.adSeconds);
+      game.ads.rewarded(() => { game.unlockCosmetic(id); this.flash = (s.short || s.name) + ' DEBLOQUEE ET EQUIPEE'; game.audio.play('target'); }, CC.CONFIG.shop.adSeconds);
       this.flash = null;
     }
   }
@@ -147,7 +147,7 @@
     delete game.save.pendingPurchase;
     game.unlockCosmetic(id);
     game.writeSave();
-    return (s.short || s.name) + ' UNLOCKED - THANK YOU!';
+    return (s.short || s.name) + ' DEBLOQUEE - MERCI !';
   };
 
   CC.Shop = Shop;

@@ -42,9 +42,14 @@
     let finger = null;
     const scale = () => cfg.dragGain / Math.max(1, Math.min(window.innerWidth, window.innerHeight));
     const boostOff = () => { if (T.thrust) { T.thrust = false; if (Hap) Hap.boostStop(); } };
-    const boostOn = () => { T.thrust = true; game.audio.play('toggle'); if (Hap) Hap.boostStart(); };
+    const boostOn = () => { T.thrust = true; if (Hap) Hap.boostStart(); };   // v034 : le son du boost est joué par Game.onBoostStart
     document.addEventListener('touchstart', (e) => {
       wake();
+      // v034 : au lanceur, le lancement part dès que le doigt TOUCHE (pas au relâchement) — sauf sur une icône de l'interface
+      if (game.state === 'MENU' && game.padMode && !game.ui.overlay && !game.pendingHome && e.target !== pause) {
+        const t0 = e.changedTouches[0], p = input.uiCoords(t0.clientX, t0.clientY);
+        if (!game.ui.hitTest(p.x, p.y)) { e.preventDefault(); buzz('touch'); game.beginLaunch(); return; }
+      }
       if (!playing() || e.target === pause) return;   // menus, pause : le toucher devient un clic sur le jeu
       e.preventDefault();
       buzz('touch');                                 // v026 : mini vibration dès que le doigt touche l'écran en partie

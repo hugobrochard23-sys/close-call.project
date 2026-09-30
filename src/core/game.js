@@ -11,6 +11,8 @@
       float s = max(dot(normalize(vDir), normalize(sunDir)), 0.0); c += sunCol * (pow(s, 64.0) * 0.6 + pow(s, sunSize) * 0.9);
       gl_FragColor = vec4(c, 1.0); }`;
 
+  CC.INGAME = ['AIM', 'LAUNCH', 'FLIGHT', 'IMPACT', 'CRASHED', 'RESPAWN', 'REVIVE'];   // v034 : états où l'on « joue »
+
   class Telemetry {
     constructor() { this.frames = []; this.events = []; this.enabled = false; this.t = 0; }
     event(type, data) { if (this.enabled) this.events.push(Object.assign({ t: +this.t.toFixed(4), type }, data || {})); }
@@ -56,6 +58,10 @@
       this.targets = []; this.grapplePoints = []; this.entities = []; this.missiles = [];
       this.initEnvironment();
       this.loadSave();
+      this.progress = new CC.Progress(this);   // v034 : XP, niveaux, missions
+      this.pad = new CC.Pad(this);             // v034 : lanceur (accueil du mode CLASSIQUE)
+      this.shadow = new CC.RocketShadow(this); // v034 : ombre de la roquette
+      this.hudFeed = []; this.boostK = 0; this.padMode = false; this.fadeIn = 0; this.reviveUsed = false; this.progTick = 0; this.cellBump = 0; this.cellHap = 0; this.cellSnd = 0;
       // v023 : volumes enregistrés (SOUND / MUSIC sur OFF) appliqués dès le démarrage, avant même que le son soit créé
       this.audio.setVolumes(CC.CONFIG.audio.master, this.settings.music, this.settings.sfx);
       this.applyCosmetic();
@@ -191,6 +197,7 @@
       this.missiles = []; this.targets = []; this.grapplePoints = []; this.entities = [];
       if (this.tripod) { this.scene.remove(this.tripod); this.tripod = null; }
       this.effects.clear(); this.rocket.reset(); this.trails.clear();
+      this.pad.hide(); this.padMode = false; this.shadow.mesh.visible = false;
       this.world = new CC.World();
     }
 
@@ -283,45 +290,179 @@
     }
 
     /* v033 : mode CLASSIQUE — couloir infini (src/world/endless.js). Chaque partie a sa graine (une nouvelle à chaque
-     * essai, sauf graine imposée par le banc de test) ; une seule vie, score = mètres parcourus. */
-    startEndless(seed) {
+     * essai, sauf graine imposée par le banc de test) ; une seule vie, score = mètres + bonus.
+     * v034 : opts.home → on n'entre pas dans le vol mais sur le LANCEUR (accueil) : le couloir est déjà construit, il suffit de
+     * toucher la roquette pour partir (aucun chargement entre le toucher et le vol). */
+    startEndless(seed, opts) {
+      opts = opts || {};
       if (seed === undefined || seed === null) seed = CC.Gen.randomSeed();
       this.generated = false; this.mission = null;
-      const L = CC.Endless.level(seed);
+      const L = CC.Endless.level(seed, { zones: this.testMode ? null : this.progress.unlockedWorlds() });
       this.loadLevelFrom(L, -1);
       this.endlessRun = new CC.Endless.Run(this, L);
+      this.progress.beginRun(); this.reviveUsed = false; this.hudFeed.length = 0; this.cellHap = 0; this.cellSnd = 0;
+      if (opts.home) { this.enterPad(); return; }
       this.restartLevel(true);
       this.rocket.fuel = CC.CONFIG.endless.fuelStart;
-      const rec = this.save.endless && this.save.endless.best;
-      this.centerMsg = rec ? 'RECORD ' + Math.round(rec) + ' M' : 'VA LE PLUS LOIN POSSIBLE';
+      const rec = this.progress.P.best;
+      this.centerMsg = rec ? 'RECORD ' + U.formatInt(rec) : 'VA LE PLUS LOIN POSSIBLE';
       this.centerMsgT = 2.6;
       if (!this.testMode) { this.input.requestLock(); this.audio.init(); this.audio.resume(); if (this.audio.music) this.audio.music.start(); }
     }
 
-    // v033 : partie CLASSIQUE terminée (crash) → distance, record, cause
+    // v034 : accueil = le lanceur. La roquette est posée sur son rail, la caméra tourne doucement autour, un toucher lance.
+    enterPad() {
+      this.style.reset(); this.runTime = 0; this.targetsDone = 0; this.results = null; this.firstFire = true;
+      this.state = 'MENU'; this.centerMsg = null; this.centerMsgT = 0; this.paused = false; this.launchFx = null; this.padMode = true;
+      const la = this.level.launcher;
+      this.launcherEye = new V().fromArray(la.pos);
+      this.shoulder.visible = false;
+      this.pad.enter(this.level);
+      this.input.setAim(0, this.pad.pitch); this.rig.setAim(0, this.pad.pitch);
+      this.rocket.pos.copy(this.pad.origin);
+      this.warn = null; this.boostK = 0; this.flash = 0;
+    }
+
+    // v034 : retour rapide à l'accueil (fondu au noir le temps de bâtir le nouveau couloir, ~0,2 s), avec relance automatique éventuelle
+    goHome(opts) {
+      this.pendingHome = { frames: 0, opts: opts || {} };
+      this.paused = false; this.ui.overlay = null; this.input.exitLock();
+    }
+    runPendingHome() {
+      const ph = this.pendingHome;
+      if (!ph || ++ph.frames < 3) return;
+      this.pendingHome = null;
+      this.startEndless(null, { home: true });
+      this.fadeIn = 0.45;
+      if (ph.opts.autoLaunch) this.pad.queued = true;
+    }
+
+    // v034 : le toucher sur le lanceur → charge → allumage (Game.update, état LAUNCH)
+    beginLaunch() {
+      if (this.state !== 'MENU' || !this.padMode || this.ui.overlay || this.pendingHome) return false;
+      if (this.pad.mode === 'reload') { this.pad.queued = true; return true; }   // rechargement en cours : le toucher est mémorisé
+      if (!this.pad.arm()) return false;
+      this.audio.init(); this.audio.resume(); if (this.audio.music) this.audio.music.start();
+      this.state = 'LAUNCH'; this.launchT = 0;
+      this.progress.P.launches = (this.progress.P.launches || 0) + 1;
+      this.telemetry.event('arm', {});
+      return true;
+    }
+
+    // départ depuis le lanceur : poussée gratuite plus longue, moteur déjà chaud, travelling de la caméra
+    firePad() {
+      const pad = this.pad, PC = CC.CONFIG.pad, rk = this.rocket;
+      this.input.setAim(0, pad.pitch); this.rig.setAim(0, pad.pitch);
+      rk.launch(pad.origin.clone(), pad.dir.clone(), { speed: PC.launchSpeed, ignited: true, freeBoost: PC.freeBoost });
+      rk.fuel = Math.min(rk.fuel, CC.CONFIG.endless.fuelStart);
+      pad.ignite(); this.audio.play('padIgnite');
+      this.rig.startHandoff(true); this.rig.startFlight();
+      this.padMode = false;
+      this.state = 'FLIGHT'; this.flightTime = 0; this.stallT = 0; this.boostK = 0;
+      if (CC.Touch && CC.Touch.active) { this.settings.tutorialFlights = (this.settings.tutorialFlights || 0) + 1; const T = this.input.touch; if (T) T.reboostUntil = performance.now() + 1800; }   // le doigt posé juste après le départ = boost tout de suite
+      this.telemetry.event('fire', { runTime: this.runTime, pad: true });
+    }
+
+    canRevive() {
+      const run = this.endlessRun, RC = CC.CONFIG.revive;
+      return !!run && !this.reviveUsed && !this.testMode && this.ads && this.ads.enabled() && run.dist >= RC.minDist && this.crashKind !== 'outOfBounds' && this.crashKind !== 'stalled';
+    }
+    beginRevive() {
+      this.state = 'REVIVE'; this.reviveT = CC.CONFIG.revive.window; this.ui.overlay = 'revive';
+      this.telemetry.event('reviveOffer', { dist: Math.round(this.endlessRun.dist) });
+    }
+    // publicité récompensée regardée : la roquette repart 24 m avant le crash, au milieu du couloir, invulnérable quelques secondes
+    revive() {
+      const run = this.endlessRun, rk = this.rocket, RC = CC.CONFIG.revive, T = run.T, cfg = CC.CONFIG.endless;
+      this.reviveUsed = true; this.ui.overlay = null; this.paused = false;
+      const d = Math.max(30, run.dist - RC.back), sl = T.slope(d);
+      const pos = new V().fromArray(T.at(d, 0, cfg.cruise)), dir = new V(sl, 0.02, -1).normalize();
+      for (const m of this.missiles) this.scene.remove(m.object);
+      this.missiles = [];
+      const yaw = Math.atan2(-dir.x, -dir.z), pitch = Math.asin(dir.y);
+      this.input.setAim(yaw, pitch); this.rig.setAim(yaw, pitch);
+      rk.launch(pos, dir, { speed: 36, ignited: true, freeBoost: 0.8 });
+      rk.fuel = rk.fuelMax * RC.fuelFrac; rk.shieldT = RC.shield;
+      this.rig.padLook.copy(pos); this.rig.startHandoff(false); this.rig.startFlight();
+      this.state = 'FLIGHT'; this.flightTime = 0.5; this.stallT = 0; this.warn = null; run.altT = 0;
+      this.audio.play('shield'); this.feed('CONTINUE !', CC.CONFIG.hud.colors.blue);
+      this.telemetry.event('revive', {});
+    }
+
+    // v033 : partie CLASSIQUE terminée (crash) → v034 : score, XP, niveau, missions (Progress.endRun), puis écran de récompenses
     finishEndless() {
       const run = this.endlessRun, S = this.save, dist = Math.round(run.dist);
+      this.ui.overlay = null;
+      const res = this.progress.endRun({ dist: run.dist, bonus: run.bonus, time: this.runTime });
       S.endless = S.endless || { best: 0, runs: 0 };
-      const prev = S.endless.best || 0;
       S.endless.runs = (S.endless.runs || 0) + 1;
-      if (dist > prev) S.endless.best = dist;
-      const causes = { wall: 'MUR', hazard: 'LASER', cable: 'CABLE', missile: 'MISSILE', altitude: 'TROP HAUT', outOfBounds: 'CHUTE', stalled: 'PANNE SECHE' };
-      this.results = { endless: true, title: 'DISTANCE ' + dist + ' M', dist, best: S.endless.best, newRecord: dist > prev && prev > 0, firstRun: prev === 0,
-        style: this.style.total, time: this.runTime, stage: run.stageLabel(), cause: causes[this.crashKind] || 'CRASH' };
+      if (dist > (S.endless.best || 0)) S.endless.best = dist;
+      const causes = { wall: 'MUR', hazard: 'LASER', cable: 'CABLE', missile: 'MISSILE', drone: 'DRONE', altitude: 'TROP HAUT', outOfBounds: 'CHUTE', stalled: 'PANNE SECHE' };
+      this.results = Object.assign(res, { endless: true, time: this.runTime, stage: run.stageLabel(), cause: causes[this.crashKind] || 'CRASH', style: this.style.total, runStats: run.stats, xpDoubled: false, t: 0 });
       this.state = 'RESULTS'; this.centerMsg = null;
-      if (this.ads) this.ads.onLevelEnd();
+      if (this.ads) this.ads.onRunEnd(this.results);
       this.writeSave();
       this.input.exitLock();
-      this.telemetry.event('results', { dist, style: this.style.total });
+      this.telemetry.event('results', { dist, score: res.score, xp: res.gained });
     }
 
     // v033 : chaque gain de STYLE recharge l'essence en mode CLASSIQUE (la destruction d'une cible a son propre bonus)
+    // v034 : et compte dans le score (points de bonus) ; le journal du HUD l'annonce en français
     onStyleAward(label, points) {
-      if (this.endlessRun && label !== 'BOMB SMASH!') this.endlessRun.addFuel(points * CC.CONFIG.endless.fuelPerStyle);
+      const run = this.endlessRun; if (!run) return;
+      if (label === 'BOMB SMASH!') return;
+      run.addFuel(points * CC.CONFIG.endless.fuelPerStyle);
+      const v = Math.round(run.addBonus(points));
+      const col = CC.CONFIG.hud.colors, nm = /PROXIMITY/.test(label) ? 'FROLE' : /SKIM/.test(label) ? 'RASE-MOTTES' : /COLD/.test(label) ? 'COLD IMPACT' : 'VIRAGE';
+      this.feed(nm + '  +' + v, /COLD/.test(label) ? col.yellow : col.white);
+      run.stats.close++; this.progress.event('close');
+    }
+
+    // v034 : journal du HUD (3 lignes courtes sous le score)
+    feed(text, color) { this.hudFeed.unshift({ text, color: color || '#ffffff', t: 0 }); if (this.hudFeed.length > 4) this.hudFeed.length = 4; }
+
+    // v034 : éclat / étoile / multiplicateur ramassé (Collect.update)
+    onCollect(kind, pos) {
+      const run = this.endlessRun; if (!run) return;
+      const S = CC.CONFIG.score, fx = this.effects, col = CC.CONFIG.hud.colors, now = performance.now(), touch = CC.Touch && CC.Touch.active && CC.Haptics;
+      if (kind === 'cell') {
+        run.stats.cells++; run.addBonus(S.cell);
+        run.chain = Math.min(40, run.chain + 1); run.chainT = 1.1;
+        if (now - this.cellSnd > 50) { this.audio.play('cell', null, Math.floor((run.chain - 1) / 2) % 8); this.cellSnd = now; }
+        if (touch && now - this.cellHap > 120) { CC.Haptics.tick('collect'); this.cellHap = now; }
+        for (let i = 0; i < 3; i++) fx.sparks.emit({ pos, vel: new V(U.fx.range(-1, 1), U.fx.range(-0.3, 1), U.fx.range(-1, 1)).multiplyScalar(U.fx.range(2, 5)), life: U.fx.range(0.2, 0.4), s0: 0.05, s1: 0.06, s2: 0.01, cols: fx.pal.cyan, drag: 2, a: 1, fout: 0.4 });
+        this.cellBump = 1; this.progress.event('cells');
+      } else if (kind === 'gold') {
+        run.stats.gold++; const v = Math.round(run.addBonus(S.gold)); run.addFuel(CC.CONFIG.cells.goldFuel);
+        this.audio.play('gold'); if (touch) CC.Haptics.tick('gold');
+        fx.ring(pos, this.rocket.fwd, 0.3, 3.4, 0.35, '#ffd23a', 0.6);
+        for (let i = 0; i < 26; i++) fx.sparks.emit({ pos, vel: new V(U.fx.range(-1, 1), U.fx.range(-1, 1), U.fx.range(-1, 1)).normalize().multiplyScalar(U.fx.range(3, 9)), life: U.fx.range(0.3, 0.7), s0: 0.06, s1: 0.07, s2: 0.01, cols: fx.pal.ember, drag: 1.6, a: 1, fout: 0.4 });
+        this.feed('ETOILE  +' + v, col.yellow); this.cellBump = 1.6; this.progress.event('gold');
+      } else if (kind === 'mult') {
+        run.multT = S.multTime; this.audio.play('mult'); if (touch) CC.Haptics.tick('gold');
+        fx.ring(pos, this.rocket.fwd, 0.3, 3.4, 0.35, '#ff5be0', 0.6);
+        this.feed('SCORE X2  ' + S.multTime + ' S', '#ff8be8'); this.cellBump = 1.4;
+      }
+    }
+
+    // v034 : départ du boost (doigt maintenu) — coup de caméra, onde de choc à la tuyère, son, secousse
+    onBoostStart() {
+      const rk = this.rocket, fx = this.effects, B = CC.CONFIG.boost;
+      this.rig.boostKick(); this.rig.shake = Math.max(this.rig.shake, B.kickShake);
+      this.audio.play('boostOn');
+      const noz = rk.nozzle(new V());
+      fx.ring(noz, rk.fwd, 0.25, B.ringSize, 0.28, '#ffe8a8', 0.55);
+      for (let i = 0; i < 16; i++) fx.exhaust(noz, rk.fwd, rk.vel, 1.7 + U.fx() * 0.8, U.fx());
+      for (let i = 0; i < 22; i++) fx.sparks.emit({ pos: noz, vel: new V(U.fx.range(-1, 1), U.fx.range(-1, 1), U.fx.range(-1, 1)).multiplyScalar(U.fx.range(2, 6)).addScaledVector(rk.fwd, -U.fx.range(8, 20)).addScaledVector(rk.vel, 0.6), life: U.fx.range(0.2, 0.5), s0: 0.04, s1: 0.05, s2: 0.01, cols: fx.pal.ember, drag: 1.6, grav: 2, a: 1, fout: 0.4 });
+      fx.flash(noz, '#ffd090', 3.2, 16, 0.2, '#ff7020');
+      if (this.endlessRun) { this.endlessRun.stats.boosts++; this.progress.event('boosts'); }
     }
 
     restartLevel(fromEndless) {
-      if (this.endlessRun && fromEndless !== true) { this.startEndless(this.testMode ? this.level.seed : null); return; }   // v033 : nouveau couloir
+      if (this.endlessRun && fromEndless !== true) {   // v033 : nouveau couloir ; v034 : au lanceur, avec relance automatique (un seul toucher pour rejouer)
+        if (this.testMode) this.startEndless(this.level.seed); else this.goHome({ autoLaunch: true });
+        return;
+      }
       for (const t of this.targets) { t.reset(); t.updateObb(); }
       for (const e of this.entities) if (e.reset && !(e instanceof CC.Target)) e.reset();
       for (const m of this.missiles) this.scene.remove(m.object);
@@ -335,7 +476,7 @@
 
     enterAim(resetAim) {
       const la = this.level.launcher;
-      this.state = 'AIM'; this.centerMsg = null; this.centerMsgT = 0; this.paused = false;
+      this.state = 'AIM'; this.centerMsg = null; this.centerMsgT = 0; this.paused = false; this.padMode = false;
       if (this.launchFx) { this.launchFx.bore.ring.visible = false; this.launchFx = null; }
       this.rocket.reset();
       { this.input.setAim(U.deg(la.yaw), U.deg(la.pitch || 0)); if (this.autopilot) this.autopilot.init(U.deg(la.yaw), U.deg(la.pitch || 0)); }
@@ -364,6 +505,7 @@
     }
 
     fire() {
+      if (this.padMode) { this.firePad(); return; }   // v034 : départ du lanceur (mode CLASSIQUE)
       const dir = this.rig.aimDir.clone();
       const muzzle = this.launcherEye.clone().addScaledVector(dir, this.level.launcher.type === 'tripod' ? 3.2 : 1.3).addScaledVector(this.rig.up, -0.25);
       this.rocket.launch(muzzle, dir);
@@ -385,14 +527,19 @@
     }
 
     onTargetHit(t, rocket) {
+      if (t.hazard) { this.onRocketCrash('drone', rocket.pos.clone(), new V(0, 1, 0)); return; }   // v034 : un drone ne se détruit pas, il détruit
       const c = t.obb.c.clone();
       t.kill(this);
       if (this.endlessRun) {   // v033 : la roquette traverse la cible et continue ; essence rechargée
         this.effects.explosion(c, null, true, 'orange');
         this.rig.shake = 0.7;
         this.audio.play('boom', c); this.audio.play('target');
-        this.style.bombSmash(rocket.vel.length());
         this.endlessRun.addFuel(CC.CONFIG.endless.fuelTarget);
+        if (!t.guard) {   // v034 : cible détruite = 100 points (un char de garde ne rapporte rien : il tirait sur nous)
+          const v = Math.round(this.endlessRun.addBonus(CC.CONFIG.score.target));
+          this.endlessRun.stats.targets++; this.progress.event('targets');
+          this.feed('CIBLE  +' + v, CC.CONFIG.hud.colors.green); this.cellBump = 1.3;
+        }
         if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('warn');
         this.telemetry.event('targetHit', { target: t.type, speed: +rocket.vel.length().toFixed(2), runTime: +this.runTime.toFixed(3) });
         return;
@@ -419,6 +566,7 @@
 
     onRocketCrash(kind, pos, normal) {
       if (!this.rocket.active) return;
+      if (this.rocket.shieldT > 0 && kind !== 'outOfBounds' && kind !== 'stalled') return;   // v034 : bouclier du revive
       const rk = this.rocket;
       this.lastSpeed = 0; this.crashKind = kind;
       rk.active = false; rk.mesh.visible = false; rk.light.intensity = 0; rk.rope.visible = false; rk.grapple.active = false;
@@ -516,27 +664,27 @@
     }
     trophyCount(diff) { const s = this.challengeStars(diff); return CC.CONFIG.challenge.trophies.filter((t) => s >= t).length; }
 
+    // v034 : « menu » = le lanceur du mode CLASSIQUE (couloir déjà construit, roquette sur son rail)
     toMenu() {
       this.paused = false; this.ui.overlay = null;
       this.input.exitLock();
-      if (this.levelIndex === undefined || !this.level) this.loadLevel(0);
-      this.state = 'MENU'; this.centerMsg = null; this.rocket.reset(); this.shoulder.visible = false;
-      const m = this.level.menuView || { center: this.level.launcher.pos, radius: 40, height: 18 };
-      this.rig.startMenu(new V().fromArray(m.center), m.radius, m.height);
+      this.startEndless(null, { home: true });
     }
 
     pause() { if (['AIM', 'FLIGHT', 'IMPACT', 'CRASHED', 'RESPAWN'].includes(this.state)) { this.paused = true; this.input.exitLock(); } }
     resume() { this.paused = false; this.ui.overlay = null; if (!this.testMode) this.input.requestLock(); }
 
-    onPointerLost() { if (!this.testMode && !this.ui.overlay && ['AIM', 'FLIGHT', 'IMPACT', 'CRASHED', 'RESPAWN'].includes(this.state)) this.paused = true; }
+    onPointerLost() { if (!this.testMode && !this.ui.overlay && !this.padMode && ['AIM', 'FLIGHT', 'IMPACT', 'CRASHED', 'RESPAWN'].includes(this.state)) this.paused = true; }
 
     onKey(k) {
       if (typeof document !== 'undefined' && document.activeElement && document.activeElement.tagName === 'INPUT') return;   // saisie d'une graine
       this.audio.init(); this.audio.resume();
       const inGame = ['AIM', 'FLIGHT', 'IMPACT', 'CRASHED', 'RESPAWN'].includes(this.state);
+      if ((k === 'Space' || k === 'Enter') && this.state === 'MENU' && this.padMode && !this.ui.overlay) { this.beginLaunch(); return; }   // v034 : au clavier, Espace lance
       if (k === 'Escape') {
+        if (this.state === 'REVIVE' || this.state === 'LAUNCH') return;
         if (this.ui.overlay) { this.ui.overlay = null; return; }
-        if (this.state === 'RESULTS') { this.toMenu(); return; }
+        if (this.state === 'RESULTS') { if (this.results && this.results.endless) this.goHome({}); else this.toMenu(); return; }
         if (inGame) { if (this.paused) this.toMenu(); else this.pause(); }
       } else if (k === 'Tab') {
         this.ui.overlay = this.ui.overlay === 'settings' ? null : 'settings';
@@ -559,6 +707,17 @@
       else { this.input.setAim(inp.yaw, inp.pitch); this.rig.setAim(inp.yaw, inp.pitch); }   // pilote automatique : lacet / tangage
       const rk = this.rocket;
       switch (this.state) {
+        case 'MENU':   // v034 : le lanceur vit (feux, vapeur, caméra qui dérive) ; la visée est figée
+          if (this.padMode) { this.input.setAim(0, this.pad.pitch); this.rig.setAim(0, this.pad.pitch); this.pad.update(dt); }
+          break;
+        case 'LAUNCH':   // v034 : charge (0,9 s) puis allumage
+          this.input.setAim(0, this.pad.pitch); this.rig.setAim(0, this.pad.pitch);
+          this.launchT += dt; this.pad.update(dt);
+          if (this.launchT >= CC.CONFIG.pad.chargeTime) this.fire();
+          break;
+        case 'REVIVE':   // v034 : l'offre de continuer (publicité récompensée) s'éteint toute seule
+          if (this.ui.overlay === 'revive' && (this.reviveT -= dt) <= 0) { this.ui.overlay = null; this.finishEndless(); }
+          break;
         case 'AIM':
           this.aimTime += dt;
           if (inp.fire && this.aimTime > 0.15) this.fire();
@@ -566,7 +725,10 @@
         case 'FLIGHT': {
           this.flightTime += dt;
           if (this.flightTime > 0.28) this.shoulder.visible = false;   // v024 : 0,2 → 0,28 s, le temps de voir l'animation du tube
-          if (inp.thrust !== rk.throttle) { rk.throttle = inp.thrust; this.telemetry.event('engine', { on: rk.throttle }); }
+          if (inp.thrust !== rk.throttle) {
+            rk.throttle = inp.thrust; this.telemetry.event('engine', { on: rk.throttle });
+            if (rk.throttle && !rk.freeBoost && rk.fuel > 0) this.onBoostStart();   // v034 : le boost se ressent (caméra, onde de choc, son)
+          }
           if (inp.grappleEdge) rk.tryGrapple(this.rig.aimDir, this.camera.position);
           const fdt = CC.CONFIG.physics.fixedDt;
           this.acc += dt;
@@ -578,6 +740,10 @@
           }
           if (rk.active) {
             rk.frame(dt, inp);
+            if (this.endlessRun) {   // v034 : éclats, progression des missions
+              CC.Collect.update(this, this.endlessRun, dt);
+              if ((this.progTick += dt) > 0.25) { this.progTick = 0; this.progress.tick(this.endlessRun.dist, this.endlessRun.score, this.runTime); }
+            }
             this.updateWarnings(dt, rk);
             this.lastSpeed = rk.speed;
             const killY = this.level.killY !== undefined ? this.level.killY : -60;
@@ -598,7 +764,10 @@
           break;
         case 'CRASHED':
           this.impactT += dt;
-          if (this.endlessRun) { if (this.impactT > 1.3) this.finishEndless(); break; }   // v033 : une seule vie
+          if (this.endlessRun) {   // v033 : une seule vie ; v034 : une chance de continuer (publicité récompensée) avant l'écran de fin
+            if (this.impactT > 1.1) { if (this.canRevive()) this.beginRevive(); else this.finishEndless(); }
+            break;
+          }
           if (this.level.mode === 'targets') this.runTime += dt;
           if (this.impactT > 0.45) { this.state = 'RESPAWN'; this.centerMsg = this.respawnMsg(); }
           break;
@@ -609,6 +778,7 @@
           break;
       }
       this.updateLaunchFx(dt);
+      if (this.state === 'RESULTS' && this.results && this.results.endless) this.results.t += dt;   // v034 : chronologie de l'écran de récompenses
       if (this.endlessRun && this.state !== 'MENU' && this.state !== 'RESULTS') this.endlessRun.update(dt);   // v033 : tronçons, paliers, zones
       for (const e of this.entities) if (e.update) e.update(dt, this);
       for (const m of this.missiles) m.update(dt, this);
@@ -621,6 +791,14 @@
       this.audio.updateRocket(rk, dt);
       this.audio.updateWorld(this, dt);
       this.flash = Math.max(0, this.flash - dt * 7);
+      // v034 : intensité du boost pour le HUD (traits de vitesse) et l'aberration chromatique ; journal du HUD ; sursaut du compteur
+      const boostOn = this.state === 'FLIGHT' && rk.active && rk.thrusting && !rk.freeBoost ? 1 : 0;
+      this.boostK += (boostOn - this.boostK) * U.damp(boostOn ? 9 : 4, dt);
+      for (const f of this.hudFeed) f.t += dt;
+      while (this.hudFeed.length && this.hudFeed[this.hudFeed.length - 1].t > 1.9) this.hudFeed.pop();
+      this.cellBump = Math.max(0, this.cellBump - dt * 5);
+      this.progress.update(dt);
+      this.shadow.update(dt);
       this.telemetry.t += dt;
     }
 
@@ -648,6 +826,8 @@
       this.sky.position.copy(this.camera.position);
       if (this.settings.postfx && this.postParams) {
         this.postParams.flash = this.flash * 0.85; this.postParams.flashColor = this.flashColor || '#ffffff';
+        if (this.postChroma === undefined || this.postParamsRef !== this.postParams) { this.postParamsRef = this.postParams; this.postChroma = this.postParams.chromatic; }
+        this.postParams.chromatic = this.postChroma + this.boostK * CC.CONFIG.boost.chromatic;   // v034 : le boost écarte les couleurs sur les bords
         this.postfx.render(this.scene, this.camera, this.postParams, time);
       } else {
         this.renderer.setRenderTarget(null);
@@ -659,6 +839,8 @@
       if (this.ads) this.ads.update(dt);
       if (this.noticeT > 0 && (this.noticeT -= dt) <= 0) this.notice = null;
       if (this.pendingMission) this.runPendingMission();
+      if (this.pendingHome) this.runPendingHome();
+      if (this.fadeIn > 0) this.fadeIn = Math.max(0, this.fadeIn - dt);
       if (!this.paused && this.state !== 'BOOT') this.update(dt);
       else { this.input.poll(0); this.rig.update(0); }
       this.render(performance.now() / 1000);
@@ -691,8 +873,9 @@
       const loop = (now) => {
         requestAnimationFrame(loop);
         // v030 : cadence plafonnée — 60 images/s en jeu sur écran tactile (écrans 120 Hz), 20 dans les menus et la pause
-        const idle = this.paused || this.state === 'MENU' || this.state === 'RESULTS' || this.hidden;
-        const cap = this.hidden ? 4 : idle ? Q.pausedFps : (CC.Touch && CC.Touch.active ? Q.maxFpsTouch : 0);
+        // v034 : le lanceur et l'écran de fin sont des scènes vivantes (45 images/s) ; pause et onglet masqué restent économes
+        const home = !this.paused && (this.state === 'MENU' || this.state === 'RESULTS' || this.state === 'REVIVE');
+        const cap = this.hidden ? 4 : this.paused ? Q.pausedFps : home ? Q.homeFps : (CC.Touch && CC.Touch.active ? Q.maxFpsTouch : 0);
         if (cap && now - last < 1000 / cap - 2) return;
         const real = (now - last) / 1000, dt = Math.min(0.05, real); last = now;
         fpsAcc += dt; fpsN++; if (fpsAcc > 0.5) { this.fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; }
