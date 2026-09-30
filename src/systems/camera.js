@@ -171,7 +171,7 @@
       if (Math.abs(cam.fov - fov) > 1e-3) { cam.fov = fov; cam.updateProjectionMatrix(); }
       if (this.shake > 0) {
         this.shake = Math.max(0, this.shake - dt * 2.5);
-        cam.position.x += (U.rng() - 0.5) * this.shake * 0.4; cam.position.y += (U.rng() - 0.5) * this.shake * 0.4;
+        cam.position.x += (U.fx() - 0.5) * this.shake * 0.4; cam.position.y += (U.fx() - 0.5) * this.shake * 0.4;   // v034 : U.fx (visuel) et non U.rng : une secousse ne doit jamais changer le hasard du gameplay (tirs ennemis)
       }
       cam.updateMatrixWorld();
     }

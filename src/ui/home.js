@@ -153,10 +153,10 @@
     const items = [['target', 'MISSIONS', ORANGE, () => { ui.overlay = 'quests'; }], ['trophy', 'PROGRES', GOLD, () => { ui.overlay = 'progress'; }],
       ['star', 'DEFIS', '#8fd0ff', () => { ui.overlay = 'defi'; }], ['rocket', 'BOUTIQUE', GREEN, () => { ui.overlay = 'shop'; }]];
     const r = u * (P ? 0.085 : 0.105);
-    const slot = P ? W * 0.235 : r * 3.3, lpx = Math.min.apply(null, items.map((it) => ui.fitPx([it[1]], Math.max(r * 2.2, slot * 0.96), r * 0.075)));   // même taille pour les quatre libellés
+    const slot = P ? W * 0.235 : r * 3.3, iconPx = Math.min.apply(null, items.map((it) => ui.fitPx([it[1]], Math.max(r * 2.2, slot * 0.96), r * 0.075)));   // même taille pour les quatre libellés
     items.forEach((it, i) => {
-      if (P) roundBtn(ui, ctx, W * (0.14 + i * 0.24), Y(0.925) - r * 0.2, r, it[0], it[1], it[2], it[3], false, W * 0.235, lpx);
-      else roundBtn(ui, ctx, W - margin - r * 1.5 - (i % 2) * (r * 3.4), Y(0.3 + Math.floor(i / 2) * 0.33), r, it[0], it[1], it[2], it[3], false, r * 3.3, lpx);
+      if (P) roundBtn(ui, ctx, W * (0.14 + i * 0.24), Y(0.925) - r * 0.2, r, it[0], it[1], it[2], it[3], false, W * 0.235, iconPx);
+      else roundBtn(ui, ctx, W - margin - r * 1.5 - (i % 2) * (r * 3.4), Y(0.3 + Math.floor(i / 2) * 0.33), r, it[0], it[1], it[2], it[3], false, r * 3.3, iconPx);
     });
     if (!touch) text(ui, ctx, 'ESPACE OU CLIC : LANCER    F1 : TOUCHES', W / 2, Y(0.975), ui.fitPx(['ESPACE OU CLIC : LANCER    F1 : TOUCHES'], W * 0.8, u * 0.0032), '#8a96a8', { align: 'center' });
     text(ui, ctx, CC.CONFIG.version.toUpperCase(), W - margin, Y(0.985), u * 0.0022, '#5d6878', { align: 'right' });

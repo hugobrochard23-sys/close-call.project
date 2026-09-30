@@ -99,7 +99,7 @@
       F.draw(ctx, sc, W / 2, sy, spx, broke ? C.colors.yellow : '#ffffff', { align: 'center', outline: '#101010' });
       ctx.restore();
       // ---- jauge d'essence (10 segments de 2 s) juste sous le score
-      const bw = Math.min(W * 0.58, u * 0.62), bh = Math.max(9, H * 0.017), bx = W / 2 - bw / 2 + bh * 0.9, by = sy + spx * 8.6;
+      const bw = Math.min(W * 0.5, u * 0.55), bh = Math.max(9, H * 0.017), bx = W / 2 - bw / 2 + bh * 0.9, by = sy + spx * 8.6;
       this.drawFuelBar(game, rk, bx - bh * 0.9, by, bw, bh);
       // ---- record (petit) ou « NOUVEAU RECORD »
       const ry = by + bh + H * 0.011, rpx = Math.min(W * 0.0042, H * 0.0026);

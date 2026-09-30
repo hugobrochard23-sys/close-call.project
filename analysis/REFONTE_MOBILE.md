@@ -129,7 +129,7 @@ fin froid, menu pause anglais (remplacé par un menu français à gros boutons, 
 | REJOUER → interstitielle (règles) → lanceur | interstitielle affichée seulement si toutes les règles sont réunies, puis lanceur prêt |
 | 5 cycles lancement / crash / REJOUER | géométries stables (≈ 155 en vol, ≈ 98 à l'accueil), boîtes de collision stables, pas de fuite visible |
 | Coût de rendu | 90 à 154 appels de dessin, 36 000 à 64 000 triangles |
-| Régression de physique | mêmes distances qu'en v033 pour les mêmes graines (pilote automatique, palier FACILE) |
+| Modes existants (pilote automatique) | CITY 14,90 s, CANYON 13,0 s, missions FACILE et DIFFICILE : toutes terminées ; navigation lanceur ↔ DÉFI ↔ niveaux ↔ lanceur vérifiée. Les secousses de caméra et le décalage des annonces de STYLE tirent désormais `U.fx` (visuel) et non `U.rng` (gameplay) : un effet visuel ne change plus le hasard des tirs ennemis — les temps de certains niveaux au pilote automatique bougent donc de quelques centièmes par rapport à v033 |
 | Tous les sons | 22 sons joués sans exception, contexte audio actif |
 
 ## 6. Limites connues / à faire
