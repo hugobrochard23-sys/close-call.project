@@ -100,6 +100,13 @@
       ctx.beginPath(); ctx.moveTo(cx - r * 0.2, cy + r * 0.3); ctx.lineTo(cx - r * 0.75, cy + r * 0.85); ctx.lineTo(cx - r * 0.75, cy + r * 0.3); ctx.closePath(); ctx.fill();
       ctx.fillStyle = INK; ctx.fillRect(cx - r * 0.05, cy - r * 0.1, r * 0.22, r * 0.2);
     },
+    nut(ctx, cx, cy, r, col) {   // écrou hexagonal doré (la monnaie : les MATERIAUX)
+      const hex = (rr) => { ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } ctx.closePath(); };
+      hex(r); ctx.fillStyle = '#7a4a00'; ctx.fill();
+      const g = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r); g.addColorStop(0, '#fff3a0'); g.addColorStop(0.5, '#ffc820'); g.addColorStop(1, '#c87800');
+      hex(r * 0.88); ctx.fillStyle = g; ctx.fill(); hex(r * 0.88); ctx.strokeStyle = '#fff8c8'; ctx.lineWidth = Math.max(1, r * 0.08); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.36, 0, 6.283); ctx.fillStyle = '#5a3400'; ctx.fill();
+    },
     gem(ctx, cx, cy, r, col) {
       ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r * 0.8, cy - r * 0.15); ctx.lineTo(cx, cy + r); ctx.lineTo(cx - r * 0.8, cy - r * 0.15); ctx.closePath(); ctx.fill();
       ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx - r * 0.8, cy - r * 0.15); ctx.lineTo(cx - r * 0.05, cy - r * 0.05); ctx.closePath(); ctx.fill();
@@ -114,6 +121,64 @@
     home(ctx, cx, cy, r, col) { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r, cy); ctx.lineTo(cx + r * 0.65, cy); ctx.lineTo(cx + r * 0.65, cy + r * 0.85); ctx.lineTo(cx - r * 0.65, cy + r * 0.85); ctx.lineTo(cx - r * 0.65, cy); ctx.lineTo(cx - r, cy); ctx.closePath(); ctx.fill(); },
   };
   Home.icon = ICON;
+
+  // ---------- icônes colorées de la barre d'onglets (dégradés, reflets) ----------
+  const grad = (ctx, y0, y1, c0, c1) => { const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, c0); g.addColorStop(1, c1); return g; };
+  const TABICON = {
+    mission(ctx, cx, cy, r) {   // bloc-notes avec pince orange et coche verte
+      rr(ctx, cx - r * 0.7, cy - r * 0.85, r * 1.4, r * 1.75, r * 0.18); ctx.fillStyle = grad(ctx, cy - r, cy + r, '#ffffff', '#c8d2e0'); ctx.fill(); ctx.strokeStyle = '#3a4a64'; ctx.lineWidth = r * 0.09; ctx.stroke();
+      rr(ctx, cx - r * 0.35, cy - r * 1.05, r * 0.7, r * 0.36, r * 0.12); ctx.fillStyle = grad(ctx, cy - r, cy - r * 0.6, '#ffb24a', '#e06a00'); ctx.fill(); ctx.stroke();
+      ICON.check(ctx, cx, cy + r * 0.12, r * 0.42, '#20b040');
+      ctx.fillStyle = '#9fb0c8'; ctx.fillRect(cx - r * 0.45, cy + r * 0.6, r * 0.9, r * 0.1);
+    },
+    trophy(ctx, cx, cy, r) {
+      ctx.strokeStyle = '#b87800'; ctx.lineWidth = r * 0.16; for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(cx + s * r * 0.62, cy - r * 0.3, r * 0.3, s > 0 ? -1.2 : Math.PI - 1.9 + 0.7, s > 0 ? 1.9 : Math.PI + 1.2 - 0.7, s < 0); ctx.stroke(); }
+      ctx.beginPath(); ctx.moveTo(cx - r * 0.62, cy - r * 0.75); ctx.lineTo(cx + r * 0.62, cy - r * 0.75); ctx.lineTo(cx + r * 0.42, cy + r * 0.15); ctx.quadraticCurveTo(cx, cy + r * 0.45, cx - r * 0.42, cy + r * 0.15); ctx.closePath();
+      ctx.fillStyle = grad(ctx, cy - r, cy + r * 0.4, '#fff3a0', '#e89a00'); ctx.fill(); ctx.strokeStyle = '#8a5200'; ctx.lineWidth = r * 0.08; ctx.stroke();
+      ctx.fillStyle = '#c87800'; ctx.fillRect(cx - r * 0.1, cy + r * 0.3, r * 0.2, r * 0.3); rr(ctx, cx - r * 0.45, cy + r * 0.58, r * 0.9, r * 0.3, r * 0.08); ctx.fillStyle = grad(ctx, cy + r * 0.5, cy + r * 0.9, '#ffd23a', '#b87800'); ctx.fill(); ctx.stroke();
+    },
+    home(ctx, cx, cy, r) {   // la roquette (l'accueil, c'est le lanceur)
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(-Math.PI / 4);
+      ctx.fillStyle = '#ff6a10'; ctx.beginPath(); ctx.moveTo(-r * 0.25, r * 0.55); ctx.quadraticCurveTo(0, r * 1.25, r * 0.25, r * 0.55); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#e02a1c'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * r * 0.3, r * 0.1); ctx.lineTo(s * r * 0.75, r * 0.65); ctx.lineTo(s * r * 0.28, r * 0.55); ctx.closePath(); ctx.fill(); }
+      rr(ctx, -r * 0.34, -r * 0.6, r * 0.68, r * 1.25, r * 0.3); ctx.fillStyle = grad(ctx, -r * 0.6, r * 0.65, '#ffffff', '#b8c4d4'); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-r * 0.34, -r * 0.55); ctx.quadraticCurveTo(0, -r * 1.35, r * 0.34, -r * 0.55); ctx.closePath(); ctx.fillStyle = '#e02a1c'; ctx.fill();
+      ctx.beginPath(); ctx.arc(0, -r * 0.1, r * 0.17, 0, 6.283); ctx.fillStyle = '#39b8ff'; ctx.fill(); ctx.strokeStyle = '#1a4a7a'; ctx.lineWidth = r * 0.06; ctx.stroke();
+      ctx.restore();
+    },
+    star(ctx, cx, cy, r) {
+      ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr2 = i % 2 ? r * 0.45 : r * 1.0; ctx.lineTo(cx + Math.cos(a) * rr2, cy + Math.sin(a) * rr2); } ctx.closePath();
+      ctx.fillStyle = grad(ctx, cy - r, cy + r, '#fff3a0', '#ff9a00'); ctx.fill(); ctx.lineJoin = 'round'; ctx.strokeStyle = '#8a4a00'; ctx.lineWidth = r * 0.12; ctx.stroke();
+    },
+    shop(ctx, cx, cy, r) {   // étal : auvent rayé et caisse
+      rr(ctx, cx - r * 0.75, cy - r * 0.05, r * 1.5, r * 0.95, r * 0.1); ctx.fillStyle = grad(ctx, cy, cy + r, '#e0a060', '#9a5a20'); ctx.fill(); ctx.strokeStyle = '#4a2a10'; ctx.lineWidth = r * 0.08; ctx.stroke();
+      for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(cx - r * 0.85 + i * r * 0.34, cy - r * 0.75); ctx.lineTo(cx - r * 0.85 + (i + 1) * r * 0.34, cy - r * 0.75); ctx.lineTo(cx - r * 0.85 + (i + 1) * r * 0.3 - r * 0.04, cy - r * 0.1); ctx.lineTo(cx - r * 0.85 + i * r * 0.3 - r * 0.04, cy - r * 0.1); ctx.closePath(); ctx.fillStyle = i % 2 ? '#ffffff' : '#e02a3c'; ctx.fill(); }
+      ICON.nut(ctx, cx, cy + r * 0.45, r * 0.26, '#ffc820');
+    },
+  };
+  // barre d'onglets du bas : MISSION · PROGRES · [ACCUEIL surélevé, jaune] · DEFIS · BOUTIQUE (comme les jeux mobiles)
+  function tabBar(ui, ctx, L, tabs) {
+    const { W, HH, T, u } = L, bh = Math.min(u * 0.2, HH * 0.11), y0 = T + HH - bh, tw = W / tabs.length;
+    const g = ctx.createLinearGradient(0, y0, 0, y0 + bh); g.addColorStop(0, 'rgba(24,34,56,0.94)'); g.addColorStop(1, 'rgba(8,12,22,0.97)');
+    ctx.fillStyle = g; ctx.fillRect(0, y0, W, bh); ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillRect(0, y0, W, 2);
+    const px = Math.min.apply(null, tabs.map((t) => ui.fitPx([t.label], tw * 0.92, bh * 0.05)));
+    tabs.forEach((t, i) => {
+      const cx = tw * (i + 0.5), r = bh * 0.3;
+      if (t.active) {
+        const lift = bh * 0.28;
+        rr(ctx, cx - tw * 0.46, y0 - lift, tw * 0.92, bh + lift, bh * 0.2); ctx.fillStyle = grad(ctx, y0 - lift, y0 + bh, '#ffe860', '#ffb800'); ctx.fill(); ctx.strokeStyle = '#fff8c0'; ctx.lineWidth = 2; ctx.stroke();
+        TABICON[t.icon](ctx, cx, y0 - lift + bh * 0.42, r * 1.25);
+        text(ui, ctx, t.label, cx, y0 + bh * 0.6, px, '#ffffff', { align: 'center', outline: '#8a5200' });
+      } else {
+        const on = inRect(ui, cx - tw / 2, y0, tw, bh);
+        if (on) { rr(ctx, cx - tw * 0.45, y0 + 4, tw * 0.9, bh - 8, bh * 0.2); ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fill(); }
+        TABICON[t.icon](ctx, cx, y0 + bh * 0.36, r);
+        text(ui, ctx, t.label, cx, y0 + bh * 0.68, px, '#e6edf8', { align: 'center', outline: '#05080e' });
+        hit(ui, cx - tw / 2, y0, tw, bh, t.action);
+      }
+    });
+    return bh;
+  }
 
   // bouton rond d'icône avec libellé dessous (accueil)
   function roundBtn(ui, ctx, cx, cy, r, icon, label, color, action, badge, slotW, labelPx) {
@@ -152,6 +217,11 @@
     bar(ctx, xx, by + bs * 0.52, xw, bs * 0.2, xk, CY);
     text(ui, ctx, prog.rank(prog.level), xx, by + bs * 0.06, ui.fitPx(['COMMANDANT'], xw, bs * 0.04), '#e8eef8', {});
     text(ui, ctx, prog.xp + ' / ' + prog.need(prog.level) + ' XP', xx, by + bs * 0.8, ui.fitPx(['0000 / 0000 XP'], xw, bs * 0.03), '#9fb0c8', {});
+    // matériaux possédés (à gauche de l'engrenage)
+    { const mat = U.formatInt(prog.P.materials || 0), mh = u * 0.085, mpx = mh * 0.062, mw = F.measure(mat, mpx) + mh * 1.4, mx = W - margin - u * 0.11 - u * 0.03 - mw;
+      pill(ctx, mx, by + bs * 0.5 - mh / 2 + 2, mw, mh, 'rgba(10,16,28,0.7)', 'rgba(255,255,255,0.35)');
+      ICON.nut(ctx, mx + mh * 0.55, by + bs * 0.5 + 2, mh * 0.3, '#ffc820');
+      text(ui, ctx, mat, mx + mw - mh * 0.35, by + bs * 0.5 + 2 - mpx * 3.6, mpx, '#ffffff', { align: 'right', outline: '#0a0e16' }); }
     // réglages (haut droite)
     const gr = u * 0.055, gx = W - margin - gr, gy = by + gr;
     pxRect(ctx, gx - gr, gy - gr, 2 * gr, 2 * gr, inRect(ui, gx - gr, gy - gr, 2 * gr, 2 * gr) ? 'rgba(255,255,255,0.2)' : 'rgba(8,12,20,0.7)', '#9fb0c8', Math.round(gr * 0.28), 2);
@@ -165,31 +235,28 @@
     const best = prog.P.best;
     if (best > 0) text(ui, ctx, 'RECORD ' + U.formatInt(best), W / 2, ly + lpx * 9.5, ui.fitPx(['RECORD 000.000'], W * 0.5, u * 0.0058), '#ffd23a', { align: 'center' });
     // 1. la roquette : anneau pulsant + doigt qui touche (les 3 premiers vols : consigne écrite en plus)
-    // 3. mission la plus avancée
+    // 4. barre d'onglets en bas (style jeu mobile) et 3. mission la plus avancée juste au-dessus
+    const barH = tabBar(ui, ctx, L, [
+      { icon: 'mission', label: 'MISSION', action: () => { ui.overlay = 'quests'; } },
+      { icon: 'trophy', label: 'PROGRES', action: () => { ui.overlay = 'progress'; } },
+      { icon: 'home', label: 'ACCUEIL', active: true },
+      { icon: 'star', label: 'DEFIS', action: () => { ui.overlay = 'defi'; } },
+      { icon: 'shop', label: 'BOUTIQUE', action: () => { ui.overlay = 'shop'; } }]);
     const m = prog.tracked();
     if (m) {
-      const mw = W - margin * 2 - (P ? 0 : u * 0.5), mh = u * 0.115, mx = margin, my = Y(P ? 0.79 : 0.855);
+      const mw = W - margin * 2, mh = u * 0.115, mx = margin, my = T + HH - barH - mh - u * 0.06;
       const on = inRect(ui, mx, my, mw, mh);
-      pxRect(ctx, mx, my, mw, mh, on ? 'rgba(255,255,255,0.18)' : 'rgba(8,12,20,0.78)', 'rgba(159,176,200,0.6)', Math.round(mh * 0.14));
+      pill(ctx, mx, my, mw, mh, on ? 'rgba(255,255,255,0.2)' : 'rgba(8,12,20,0.78)', 'rgba(255,255,255,0.35)', mh * 0.3);
       ICON.target(ctx, mx + mh * 0.5, my + mh * 0.5, mh * 0.27, ORANGE);
       const tx = mx + mh * 1.0, mp = ui.fitPx([prog.missionText(m)], mw - mh * 1.1 - mh * 1.7, mh * 0.04);
-      text(ui, ctx, prog.missionText(m), tx, my + mh * 0.16, mp, '#f4f4f4', {});
-      bar(ctx, tx, my + mh * 0.6, mw - mh * 1.1 - mh * 1.7, mh * 0.16, m.progress / m.target, ORANGE);
-      text(ui, ctx, m.progress + '/' + m.target, mx + mw - mh * 0.25, my + mh * 0.16, mp, '#c8d0dc', { align: 'right' });
-      text(ui, ctx, '+' + m.xp + ' XP', mx + mw - mh * 0.25, my + mh * 0.56, mp, CY, { align: 'right' });
+      text(ui, ctx, prog.missionText(m), tx, my + mh * 0.14, mp, '#ffffff', {});
+      meter(ctx, tx, my + mh * 0.62, mw - mh * 1.1 - mh * 1.7, mh * 0.16, m.progress / m.target, '#ffa040', '#ff6a10');
+      text(ui, ctx, m.progress + '/' + m.target, mx + mw - mh * 0.3, my + mh * 0.14, mp, '#dfe6f0', { align: 'right' });
+      text(ui, ctx, '+' + m.xp + ' XP', mx + mw - mh * 0.3, my + mh * 0.54, mp, CY, { align: 'right' });
       hit(ui, mx, my, mw, mh, () => { ui.overlay = 'quests'; });
     }
-    // 4. icônes secondaires (paysage : colonne à droite ; portrait : rangée en bas)
-    const items = [['target', 'MISSIONS', ORANGE, () => { ui.overlay = 'quests'; }], ['trophy', 'PROGRES', GOLD, () => { ui.overlay = 'progress'; }],
-      ['star', 'DEFIS', '#8fd0ff', () => { ui.overlay = 'defi'; }], ['rocket', 'BOUTIQUE', GREEN, () => { ui.overlay = 'shop'; }]];
-    const r = u * (P ? 0.085 : 0.105);
-    const slot = P ? W * 0.235 : r * 3.3, iconPx = Math.min.apply(null, items.map((it) => ui.fitPx([it[1]], Math.max(r * 2.2, slot * 0.96), r * 0.075)));   // même taille pour les quatre libellés
-    items.forEach((it, i) => {
-      if (P) roundBtn(ui, ctx, W * (0.14 + i * 0.24), Y(0.925) - r * 0.2, r, it[0], it[1], it[2], it[3], false, W * 0.235, iconPx);
-      else roundBtn(ui, ctx, W - margin - r * 1.5 - (i % 2) * (r * 3.4), Y(0.3 + Math.floor(i / 2) * 0.33), r, it[0], it[1], it[2], it[3], false, r * 3.3, iconPx);
-    });
-    if (!touch) text(ui, ctx, 'ESPACE OU CLIC : LANCER    F1 : TOUCHES', W / 2, Y(0.975), ui.fitPx(['ESPACE OU CLIC : LANCER    F1 : TOUCHES'], W * 0.8, u * 0.0032), '#8a96a8', { align: 'center' });
-    text(ui, ctx, CC.CONFIG.version.toUpperCase(), W - margin, Y(0.985), u * 0.0022, '#5d6878', { align: 'right' });
+    if (!touch) text(ui, ctx, 'ESPACE OU CLIC : LANCER    F1 : TOUCHES', W / 2, T + HH - barH - u * 0.035, ui.fitPx(['ESPACE OU CLIC : LANCER    F1 : TOUCHES'], W * 0.8, u * 0.0032), '#8a96a8', { align: 'center' });
+    
     ctx.restore();
   };
 
@@ -409,7 +476,7 @@
       const s1 = 'NIVEAU ' + r.lvNew + ' !';
       text(ui, ctx, s1, W / 2, by2 + bh2 * 0.12, fitq(s1, W * 0.85, 9 * sc), GOLD, { align: 'center', skew: -0.2, outline: '#0b0e14' });
       const nw = r.newWorlds && r.newWorlds.length && r.lvNew === r.after.level ? r.newWorlds : [];
-      const s2 = nw.length ? 'NOUVEAU DECOR : ' + nw.map((w) => prog.worldName(w)).join(', ') : prog.rank(r.lvNew);
+      const s2 = (nw.length ? 'NOUVEAU DECOR : ' + nw.map((w) => prog.worldName(w)).join(', ') + '   ' : '') + '+' + CC.CONFIG.progress.levelMaterials + ' MATERIAUX';
       text(ui, ctx, s2, W / 2, by2 + bh2 * 0.68, fitq(s2, W * 0.92, 3), '#ffffff', { align: 'center' });
       ctx.restore();
     }

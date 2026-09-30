@@ -212,8 +212,8 @@ CC.CONFIG = {
     chunkLen: 200,               // m : longueur d'un tronçon construit d'un coup
     ahead: 3,                    // tronçons prêts devant la roquette (le brouillard cache le bout)
     behind: 1,                   // tronçons gardés derrière avant d'être détruits
-    stageLen: 800,               // m par palier de difficulté (le 4e palier, IMPOSSIBLE, ne finit jamais)
-    zoneLen: 1000,               // m par décor (ville, désert, neige, industrie, canyon…)
+    stageLen: 2400,              // m par palier de difficulté (v034b : 800 → 2400, parties ~3 fois plus longues)
+    zoneLen: 1800,               // m par décor ; on passe d'un décor à l'autre sous un pont, sans annonce
     width: [40, 30, 23, 18],     // m : largeur du couloir par palier
     gap: [85, 70, 58, 48],       // m : espacement moyen des obstacles par palier
     hole: [15, 12, 10, 8.5],     // m : côté du trou des murs percés par palier
@@ -221,16 +221,18 @@ CC.CONFIG = {
     ceiling: 48,                 // m : altitude au-dessus de laquelle l'alarme ALTITUDE! se déclenche
     ceilingGrace: 1.5,           // s au-dessus du plafond avant l'explosion
     cruise: 14,                  // m : altitude de vol du pilote automatique (banc de test)
-    fuelStart: 14,               // s d'essence au départ
-    fuelMax: 20,                 // s : taille du réservoir (les recharges ne dépassent pas)
+    fuelStart: 30,               // s d'essence au départ (v034b : 14 → 30)
+    fuelMax: 42,                 // s : taille du réservoir
     fuelPerStyle: 0.0035,        // s d'essence gagnées par point de STYLE (COLD IMPACT X2 = 200 pts → +0,7 s)
-    fuelTarget: 4,               // s d'essence par cible détruite en route (dépôt de carburant, camion, char)
+    fuelTarget: 6,               // s d'essence par cible détruite en route
     targetGap: [200, 300],       // m entre deux cibles à détruire
-    threat: [0.2, 0.45, 0.75, 1],        // menace des tirs ennemis par palier (bornes de CC.CONFIG.aa)
-    tanks: [0, 1, 2, 3],         // chars ennemis par tronçon et par palier
-    drones: [0, 1, 2, 3],        // v034 : drones (obstacle mobile) par tronçon et par palier
+    threat: [0.08, 0.2, 0.36, 0.55],     // menace des tirs ennemis par palier (v034b : adoucie, on ne progressait plus vers 3 000 m)
+    tanks: [0, 1, 1, 2],         // chars ennemis par tronçon et par palier
+    sams: [0, 0, 1, 1],          // v034b : lance-missiles par tronçon
+    helis: [0, 0, 0, 1],         // v034b : hélicoptères de garde par tronçon
+    drones: [0, 1, 1, 2],        // v034 : drones (obstacle mobile) par tronçon et par palier
     droneSpeed: [4.5, 4.0, 3.4, 2.9],   // s par aller-retour d'un drone, par palier (plus court = plus vif)
-    maxMissiles: [2, 2, 3, 4],   // missiles ennemis en vol en même temps, par palier
+    maxMissiles: [1, 2, 2, 3],   // missiles ennemis en vol en même temps, par palier
   },
 
   // v033 : mode DÉFI — série fixe de cartes générées par difficulté, 1 à 3 étoiles au temps, trophées par difficulté.
@@ -298,25 +300,27 @@ CC.CONFIG = {
     multTime: 12,                // s de multiplicateur ×2 (bonus rare)
   },
   cells: {
-    spacing: 6.5,                // m entre deux éclats d'une traînée
-    trailLen: [4, 8],            // éclats par traînée
-    trailGap: [55, 110],         // m entre deux traînées
+    spacing: 7,                  // m entre deux matériaux d'une traînée
+    trailLen: [5, 10],           // matériaux par traînée
+    trailGap: [40, 85],          // m entre deux traînées
     goldEvery: [420, 700],       // m entre deux étoiles dorées (+ recharge d'essence)
     multEvery: [900, 1400],      // m entre deux multiplicateurs ×2
     goldFuel: 3.0,               // s d'essence d'une étoile dorée
-    radius: 1.7, radiusBig: 2.4, // m : rayon de ramassage (généreux : on est à 60 m/s)
-    size: 1.15,                  // taille d'un éclat (m)
+    radius: 2.6, radiusBig: 3.4, // m : rayon de ramassage (généreux : on est à 60 m/s)
+    magnet: 9,                   // m : les matériaux proches sont aspirés vers la roquette
+    size: 2.1,                   // taille d'un matériau (écrou doré, m)
+    fuel: 0.2,                   // s d'essence par matériau (suivre les traînées prolonge le vol)
   },
 
   // v034 : PROGRESSION — XP, niveaux, missions
   progress: {
-    xpPerMeter: 0.1,             // 1 XP pour 10 m
-    xpPerBonus: 0.1,             // 1 XP pour 10 points de bonus (éclats, cibles, frôlements)
+    xpPerMeter: 0.04,            // v034b : 1 XP pour 25 m (les parties durent ~3 fois plus : on ne monte pas trop vite)
+    xpPerBonus: 0.03,            // 1 XP pour ~33 points de bonus (éclats, cibles, frôlements)
     recordXp: 25,                // XP d'un nouveau record
     firstRunXp: 30,              // XP du tout premier vol
-    levelBase: 80, levelStep: 40,   // XP pour passer du niveau n au suivant : base + step × (n − 1)
+    levelBase: 300, levelStep: 200, levelMaterials: 200,   // XP pour passer du niveau n au suivant : base + step × (n − 1) ; matériaux offerts à chaque niveau   // XP pour passer du niveau n au suivant : base + step × (n − 1)
     missionSlots: 1,
-    worlds: { city: 1, desert: 2, snow: 3, industry: 4, canyon: 5, night: 6 },   // niveau qui débloque chaque décor
+    worlds: { city: 1, desert: 2, snow: 3, industry: 5, canyon: 7, night: 9 },   // niveau qui débloque chaque décor
     ranks: ['RECRUE', 'PILOTE', 'AS', 'CAPITAINE', 'MAJOR', 'COMMANDANT', 'LEGENDE'],
   },
 

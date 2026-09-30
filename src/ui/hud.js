@@ -16,6 +16,7 @@
     }
 
     draw(game, dt) {
+      this.dt = dt;
       const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
       this.portrait = !!game.portrait; this.modern = !!game.endlessRun;   // CLASSIQUE : police moderne ; niveaux d'origine : police pixel de la vidéo
       this.refH = this.portrait ? Math.min(H, W * 0.95) : H;
@@ -106,8 +107,22 @@
       // ---- pastille des éclats (haut droite)
       const gw = pillH * 2.3, gx = W - gw - Math.max(10, W * 0.03), gr = pillH * 0.3 * (1 + 0.25 * Math.min(1.6, game.cellBump));
       Home.pill(ctx, gx, top, gw, pillH, 'rgba(10,16,28,0.66)', 'rgba(255,255,255,0.35)');
-      Home.icon.gem(ctx, gx + pillH * 0.55, top + pillH / 2, gr, '#39d4ff');
-      F.draw(ctx, String(run.stats.cells), gx + gw - pillH * 0.4, top + pillH / 2 - px * 3.6, px * 0.95, '#ffffff', { align: 'right', outline: '#0a0e16' });
+      Home.icon.nut(ctx, gx + pillH * 0.55, top + pillH / 2, gr * 1.15, '#ffc820');
+      this.cx = gx + pillH * 0.55; this.cy = top + pillH / 2;
+      F.draw(ctx, String(Math.round(run.shown)), gx + gw - pillH * 0.4, top + pillH / 2 - px * 3.6, px * 0.95, '#ffffff', { align: 'right', outline: '#0a0e16' });
+      // ---- écrous volants (mur cassé) : jaillissent, puis rejoignent le compteur
+      if (game.flyers.length) {
+        const dt2 = this.dt || 0.016, tx = this.cx, ty = this.cy, keep = [];
+        for (const f of game.flyers) {
+          f.t += dt2; if (f.t < 0) { keep.push(f); continue; }
+          const burst = 0.28, k = (f.t - burst) / 0.55;
+          if (f.t < burst) { f.x += f.vx * dt2; f.y += f.vy * dt2; f.vx *= 0.93; f.vy *= 0.93; f.sx = f.x; f.sy = f.y; }
+          else { const e = Math.min(1, Math.max(0, k)), ee = e * e * (3 - 2 * e); f.x = f.sx + (tx - f.sx) * ee; f.y = f.sy + (ty - f.sy) * ee; }
+          if (f.t >= burst + 0.55) { game.onFlyerArrive(f.val); continue; }
+          Home.icon.nut(ctx, f.x, f.y, pillH * 0.3 * (1 - 0.35 * Math.max(0, k)), '#ffc820'); keep.push(f);
+        }
+        game.flyers = keep;
+      }
       // ---- jauge d'essence verticale (bord droit, sous la pastille des éclats)
       const gh = Math.min(H * 0.3, 260), gwid = Math.max(14, pillH * 0.36), gxx = W - gwid - Math.max(14, W * 0.045), gy = top + pillH + H * 0.03;
       this.drawFuelBar(game, rk, gxx, gy, gwid, gh);

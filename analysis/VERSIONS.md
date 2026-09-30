@@ -572,3 +572,19 @@ publicités en français, `endless.js` (score, décors par niveau, éclats, dron
 
 **Supprimés (CLASSIQUE) :** menu à trois boutons, bannière, tir à l'épaule, chrono, vitesse, essence chiffrée, STYLE affiché, palier
 permanent, rappel de touches.
+
+## v034b — monnaie « matériaux », murs à casser, décors et parties plus riches, barre d'onglets
+
+- **Matériaux** (écrous hexagonaux dorés, lisses, plus gros, **aimantés** : les séries se ramassent sans viser) et **murs à casser**
+  (`src/entities/smash.js`) : un mur de gros blocs barre le couloir, la roquette le traverse (−12 % de vitesse) ; les blocs éclatent, des
+  écrous jaillissent et **volent jusqu'au compteur** du HUD. Les matériaux comptent au score, à l'XP, aux missions, prolongent un peu
+  l'essence et se cumulent (`save.prog.materials`, affichés à l'accueil).
+- **Niveaux plus lents** (300 XP puis +200 par niveau, XP divisée par 2,5) avec une récompense à chaque niveau : **200 matériaux** et,
+  à certains niveaux, un nouveau décor (niveaux 2, 3, 5, 7, 9).
+- **Parties ~3 fois plus longues** : paliers de 2 400 m, décors de 1 800 m, essence de départ 30 s ; ennemis **adoucis** (menace,
+  chars, missiles simultanés réduits) et plus variés (chars, lance-missiles, hélicoptères, drones).
+- **Décor** (`src/world/scenery.js`) : segments de 30 à 70 m par côté — immeubles variés (auvents, enseignes néon, toits équipés,
+  tours derrière), maisons basses avec trous, parcs, **zones ouvertes sans mur**, cours industrielles (conteneurs, silos), forêts
+  de conifères, falaises — réutilise les objets du générateur de missions. On change de décor **sous un pont** (route en surplomb ou
+  arche de roche) et le **relief monte ou descend** (0 / 10 / 18 / 26 m) ; plus aucun nom de zone ni de palier n'est annoncé.
+- **Accueil** : barre d'onglets en bas (MISSION, PROGRES, ACCUEIL surélevé, DEFIS, BOUTIQUE) avec icônes colorées ; mission juste au-dessus.

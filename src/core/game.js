@@ -61,7 +61,7 @@
       this.progress = new CC.Progress(this);   // v034 : XP, niveaux, missions
       this.pad = new CC.Pad(this);             // v034 : lanceur (accueil du mode CLASSIQUE)
       this.shadow = new CC.RocketShadow(this); // v034 : ombre de la roquette
-      this.hudFeed = []; this.boostK = 0; this.padMode = false; this.fadeIn = 0; this.reviveUsed = false; this.progTick = 0; this.cellBump = 0; this.cellHap = 0; this.cellSnd = 0;
+      this.hudFeed = []; this.flyers = []; this.boostK = 0; this.padMode = false; this.fadeIn = 0; this.reviveUsed = false; this.progTick = 0; this.cellBump = 0; this.cellHap = 0; this.cellSnd = 0;
       // v023 : volumes enregistrés (SOUND / MUSIC sur OFF) appliqués dès le démarrage, avant même que le son soit créé
       this.audio.setVolumes(CC.CONFIG.audio.master, this.settings.music, this.settings.sfx);
       this.applyCosmetic();
@@ -426,7 +426,7 @@
       const run = this.endlessRun; if (!run) return;
       const S = CC.CONFIG.score, fx = this.effects, col = CC.CONFIG.hud.colors, now = performance.now(), touch = CC.Touch && CC.Touch.active && CC.Haptics;
       if (kind === 'cell') {
-        run.stats.cells++; run.addBonus(S.cell);
+        run.stats.cells++; run.shown++; run.addBonus(S.cell); run.addFuel(CC.CONFIG.cells.fuel);
         run.chain = Math.min(40, run.chain + 1); run.chainT = 1.1;
         if (now - this.cellSnd > 50) { this.audio.play('cell', null, Math.floor((run.chain - 1) / 2) % 8); this.cellSnd = now; }
         if (touch && now - this.cellHap > 120) { CC.Haptics.tick('collect'); this.cellHap = now; }
@@ -443,6 +443,24 @@
         fx.ring(pos, this.rocket.fwd, 0.3, 3.4, 0.35, '#ff5be0', 0.6);
         this.feed('SCORE X2  ' + S.multTime + ' S', '#ff8be8'); this.cellBump = 1.4;
       }
+    }
+
+    /* v034b : mur cassé — n matériaux libérés (score, XP, missions, un peu d'essence) ; des écrous dorés jaillissent du mur puis
+     * volent jusqu'au compteur du HUD, qui monte à leur arrivée (HUD.drawClassic). */
+    onSmash(pos, n) {
+      const run = this.endlessRun; if (!run || n <= 0) return;
+      run.stats.cells += n; run.addBonus(n * CC.CONFIG.score.cell * 0.5); run.addFuel(0.5 + n * 0.05); this.progress.event('cells', n);
+      const v = new V().copy(pos).project(this.camera), W = this.hudCanvas.width, H = this.hudCanvas.height;
+      const k = Math.min(16, Math.max(6, Math.round(n * 0.7))), sx = v.z > 1 ? W / 2 : (v.x * 0.5 + 0.5) * W, sy = v.z > 1 ? H * 0.45 : (0.5 - v.y * 0.5) * H;
+      for (let i = 0; i < k; i++) { const a = U.fx() * 6.283, sp = (0.12 + U.fx() * 0.25) * Math.min(W, H); this.flyers.push({ x: sx, y: sy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 0.1 * H, t: -i * 0.035, val: n / k, rot: U.fx() * 6 }); }
+      this.feed('MATERIAUX  +' + n, CC.CONFIG.hud.colors.yellow); this.cellBump = 1.4;
+      if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('gold');
+    }
+    // un écrou volant est arrivé au compteur
+    onFlyerArrive(val) {
+      const run = this.endlessRun; if (run) run.shown += val;
+      this.cellBump = Math.max(this.cellBump, 0.7);
+      const now = performance.now(); if (now - this.cellSnd > 45) { this.audio.play('cell', null, 3 + (this.flyerPitch = ((this.flyerPitch || 0) + 1) % 5)); this.cellSnd = now; }
     }
 
     // v034 : départ du boost (doigt maintenu) — coup de caméra, onde de choc à la tuyère, son, secousse
