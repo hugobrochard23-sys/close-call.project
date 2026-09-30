@@ -33,6 +33,8 @@
     canyon: { label: 'CANYON', envs: ['dusk', 'day', 'haze'], ground: 'dirt', groundTint: '#c8a888',
       wall: (r) => ({ mat: { side: 'rock', top: 'dirt' }, tint: r.pick(['#c07858', '#b06848', '#c88a68']) }),
       obstacle: 'rock', obstacleTint: '#b87858' },
+    forest: { label: 'FORET', envs: ['dusk', 'moonlit', 'fog'], ground: 'dirt', groundTint: '#5a6a48',
+      wall: (r) => ({ mat: { side: 'rock', top: 'grass' }, tint: r.pick(['#8a9a82', '#7a8a72']) }), obstacle: 'rock', obstacleTint: '#8a9a82' },
     night: { label: 'VILLE DE NUIT', envs: ['night', 'moonlit'], ground: 'asphalt', groundTint: '#b8b8c0', city: true,
       wall: (r) => ({ mat: { side: r.pick(['facadeDark', 'facade']), top: 'concreteDark', bottom: 'concreteDark' }, tint: r.pick(['#b8bcc8', '#a8acb8']) }),
       obstacle: 'metal', obstacleTint: '#9aa0b0' },
@@ -54,9 +56,10 @@
       const r = G.stream(seed, 'track');
       this.p = [r() * 6.28, r() * 6.28, r() * 6.28, r() * 6.28];
       this.l = [r.between([170, 230]), r.between([75, 105]), r.between([48, 70])];
+      const rl = G.stream(seed, 'lane'); this.lp = [rl() * 6.28, rl() * 6.28, rl() * 6.28, rl() * 6.28]; this.ll = [rl.between([170, 230]), rl.between([70, 100])];
       this.seed = seed;
       // ordre des zones : la ville d'abord (lisible), puis les autres dans un ordre tiré de la graine, en boucle
-      const rest = ['desert', 'snow', 'industry', 'canyon', 'night'].filter((z) => !zones || zones.includes(z));   // v034 : décors ouverts par le niveau du joueur
+      const rest = ['forest', 'desert', 'snow', 'industry', 'canyon', 'night'].filter((z) => !zones || zones.includes(z));   // v034 : décors ouverts par le niveau du joueur
       const rz = G.stream(seed, 'zones');
       for (let i = rest.length - 1; i > 0; i--) { const j = Math.floor(rz() * (i + 1)); const t = rest[i]; rest[i] = rest[j]; rest[j] = t; }
       this.zoneOrder = ['city'].concat(rest);
@@ -64,6 +67,11 @@
       const re = G.stream(seed, 'elev'); this.elevs = [0];
       for (let i = 1; i < 80; i++) this.elevs.push(this.elevs[i - 1] > 0 ? re.weighted({ 0: 3, 10: 1, 18: 1 }) | 0 : re.weighted({ 0: 1.5, 10: 2, 18: 2, 26: 1.5 }) | 0);
     }
+    // v034c : la TRAJECTOIRE (lane) — position latérale (relative au couloir) et altitude (relative au sol) qui serpentent, montent et
+    // descendent ; les structures sont posées autour d'elle, le parcours est donc toujours faisable
+    laneX(d) { const f = U.clamp((d - 60) / 140, 0, 1), A = param(C().laneAmp, d); return f * A * (Math.sin(d / this.ll[0] + this.lp[0]) + 0.55 * Math.sin(d / this.ll[1] + this.lp[1])) / 1.55; }
+    laneY(d) { const f = U.clamp((d - 40) / 160, 0, 1); return U.clamp(16 + f * (9 * Math.sin(d / 310 + this.lp[2]) + 4.5 * Math.sin(d / 127 + this.lp[3])), 8, 31); }
+    vol(d) { return 33 + 5 * Math.sin(d / 131 + this.lp[0] * 1.7); }          // demi-largeur du volume de jeu
     elev(zi) { return +this.elevs[Math.min(Math.max(0, zi), this.elevs.length - 1)]; }
     base(d) {
       if (d <= 0) return 0;
@@ -88,6 +96,10 @@
         const id = Z.envs[Math.floor(r() * Z.envs.length)];
         this._env[zi] = G.Envs.get(id).make(r);
         this._env[zi].clouds = false;
+        // v034c : lumières dosées (plus de « mini disco ») : la nuit reste bleutée et douce, aberration chromatique réduite partout
+        const E0 = this._env[zi], px = E0.postfx = E0.postfx || {};
+        px.chromatic = (px.chromatic !== undefined ? px.chromatic : CC.CONFIG.postfx.chromatic) * 0.55;
+        if (id === 'night' || id === 'moonlit') { E0.hemi.sky = '#8a9ab8'; E0.hemi.ground = '#22262e'; E0.hemi.intensity = Math.min(E0.hemi.intensity, 0.95); px.saturation = 0.95; }
       }
       return this._env[zi];
     }
@@ -130,94 +142,79 @@
     const pseudo = { seed: (T.seed ^ (k * 7919)) >>> 0, env: { sky: { stars: true } }, routes: [] };   // pas de nuages par tronçon
     const b = new CC.LevelBuilder(game.scene, world, pseudo);
     const gates = [];                                   // points de passage { d, lx, y } (pilote automatique)
-    const busy = [];                                    // tranches de d déjà occupées (cibles, obstacles)
+    const busy = [], reserved = [], bridges = [];       // distances occupées, rectangles réservés, ponts de zone
     const free = (d, m) => d > d0 + 8 && d < d1 - 8 && busy.every((q) => Math.abs(q - d) > m);
+    const st = stageOf(d0), midD = (d0 + d1) / 2, zone = T.zoneId(Math.max(0, midD)), Zg = ZONES[zone], env = T.env(T.zoneIndex(Math.max(0, midD)));
 
-    // sol (relief : pente autour des frontières de zone) et décor des deux côtés (quartiers, parcs, zones ouvertes, falaises…)
-    const midD = (d0 + d1) / 2, Zg = ZONES[T.zoneId(Math.max(0, midD))];
+    // sol (relief), limites du volume (quartiers, collines, falaises…) et silhouettes lointaines
     CC.Scenery.groundSlices(b, T, d0, d1, Zg, cfg);
     for (const side of [-1, 1]) CC.Scenery.side(b, T, r, d0, d1, side, ZONES, game);
     // pont de passage à chaque frontière de zone
-    for (let B = Math.ceil(Math.max(1, d0) / cfg.zoneLen) * cfg.zoneLen; B < d1; B += cfg.zoneLen) if (B >= d0) { CC.Scenery.bridge(b, T, r, B, T.zoneId(B - 1), gates); busy.push(B); }
+    for (let B = Math.ceil(Math.max(1, d0) / cfg.zoneLen) * cfg.zoneLen; B < d1; B += cfg.zoneLen) if (B >= d0) { CC.Scenery.bridge(b, T, r, B, T.zoneId(B - 1), gates); busy.push(B); bridges.push(B); }
 
-    // cibles en route : on les place d'abord (les obstacles s'écartent)
-    const st = stageOf(d0);
+    // cibles en route, sur la trajectoire (il faut parfois plonger vers le sol pour les prendre)
     const nextT = (from) => from + r.between(cfg.targetGap);
     if (T.nextTarget === undefined) T.nextTarget = 90;
     while (T.nextTarget < d1) {
       const d = T.nextTarget;
-      if (d >= d0 && free(d, 30)) {
-        const half = T.half(d), lx = (r() < 0.5 ? -1 : 1) * r.between([0, half * 0.4]);
+      if (d >= d0 + 10 && free(d, 40)) {
+        const lx = T.laneX(d) + r.between([-4, 4]);
         const type = st === 0 ? 'fuel' : r.pick(['fuel', 'fuel', 'truck']);
         const p = T.at(d, lx, 0);
         b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0), { unarmed: true });
-        busy.push(d);
+        busy.push(d); reserved.push({ d: d - 12, lx, w: 30, dd: 110 });   // couloir de plongée libre de toute structure
         const hy = type === 'fuel' ? 3.5 : 1.6;
-        gates.push({ d: d - 48, lx: lx * 0.6, y: 9 }, { d: d - 18, lx, y: hy + 2 }, { d, lx, y: hy }, { d: d + 26, lx: lx * 0.5, y: 9 });
+        gates.push({ d: d - 55, lx: T.laneX(d - 55), y: T.laneY(d - 55) * 0.7 }, { d: d - 22, lx, y: hy + 3 }, { d, lx, y: hy }, { d: d + 30, lx: T.laneX(d + 30), y: T.laneY(d + 30) * 0.8 });
       }
       T.nextTarget = nextT(d);
     }
 
-    // obstacles
-    const gap = param(cfg.gap, d0);
-    if (T.nextObstacle === undefined) T.nextObstacle = 150;
-    while (T.nextObstacle < d1) {
-      const d = T.nextObstacle;
-      let used = 0;
-      if (d >= d0 && free(d, 60)) used = obstacle(b, T, r, d, stageOf(d), gates);   // loin des cibles : une chose à la fois
-      if (used) busy.push(d, d + used);
-      T.nextObstacle = d + Math.max(used, 0) + gap * r.between([0.75, 1.3]);
-    }
+    // structures : portes qui cadrent la trajectoire + décor qui remplit le volume (src/world/pieces.js)
+    const po = { stage: st, zone, ZONES, busy, reserved, bridges, env, special: null };
+    CC.Pieces.build(b, T, r, d0, d1, po);
+    CC.Pieces.far(b, T, r, d0, d1, po);
 
-    // v034 : drones (paliers MOYEN et plus) — obstacle mobile : il balaie le couloir sur un rail rouge ; toujours loin des obstacles
-    // fixes et des cibles, à une altitude tirée au sort (on passe dessus, dessous, ou quand il est de l'autre côté)
+    // drones : ils balaient le passage (le rail rouge montre leur course) ; toujours dans le tube dégagé, loin des structures
     const nD = cfg.drones[st];
     for (let i = 0; i < nD; i++) {
       const d = d0 + cfg.chunkLen * (i + r.between([0.25, 0.75])) / Math.max(1, nD);
-      if (!free(d, 55)) continue;
-      const half = T.half(d), y = r.between([6, 22]), amp = Math.max(4, (half - 3.2) * r.between([0.75, 1])), period = r.between(cfg.droneSpeed[0] === undefined ? [3, 4.5] : [cfg.droneSpeed[Math.min(st, cfg.droneSpeed.length - 1)] * 0.85, cfg.droneSpeed[Math.min(st, cfg.droneSpeed.length - 1)] * 1.15]);
+      if (!free(d, 45) || po.reserveCheck) continue;
+      if (reserved.some((q) => Math.abs(q.d - d) < (q.dd + 30) / 2)) continue;
+      const lx0 = T.laneX(d), y = T.laneY(d) + r.between([-2, 2]), amp = 9, period = r.between([cfg.droneSpeed[Math.min(st, 3)] * 0.85, cfg.droneSpeed[Math.min(st, 3)] * 1.15]);
       const yaw = T.yawAcross(d) * Math.PI / 180, across = [Math.cos(yaw), -Math.sin(yaw)];
-      const p = T.at(d, 0, y);
-      const dr = new CC.Drone(p, across, amp, period, r() * 6.283);
+      const dr = new CC.Drone(T.at(d, lx0, y), across, amp, period, r() * 6.283);
       b.entity(dr); b.targets.push(dr);
-      // rail lumineux rouge en travers (le danger se lit de loin : le rail montre où il passera)
-      b.box({ p: T.at(d, 0, y), s: [2 * amp + 2.6, 0.07, 0.07], r: [0, T.yawAcross(d), 0], mat: 'basic:#ff3b2e', collide: false, shadow: false });
+      b.box({ p: T.at(d, lx0, y), s: [2 * amp + 2.6, 0.07, 0.07], r: [0, T.yawAcross(d), 0], mat: 'basic:#ff3b2e', collide: false, shadow: false });
       busy.push(d);
     }
 
-    // chars ennemis (paliers MOYEN et plus) : au pied des parois, tournés vers la roquette qui arrive. Leur modèle est
-    // détaillé (≈ 1,7 ms chacun) : ils sont créés un par image après le tronçon (Run.update), bien avant d'être visibles.
+    // ennemis (faibles, en nombre limité) : chars et lance-missiles au pied des limites du volume, hélicoptères en altitude.
+    // Leurs modèles sont détaillés : créés un par image après le tronçon (Run.update).
     const tanks = [], nT = cfg.tanks[st];
+    const edge = (d) => (r() < 0.5 ? -1 : 1) * (T.vol(d) - 5);
     for (let i = 0; i < nT; i++) {
-      const d = d0 + cfg.chunkLen * (i + r.between([0.2, 0.8])) / nT;
-      if (!free(d, 14)) continue;
-      const side = r() < 0.5 ? -1 : 1, lx = side * (T.half(d) - 4);
-      const p = T.at(d, lx, 0);
-      tanks.push({ type: 'tank', pos: p, yaw: 180 - side * 20 });
-      busy.push(d);
+      const d = d0 + cfg.chunkLen * (i + r.between([0.2, 0.8])) / nT; if (!free(d, 14)) continue;
+      const lx = edge(d); tanks.push({ type: 'tank', pos: T.at(d, lx, 0), yaw: 180 - Math.sign(lx) * 20 }); busy.push(d);
     }
-    // v034b : lance-missiles au pied des parois et hélicoptères de garde en altitude (palier DIFFICILE et plus), en nombre limité
     for (let i = 0; i < (cfg.sams[st] || 0); i++) {
       const d = d0 + cfg.chunkLen * r.between([0.15, 0.85]); if (!free(d, 20)) continue;
-      const side = r() < 0.5 ? -1 : 1; tanks.push({ type: 'sam', pos: T.at(d, side * (T.half(d) - 4), 0), yaw: 180 - side * 15 }); busy.push(d);
+      const lx = edge(d); tanks.push({ type: 'sam', pos: T.at(d, lx, 0), yaw: 180 - Math.sign(lx) * 15 }); busy.push(d);
     }
     for (let i = 0; i < (cfg.helis[st] || 0); i++) {
       const d = d0 + cfg.chunkLen * r.between([0.2, 0.8]); if (!free(d, 25)) continue;
-      const side = r() < 0.5 ? -1 : 1; tanks.push({ type: 'heli', pos: T.at(d, side * T.half(d) * 0.5, r.between([24, 34])), yaw: 180 }); busy.push(d);
+      tanks.push({ type: 'heli', pos: T.at(d, T.laneX(d) + (r() < 0.5 ? -1 : 1) * 26, r.between([24, 36])), yaw: 180 }); busy.push(d);
     }
 
     b.finish();
     const boxes = world.boxes.slice(nBoxes);
-    // route du pilote automatique : points de croisière tous les 20 m, sauf près des passages obligés
+    // route du pilote automatique et des matériaux : la trajectoire, tous les 14 m, sauf près des passages obligés (cibles, ponts)
     gates.sort((a, c) => a.d - c.d);
     const pts = [];
-    for (let d = d0; d < d1; d += 20) if (gates.every((g) => Math.abs(g.d - d) > 30)) pts.push({ d, lx: 0, y: cfg.cruise });
-    // (uniquement les points de ce tronçon, dans l'ordre : la route ne doit jamais revenir en arrière)
+    for (let d = d0; d < d1; d += 14) if (gates.every((g) => Math.abs(g.d - d) > 26)) pts.push({ d, lx: T.laneX(d), y: T.laneY(d) });
     const nodes = pts.concat(gates.filter((g) => g.d >= d0 && g.d < d1)).sort((a, c) => a.d - c.d);
     const route = k < 0 ? [] : nodes.map((g) => T.at(g.d, g.lx, g.y));
     for (const t of b.targets) t.updateObb();
-    // v034 : éclats et bonus le long de la trajectoire sûre (celle du pilote automatique)
-    const collect = k < 0 || !CC.Collect ? null : CC.Collect.build(game, T, b, nodes, d0, d1, r);
+    const collect = k < 0 || !CC.Collect ? null : CC.Collect.build(game, T, b, nodes, d0, d1, r, po.special);
     return { k, builder: b, boxes, targets: b.targets, entities: b.entities, route, tanks, collect };
   }
 

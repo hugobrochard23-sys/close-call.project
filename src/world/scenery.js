@@ -21,6 +21,7 @@
     night:    { block: 6, low: 1.3, park: 1, open: 0.5 },
     desert:   { low: 3, open: 4, cliff: 1.3 },
     snow:     { forest: 4, open: 3, cliff: 1.6, low: 1.2 },
+    forest:   { forest: 8, open: 1, cliff: 1 },
     industry: { block: 2.4, yard: 4, open: 1, low: 1 },
     canyon:   { cliff: 6, open: 1.3 },
   };
@@ -44,7 +45,7 @@
       const zone = T.zoneId(Math.max(0, d + 10)), Z = ZONES[zone], prof = PROFILE[zone];
       const len = Math.min(d1 - d, r.between([30, 70])), e = d + len;
       const kind = r.weighted(prof);
-      const ax = T.cx(d) + side * T.half(d), az = -d, bx = T.cx(e) + side * T.half(e), bz = -e;
+      const ax = T.cx(d) + side * T.vol(d), az = -d, bx = T.cx(e) + side * T.vol(e), bz = -e;
       const dx = bx - ax, dz = bz - az, cl = Math.hypot(dx, dz), psi = Math.atan2(dx, dz);
       let ox = Math.cos(psi), oz = -Math.sin(psi); if (ox * side < 0) { ox = -ox; oz = -oz; }
       const base = T.base((d + e) / 2), zi = T.zoneIndex(Math.max(0, d + 10)), env = T.env(zi), dark = !!(env && env.dark > 0.4) || zone === 'night';
@@ -119,8 +120,8 @@
         }
         far(3, 25, 80, 40, 110, 20, 50);
       } else if (kind === 'forest') {
-        wall(r.between([18, 26]), 16, r.between([10, 18]), 'white', '#eef4ff', 0, 1);
-        for (let i = 0; i < Math.round(len / 4.5); i++) { const c = P(r.between([0.02, 0.98]), r.between([2.5, 18])); tree(b, r, kc, c, base, zone, false); }
+        wall(r.between([14, 22]), 16, r.between([12, 22]), zone === 'snow' ? 'white' : 'grass', zone === 'snow' ? '#eef4ff' : r.pick(['#6a8a5a', '#5a7a4a', '#7a9a68']), 0, 1);
+        for (let i = 0; i < Math.round(len / 3.5); i++) { const c = P(r.between([0.02, 0.98]), r.between([1, 15])); tree(b, r, kc, c, base, zone, zone === 'forest' && r() < 0.6); }
         for (let i = 0; i < 3; i++) { const c = P(r(), r.between([3, 12])); b.rockLump(c[0], base, c[2], r.between([1.8, 4]), 'col:#9aa2ae'); }
         far(4, 30, 110, 50, 150, 30, 80);
       } else {   // cliff
