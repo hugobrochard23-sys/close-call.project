@@ -213,7 +213,7 @@ CC.CONFIG = {
     ahead: 3,                    // tronçons prêts devant la roquette (le brouillard cache le bout)
     behind: 1,                   // tronçons gardés derrière avant d'être détruits
     stageLen: 2400,              // m par palier de difficulté (v034b : 800 → 2400, parties ~3 fois plus longues)
-    zoneLen: 1800,               // m par décor ; on passe d'un décor à l'autre sous un pont, sans annonce
+    zoneLen: 2000,               // m par décor ; on passe d'un décor à l'autre sous un pont, sans annonce
     width: [40, 30, 23, 18],     // m : largeur du couloir par palier
     gap: [85, 70, 58, 48],       // m : espacement moyen des obstacles par palier
     hole: [15, 12, 10, 8.5],     // m : côté du trou des murs percés par palier
@@ -221,7 +221,7 @@ CC.CONFIG = {
     laneAmp: [10, 13, 16, 18],   // v034c : amplitude latérale (m) de la trajectoire qui serpente, par palier
     gate: [70, 105],             // m entre deux portes (structures qui cadrent le passage)
     density: { city: 0.8, night: 0.8, forest: 1.5, snow: 1.15, desert: 0.6, industry: 0.8, canyon: 0.65 },   // remplissage du volume par zone
-    ceiling: 48,                 // m : altitude au-dessus de laquelle l'alarme ALTITUDE! se déclenche
+    ceiling: 99999,              // v035 : plus de plafond (les zones ont leur propre hauteur : métro, base aérienne, pièce…)                 // m : altitude au-dessus de laquelle l'alarme ALTITUDE! se déclenche
     ceilingGrace: 1.5,           // s au-dessus du plafond avant l'explosion
     cruise: 14,                  // m : altitude de vol du pilote automatique (banc de test)
     fuelStart: 30,               // s d'essence au départ (v034b : 14 → 30)
@@ -323,7 +323,7 @@ CC.CONFIG = {
     firstRunXp: 30,              // XP du tout premier vol
     levelBase: 300, levelStep: 200, levelMaterials: 200,   // XP pour passer du niveau n au suivant : base + step × (n − 1) ; matériaux offerts à chaque niveau   // XP pour passer du niveau n au suivant : base + step × (n − 1)
     missionSlots: 1,
-    worlds: { city: 1, forest: 2, desert: 3, industry: 4, snow: 5, canyon: 7, night: 9 },   // niveau qui débloque chaque décor
+    worlds: { city: 1, forest: 2, port: 3, metro: 4, mini: 5, sky: 7 },   // niveau qui débloque chaque décor
     ranks: ['RECRUE', 'PILOTE', 'AS', 'CAPITAINE', 'MAJOR', 'COMMANDANT', 'LEGENDE'],
   },
 
