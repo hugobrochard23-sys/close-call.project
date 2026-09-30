@@ -39,6 +39,7 @@
       wall: (r) => ({ mat: { side: r.pick(['facadeDark', 'facade']), top: 'concreteDark', bottom: 'concreteDark' }, tint: r.pick(['#b8bcc8', '#a8acb8']) }),
       obstacle: 'metal', obstacleTint: '#9aa0b0' },
   };
+  Object.assign(ZONES, CC.Zones.meta);   // v035 : avenue, métro, port, base aérienne, monde miniature, forêt
   E.Zones = ZONES;
 
   // ---------- paramètres par palier (interpolés sur les 150 derniers mètres d'un palier : pas de marche) ----------
@@ -50,6 +51,7 @@
     return arr[i] + (arr[i + 1] - arr[i]) * s;
   }
 
+  const pinW = (p, d) => U.smooth(p.d0 - 60, p.d0, d) * (1 - U.smooth(p.d1, p.d1 + 60, d));
   /* Tracé du couloir d'une partie : x du centre et demi-largeur à la distance d (fonctions continues). */
   class Track {
     constructor(seed, zones) {
@@ -58,27 +60,23 @@
       this.l = [r.between([170, 230]), r.between([75, 105]), r.between([48, 70])];
       const rl = G.stream(seed, 'lane'); this.lp = [rl() * 6.28, rl() * 6.28, rl() * 6.28, rl() * 6.28]; this.ll = [rl.between([170, 230]), rl.between([70, 100])];
       this.seed = seed;
-      // ordre des zones : la ville d'abord (lisible), puis les autres dans un ordre tiré de la graine, en boucle
-      const rest = ['forest', 'desert', 'snow', 'industry', 'canyon', 'night'].filter((z) => !zones || zones.includes(z));   // v034 : décors ouverts par le niveau du joueur
-      const rz = G.stream(seed, 'zones');
-      for (let i = rest.length - 1; i > 0; i--) { const j = Math.floor(rz() * (i + 1)); const t = rest[i]; rest[i] = rest[j]; rest[j] = t; }
-      this.zoneOrder = ['city'].concat(rest);
-      // v034b : altitude du sol de chaque zone (0, 10, 18 ou 26 m) ; on y monte par une rampe autour de la frontière, sous un pont
-      const re = G.stream(seed, 'elev'); this.elevs = [0];
-      for (let i = 1; i < 80; i++) this.elevs.push(this.elevs[i - 1] > 0 ? re.weighted({ 0: 3, 10: 1, 18: 1 }) | 0 : re.weighted({ 0: 1.5, 10: 2, 18: 2, 26: 1.5 }) | 0);
+      // v035 : enchaînement des zones (graphe de voisinage, les zones rarement vues d'abord), limité aux zones ouvertes par le niveau
+      this.zoneOrder = CC.Zones.order(seed, zones, 90);
     }
     // v034c : la TRAJECTOIRE (lane) — position latérale (relative au couloir) et altitude (relative au sol) qui serpentent, montent et
     // descendent ; les structures sont posées autour d'elle, le parcours est donc toujours faisable
-    laneX(d) { const f = U.clamp((d - 60) / 140, 0, 1), A = param(C().laneAmp, d); return f * A * (Math.sin(d / this.ll[0] + this.lp[0]) + 0.55 * Math.sin(d / this.ll[1] + this.lp[1])) / 1.55; }
-    laneY(d) { const f = U.clamp((d - 40) / 160, 0, 1); return U.clamp(16 + f * (9 * Math.sin(d / 310 + this.lp[2]) + 4.5 * Math.sin(d / 127 + this.lp[3])), 8, 31); }
-    vol(d) { return 33 + 5 * Math.sin(d / 131 + this.lp[0] * 1.7); }          // demi-largeur du volume de jeu
-    elev(zi) { return +this.elevs[Math.min(Math.max(0, zi), this.elevs.length - 1)]; }
+    laneX0(d) { const f = U.clamp((d - 60) / 140, 0, 1), A = param(C().laneAmp, d) * CC.Zones.prof(this, d, 'amp'); return f * A * (Math.sin(d / this.ll[0] + this.lp[0]) + 0.55 * Math.sin(d / this.ll[1] + this.lp[1])) / 1.55; }
+    laneY0(d) { const f = U.clamp((d - 40) / 160, 0, 1), yr = CC.Zones.prof(this, d, 'y'), k = (yr[1] - yr[0]) / 2 / 13.5 * 0.95; return U.clamp((yr[0] + yr[1]) / 2 + f * k * (9 * Math.sin(d / 310 + this.lp[2]) + 4.5 * Math.sin(d / 127 + this.lp[3])), yr[0], yr[1]); }
+    // épingles : certaines scènes (avion géant, pont levant, tasse…) imposent le passage, la trajectoire s'y raccorde en douceur
+    laneX(d) { let x = this.laneX0(d); for (const p of CC.Zones.pinAt(this, d)) x += (p.lx - x) * pinW(p, d); return x; }
+    laneY(d) { let y = this.laneY0(d); for (const p of CC.Zones.pinAt(this, d)) y += (p.y - y) * pinW(p, d); return y; }
+    vol(d) { return CC.Zones.prof(this, d, 'vol') + 2.5 * Math.sin(d / 131 + this.lp[0] * 1.7); }          // demi-largeur du volume de jeu
+    elev(zi) { return CC.Zones.PROFILE[this.zoneOrder[Math.min(Math.max(0, zi), this.zoneOrder.length - 1)]].elev; }
     base(d) {
       if (d <= 0) return 0;
-      const L = C().zoneLen, k0 = Math.round(d / L), B = k0 * L;
-      if (k0 < 1 || Math.abs(d - B) > 130) return this.elev(this.zoneIndex(d));
-      const t = U.smooth(B - 130, B + 130, d);
-      return this.elev(k0 - 1) + (this.elev(k0) - this.elev(k0 - 1)) * t;
+      const tr = CC.Zones.trans(this, d);
+      if (!tr.k) return CC.Zones.PROFILE[tr.z1].elev;
+      return CC.Zones.PROFILE[tr.z0].elev + (CC.Zones.PROFILE[tr.z1].elev - CC.Zones.PROFILE[tr.z0].elev) * tr.t;
     }
     cx(d) {
       const a = param(C().bend, d), fade = U.clamp(d / 120, 0, 1);   // départ en ligne droite
@@ -115,6 +113,7 @@
   /* ---------- fiche de niveau du mode CLASSIQUE ---------- */
   E.level = function (seed, opts) {
     const cfg = C(), T = new Track(seed, opts && opts.zones);
+    if (opts && opts.order && opts.order.length) { const o = opts.order.filter((z) => CC.Zones.PROFILE[z]); while (o.length < 90) o.push(o[o.length % Math.max(1, opts.order.length)]); T.zoneOrder = o; }   // banc de test : ?order=city,metro,…
     const L = {
       id: 'endless', name: 'CLASSIQUE', hud: 'C', mode: 'endless', endless: true, seed, fuel: cfg.fuelMax,
       killY: -30, lookAhead: 16, terminalRange: 20, fireDelay: 0.35, impactVariant: 'orange',
@@ -141,44 +140,44 @@
     const world = game.world, nBoxes = world.boxes.length;
     const pseudo = { seed: (T.seed ^ (k * 7919)) >>> 0, env: { sky: { stars: true } }, routes: [] };   // pas de nuages par tronçon
     const b = new CC.LevelBuilder(game.scene, world, pseudo);
-    const gates = [];                                   // points de passage { d, lx, y } (pilote automatique)
-    const busy = [], reserved = [], bridges = [];       // distances occupées, rectangles réservés, ponts de zone
+    const gates = [];                                   // points de passage { d, lx, y } (pilote automatique, matériaux)
+    const busy = [], reserved = [];
     const free = (d, m) => d > d0 + 8 && d < d1 - 8 && busy.every((q) => Math.abs(q - d) > m);
-    const st = stageOf(d0), midD = (d0 + d1) / 2, zone = T.zoneId(Math.max(0, midD)), Zg = ZONES[zone], env = T.env(T.zoneIndex(Math.max(0, midD)));
+    const st = stageOf(d0), zoneAt = (d) => T.zoneId(Math.max(0, d)), tr0 = (d) => CC.Zones.trans(T, d);
+    const inRamp = (d) => { const t = tr0(d); return !!t.k && T.elev(t.k) !== T.elev(t.k - 1); };
 
-    // sol (relief), limites du volume (quartiers, collines, falaises…) et silhouettes lointaines
-    CC.Scenery.groundSlices(b, T, d0, d1, Zg, cfg);
-    for (const side of [-1, 1]) CC.Scenery.side(b, T, r, d0, d1, side, ZONES, game);
-    // pont de passage à chaque frontière de zone
-    for (let B = Math.ceil(Math.max(1, d0) / cfg.zoneLen) * cfg.zoneLen; B < d1; B += cfg.zoneLen) if (B >= d0) { CC.Scenery.bridge(b, T, r, B, T.zoneId(B - 1), gates); busy.push(B); bridges.push(B); }
-
-    // cibles en route, sur la trajectoire (il faut parfois plonger vers le sol pour les prendre)
+    // cibles en route, sur la colonne vertébrale (il faut parfois plonger vers le sol pour les prendre)
     const nextT = (from) => from + r.between(cfg.targetGap);
     if (T.nextTarget === undefined) T.nextTarget = 90;
+    const tgt = [];
     while (T.nextTarget < d1) {
       const d = T.nextTarget;
-      if (d >= d0 + 10 && free(d, 40)) {
-        const lx = T.laneX(d) + r.between([-4, 4]);
-        const type = st === 0 ? 'fuel' : r.pick(['fuel', 'fuel', 'truck']);
-        const p = T.at(d, lx, 0);
-        b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0), { unarmed: true });
-        busy.push(d); reserved.push({ d: d - 12, lx, w: 30, dd: 110 });   // couloir de plongée libre de toute structure
-        const hy = type === 'fuel' ? 3.5 : 1.6;
-        gates.push({ d: d - 55, lx: T.laneX(d - 55), y: T.laneY(d - 55) * 0.7 }, { d: d - 22, lx, y: hy + 3 }, { d, lx, y: hy }, { d: d + 30, lx: T.laneX(d + 30), y: T.laneY(d + 30) * 0.8 });
+      const nearPin = [-150, -60, 0, 40].some((o) => CC.Zones.pinAt(T, d + o).length);   // pas de plongée vers une cible dans une scène à structure imposée
+      if (d >= d0 + 10 && !inRamp(d) && tr0(d).t === 1 && Math.abs(d % cfg.zoneLen) > 70 && !nearPin) {
+        const zone = zoneAt(d), lx = CC.Zones.targetLx(T, d, zone) + r.between([-2, 2]);
+        tgt.push({ d, lx, zone });
+        reserved.push({ d: d - 12, lx, w: 30, dd: 110 });
       }
       T.nextTarget = nextT(d);
     }
 
-    // structures : portes qui cadrent la trajectoire + décor qui remplit le volume (src/world/pieces.js)
-    const po = { stage: st, zone, ZONES, busy, reserved, bridges, env, special: null };
-    CC.Pieces.build(b, T, r, d0, d1, po);
-    CC.Pieces.far(b, T, r, d0, d1, po);
+    // sol, passages entre zones, scènes (src/world/zones*.js)
+    const ctx = { game, b, T, r, d0, d1, gates, busy, reserved, ZONES, special: null };
+    CC.Zones.build(ctx);
 
-    // drones : ils balaient le passage (le rail rouge montre leur course) ; toujours dans le tube dégagé, loin des structures
+    for (const t of tgt) {
+      const d = t.d, type = st === 0 || t.zone === 'mini' ? 'fuel' : r.pick(['fuel', 'fuel', 'truck']), lx = t.lx, p = T.at(d, lx, 0);
+      b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0), { unarmed: true });
+      busy.push(d);
+      const hy = type === 'fuel' ? 3.5 : 1.6;
+      gates.push({ d: d - 55, lx: T.laneX(d - 55), y: T.laneY(d - 55) * 0.7 }, { d: d - 22, lx, y: hy + 3 }, { d, lx, y: hy }, { d: d + 30, lx: T.laneX(d + 30), y: T.laneY(d + 30) * 0.8 });
+    }
+
+    // drones : ils balaient le passage (le rail rouge montre leur course) ; dans les scènes libres seulement
     const nD = cfg.drones[st];
     for (let i = 0; i < nD; i++) {
       const d = d0 + cfg.chunkLen * (i + r.between([0.25, 0.75])) / Math.max(1, nD);
-      if (!free(d, 45) || po.reserveCheck) continue;
+      if (!free(d, 45) || inRamp(d) || tr0(d).t < 1 || zoneAt(d) === 'metro' && false) continue;
       if (reserved.some((q) => Math.abs(q.d - d) < (q.dd + 30) / 2)) continue;
       const lx0 = T.laneX(d), y = T.laneY(d) + r.between([-2, 2]), amp = 9, period = r.between([cfg.droneSpeed[Math.min(st, 3)] * 0.85, cfg.droneSpeed[Math.min(st, 3)] * 1.15]);
       const yaw = T.yawAcross(d) * Math.PI / 180, across = [Math.cos(yaw), -Math.sin(yaw)];
@@ -188,33 +187,31 @@
       busy.push(d);
     }
 
-    // ennemis (faibles, en nombre limité) : chars et lance-missiles au pied des limites du volume, hélicoptères en altitude.
-    // Leurs modèles sont détaillés : créés un par image après le tronçon (Run.update).
+    // ennemis (faibles, en nombre limité) : chars et lance-missiles en bordure du volume, hélicoptères en altitude ; selon la zone
     const tanks = [], nT = cfg.tanks[st];
-    const edge = (d) => (r() < 0.5 ? -1 : 1) * (T.vol(d) - 5);
     for (let i = 0; i < nT; i++) {
-      const d = d0 + cfg.chunkLen * (i + r.between([0.2, 0.8])) / nT; if (!free(d, 14)) continue;
-      const lx = edge(d); tanks.push({ type: 'tank', pos: T.at(d, lx, 0), yaw: 180 - Math.sign(lx) * 20 }); busy.push(d);
+      const d = d0 + cfg.chunkLen * (i + r.between([0.2, 0.8])) / nT, zn = zoneAt(d); if (!free(d, 14) || inRamp(d) || tr0(d).t < 1 || !CC.Zones.enemies(zn).tank) continue;
+      const lx = CC.Zones.edgeLx(T, d, r() < 0.5 ? -1 : 1, zn); tanks.push({ type: 'tank', pos: T.at(d, lx, 0), yaw: 180 - Math.sign(lx) * 20 }); busy.push(d);
     }
     for (let i = 0; i < (cfg.sams[st] || 0); i++) {
-      const d = d0 + cfg.chunkLen * r.between([0.15, 0.85]); if (!free(d, 20)) continue;
-      const lx = edge(d); tanks.push({ type: 'sam', pos: T.at(d, lx, 0), yaw: 180 - Math.sign(lx) * 15 }); busy.push(d);
+      const d = d0 + cfg.chunkLen * r.between([0.15, 0.85]), zn = zoneAt(d); if (!free(d, 20) || inRamp(d) || tr0(d).t < 1 || !CC.Zones.enemies(zn).sam) continue;
+      const lx = CC.Zones.edgeLx(T, d, r() < 0.5 ? -1 : 1, zn); tanks.push({ type: 'sam', pos: T.at(d, lx, 0), yaw: 180 - Math.sign(lx) * 15 }); busy.push(d);
     }
     for (let i = 0; i < (cfg.helis[st] || 0); i++) {
-      const d = d0 + cfg.chunkLen * r.between([0.2, 0.8]); if (!free(d, 25)) continue;
+      const d = d0 + cfg.chunkLen * r.between([0.2, 0.8]), zn = zoneAt(d); if (!free(d, 25) || inRamp(d) || tr0(d).t < 1 || !CC.Zones.enemies(zn).heli) continue;
       tanks.push({ type: 'heli', pos: T.at(d, T.laneX(d) + (r() < 0.5 ? -1 : 1) * 26, r.between([24, 36])), yaw: 180 }); busy.push(d);
     }
 
     b.finish();
     const boxes = world.boxes.slice(nBoxes);
-    // route du pilote automatique et des matériaux : la trajectoire, tous les 14 m, sauf près des passages obligés (cibles, ponts)
+    // route du pilote automatique et des matériaux : la trajectoire, tous les 14 m, sauf près des passages obligés (cibles, portails)
     gates.sort((a, c) => a.d - c.d);
     const pts = [];
     for (let d = d0; d < d1; d += 14) if (gates.every((g) => Math.abs(g.d - d) > 26)) pts.push({ d, lx: T.laneX(d), y: T.laneY(d) });
     const nodes = pts.concat(gates.filter((g) => g.d >= d0 && g.d < d1)).sort((a, c) => a.d - c.d);
     const route = k < 0 ? [] : nodes.map((g) => T.at(g.d, g.lx, g.y));
     for (const t of b.targets) t.updateObb();
-    const collect = k < 0 || !CC.Collect ? null : CC.Collect.build(game, T, b, nodes, d0, d1, r, po.special);
+    const collect = k < 0 || !CC.Collect ? null : CC.Collect.build(game, T, b, nodes, d0, d1, r, ctx.special);
     return { k, builder: b, boxes, targets: b.targets, entities: b.entities, route, tanks, collect };
   }
 

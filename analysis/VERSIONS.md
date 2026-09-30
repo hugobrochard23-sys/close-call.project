@@ -601,3 +601,27 @@ permanent, rappel de touches.
 - **Nouvelle zone FORET** (sol sombre, troncs géants, feuillages, troncs tombés) ; ordre des décors tiré de la graine.
 - **Lumières dosées** : aberration chromatique réduite, nuit bleutée et douce, halos de bonus et lumière de la flamme réduits, sol de forêt sombre.
 - Plongées vers les cibles : couloir réservé libre de structures. Pilote automatique : 6 graines, 1 790 à 4 624 m, 3 atteignent la limite de 70 s.
+
+## v035 — zones-lieux : avenue, métro, port, base en altitude, monde miniature (+ forêt)
+
+Cadre (`src/world/zones.js`) : chaque zone est un LIEU avec une colonne vertébrale lisible sous la roquette, un profil (altitude du sol, largeur du
+volume, plage de hauteur de vol), des **scènes** de 150 à 330 m tirées dans un paquet sans remise (ordre et variantes différents à chaque partie)
+et une **scène signature** unique vers 55 % du parcours. Entre deux zones : tranchée ou vallée quand le sol monte ou descend, puis **portail**
+(grand portique, bouche de métro, anneaux de montée, fenêtre, porte de quai). Enchaînement par graphe de voisinage. **Plus de plafond** :
+altitudes de −44 m (métro) à +170 m (base aérienne), le vide sous la base tue à −170 m. Les scènes à structure imposée « épinglent » la
+trajectoire ; les plongées vers les cibles les évitent.
+
+- **Avenue** (`zones_a.js`) : chaussée à marquages, trottoirs, lampadaires, arbres, voitures ; scènes boulevard, carrefour (feux, viaduc), viaduc
+  (autoroute en nef), chantier (grues, palissade, squelette), marché (auvents rayés, étals, guirlandes), passage (on traverse un immeuble),
+  **tour en construction** (signature : dalle après dalle).
+- **Métro** : −44 m, tunnel carrelé, rails, lampes ; tunnel, station (quais, rame à l'arrêt), embranchement, éboulement, puits de ventilation
+  (respiration), **rames qui foncent en face** (signature, entité mobile `CC.Train`).
+- **Port** (`zones_b.js`) : quai entre deux plans d'eau ; conteneurs + grues à portique, navire amarré, entrepôts + wagons, lac (îlots, phare,
+  voiliers), pont suspendu, **pont levant** (signature).
+- **Base en altitude** : plateau à +170 m au-dessus d'une mer de nuages, montée par anneaux ; piste (avions, hangars, tour), radars, rampes de
+  lancement, portiques, hangar traversant, ciel (respiration), **cargo géant dont la soute est un tunnel de 116 m** (signature).
+- **Monde miniature** (`zones_c.js`) : on entre par une fenêtre ; cuisine, sous la table, chambre d'enfant (train, ours), bureau ; **tasse dont
+  l'anse est un anneau à traverser** (signature).
+- Déblocage par niveau : avenue 1, forêt 2, port 3, métro 4, monde miniature 5, base aérienne 7.
+- Préchauffage des textures à l'accueil ; ordre des zones forçable pour les tests : `?test=1&endless=<graine>&order=city,metro,port`.
+- Pilote automatique (4 graines, sans bouclier) : 2 650 à 7 878 m, traversées de jusqu'à 4 zones ; tronçons construits en 0 à 43 ms.

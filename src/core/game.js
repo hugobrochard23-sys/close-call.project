@@ -297,7 +297,7 @@
       opts = opts || {};
       if (seed === undefined || seed === null) seed = CC.Gen.randomSeed();
       this.generated = false; this.mission = null;
-      const L = CC.Endless.level(seed, { zones: this.testMode ? null : this.progress.unlockedWorlds() });
+      const ordP = this.params.get('order'), L = CC.Endless.level(seed, { zones: this.testMode ? null : this.progress.unlockedWorlds(), order: ordP ? ordP.split(',') : null });
       this.loadLevelFrom(L, -1);
       this.endlessRun = new CC.Endless.Run(this, L);
       this.progress.beginRun(); this.reviveUsed = false; this.hudFeed.length = 0; this.cellHap = 0; this.cellSnd = 0;
@@ -397,7 +397,7 @@
       S.endless = S.endless || { best: 0, runs: 0 };
       S.endless.runs = (S.endless.runs || 0) + 1;
       if (dist > (S.endless.best || 0)) S.endless.best = dist;
-      const causes = { wall: 'MUR', hazard: 'LASER', cable: 'CABLE', missile: 'MISSILE', drone: 'DRONE', altitude: 'TROP HAUT', outOfBounds: 'CHUTE', stalled: 'PANNE SECHE' };
+      const causes = { wall: 'MUR', hazard: 'LASER', cable: 'CABLE', missile: 'MISSILE', drone: 'DRONE', train: 'RAME', altitude: 'TROP HAUT', outOfBounds: 'CHUTE', stalled: 'PANNE SECHE' };
       this.results = Object.assign(res, { endless: true, time: this.runTime, stage: run.stageLabel(), cause: causes[this.crashKind] || 'CRASH', style: this.style.total, runStats: run.stats, xpDoubled: false, t: 0 });
       this.state = 'RESULTS'; this.centerMsg = null;
       if (this.ads) this.ads.onRunEnd(this.results);
@@ -545,7 +545,7 @@
     }
 
     onTargetHit(t, rocket) {
-      if (t.hazard) { this.onRocketCrash('drone', rocket.pos.clone(), new V(0, 1, 0)); return; }   // v034 : un drone ne se détruit pas, il détruit
+      if (t.hazard) { this.onRocketCrash(t.type === 'train' ? 'train' : 'drone', rocket.pos.clone(), new V(0, 1, 0)); return; }   // v034 : un drone ne se détruit pas, il détruit
       const c = t.obb.c.clone();
       t.kill(this);
       if (this.endlessRun) {   // v033 : la roquette traverse la cible et continue ; essence rechargée
@@ -764,7 +764,7 @@
             }
             this.updateWarnings(dt, rk);
             this.lastSpeed = rk.speed;
-            const killY = this.level.killY !== undefined ? this.level.killY : -60;
+            const killY = this.endlessRun ? this.endlessRun.T.base(this.endlessRun.dist) - 170 : (this.level.killY !== undefined ? this.level.killY : -60);   // v035 : le vide sous la base aérienne tue à −170 m du sol de la zone
             if (rk.pos.y < killY || (rk.pos.length() > 4000 && !this.endlessRun)) this.onRocketCrash('outOfBounds', rk.pos.clone(), null);   // v033 : le couloir infini n'a pas de bord
             // v032 : roquette immobilisée (posée en glissant sur un toit, sans essence) → comptée comme un crash, sinon
             // la partie ne peut plus avancer
@@ -858,6 +858,11 @@
       if (this.noticeT > 0 && (this.noticeT -= dt) <= 0) this.notice = null;
       if (this.pendingMission) this.runPendingMission();
       if (this.pendingHome) this.runPendingHome();
+      // v035 : préchauffage des textures (une par image, à l'accueil) : entrer dans une nouvelle zone ne fige plus le jeu
+      if (!this.testMode && this.state === 'MENU' && !this.warmDone) {
+        const keys = this.warmKeys || (this.warmKeys = Object.keys(CC.Textures.tile || {}).concat(['chainlink', 'water']));
+        const k = keys.shift(); if (k) { try { this.builderMat = this.builderMat || new CC.LevelBuilder(this.scene, this.world, { seed: 1, env: { sky: {} }, routes: [] }); this.builderMat.mat(k); } catch (e) { /* texture inconnue */ } } else { this.warmDone = true; if (this.builderMat) { this.scene.remove(this.builderMat.root); this.builderMat = null; } }
+      }
       if (this.fadeIn > 0) this.fadeIn = Math.max(0, this.fadeIn - dt);
       if (!this.paused && this.state !== 'BOOT') this.update(dt);
       else { this.input.poll(0); this.rig.update(0); }
