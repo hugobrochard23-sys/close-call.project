@@ -66,7 +66,12 @@
     // v034c : la TRAJECTOIRE (lane) — position latérale (relative au couloir) et altitude (relative au sol) qui serpentent, montent et
     // descendent ; les structures sont posées autour d'elle, le parcours est donc toujours faisable
     laneX0(d) { const f = U.clamp((d - 60) / 140, 0, 1), A = param(C().laneAmp, d) * CC.Zones.prof(this, d, 'amp'); return f * A * (Math.sin(d / this.ll[0] + this.lp[0]) + 0.55 * Math.sin(d / this.ll[1] + this.lp[1])) / 1.55; }
-    laneY0(d) { const f = U.clamp((d - 40) / 160, 0, 1), yr = CC.Zones.prof(this, d, 'y'), k = (yr[1] - yr[0]) / 2 / 13.5 * 0.95; return U.clamp((yr[0] + yr[1]) / 2 + f * k * (9 * Math.sin(d / 310 + this.lp[2]) + 4.5 * Math.sin(d / 127 + this.lp[3])), yr[0], yr[1]); }
+    laneY0(d) {
+      const f = U.clamp((d - 40) / 160, 0, 1), tr = CC.Zones.trans(this, d), yr = CC.Zones.prof(this, d, 'y');
+      const zi0 = this.zoneIndex(d), c0 = CC.Zones.yCenter(this, tr.z0, tr.k ? tr.k - 1 : zi0, d), c1 = CC.Zones.yCenter(this, tr.z1, tr.k ? tr.k : zi0, d), c = c0 + (c1 - c0) * tr.t;
+      const hw = Math.min(yr[1] - c, c - yr[0]), k = Math.min(Math.max(hw, 8), (yr[1] - yr[0]) / 2) / 13.5 * 0.95;
+      return U.clamp(c + f * k * (9 * Math.sin(d / 310 + this.lp[2]) + 4.5 * Math.sin(d / 127 + this.lp[3])), yr[0], yr[1]);
+    }
     // épingles : certaines scènes (avion géant, pont levant, tasse…) imposent le passage, la trajectoire s'y raccorde en douceur
     laneX(d) { let x = this.laneX0(d); for (const p of CC.Zones.pinAt(this, d)) x += (p.lx - x) * pinW(p, d); return x; }
     laneY(d) { let y = this.laneY0(d); for (const p of CC.Zones.pinAt(this, d)) y += (p.y - y) * pinW(p, d); return y; }
@@ -91,9 +96,9 @@
       if (!this._env) this._env = {};
       if (!this._env[zi]) {
         const Z = ZONES[this.zoneOrder[zi % this.zoneOrder.length]], r = G.stream(this.seed, 'env' + zi);
-        const id = Z.envs[Math.floor(r() * Z.envs.length)];
+        const id = this.forceEnv || Z.envs[Math.floor(r() * Z.envs.length)];
         this._env[zi] = G.Envs.get(id).make(r);
-        this._env[zi].clouds = false;
+        this._env[zi].clouds = false; this._env[zi].dark = G.Envs.get(id).dark; this._env[zi].id = id;
         // v034c : lumières dosées (plus de « mini disco ») : la nuit reste bleutée et douce, aberration chromatique réduite partout
         const E0 = this._env[zi], px = E0.postfx = E0.postfx || {};
         px.chromatic = (px.chromatic !== undefined ? px.chromatic : CC.CONFIG.postfx.chromatic) * 0.55;
@@ -113,6 +118,7 @@
   /* ---------- fiche de niveau du mode CLASSIQUE ---------- */
   E.level = function (seed, opts) {
     const cfg = C(), T = new Track(seed, opts && opts.zones);
+    if (opts && opts.env) T.forceEnv = opts.env;   // banc de test : ?env=neonNight
     if (opts && opts.order && opts.order.length) { const o = opts.order.filter((z) => CC.Zones.PROFILE[z]); while (o.length < 90) o.push(o[o.length % Math.max(1, opts.order.length)]); T.zoneOrder = o; }   // banc de test : ?order=city,metro,…
     const L = {
       id: 'endless', name: 'CLASSIQUE', hud: 'C', mode: 'endless', endless: true, seed, fuel: cfg.fuelMax,
@@ -153,7 +159,7 @@
     while (T.nextTarget < d1) {
       const d = T.nextTarget;
       const nearPin = [-150, -60, 0, 40].some((o) => CC.Zones.pinAt(T, d + o).length);   // pas de plongée vers une cible dans une scène à structure imposée
-      if (d >= d0 + 10 && !inRamp(d) && tr0(d).t === 1 && Math.abs(d % cfg.zoneLen) > 70 && !nearPin) {
+      if (d >= d0 + 10 && !inRamp(d) && tr0(d).t === 1 && Math.abs(d % cfg.zoneLen) > 70 && !nearPin && !CC.Zones.noTargets[zoneAt(d)]) {
         const zone = zoneAt(d), lx = CC.Zones.targetLx(T, d, zone) + r.between([-2, 2]);
         tgt.push({ d, lx, zone });
         reserved.push({ d: d - 12, lx, w: 30, dd: 110 });
@@ -162,7 +168,7 @@
     }
 
     // sol, passages entre zones, scènes (src/world/zones*.js)
-    const ctx = { game, b, T, r, d0, d1, gates, busy, reserved, ZONES, special: null };
+    const ctx = { game, b, T, r, d0, d1, gates, busy, reserved, ZONES, special: null, rings: [], glows: [] };
     CC.Zones.build(ctx);
 
     for (const t of tgt) {
@@ -212,7 +218,7 @@
     const route = k < 0 ? [] : nodes.map((g) => T.at(g.d, g.lx, g.y));
     for (const t of b.targets) t.updateObb();
     const collect = k < 0 || !CC.Collect ? null : CC.Collect.build(game, T, b, nodes, d0, d1, r, ctx.special);
-    return { k, builder: b, boxes, targets: b.targets, entities: b.entities, route, tanks, collect };
+    return { k, builder: b, boxes, targets: b.targets, entities: b.entities, route, tanks, collect, rings: ctx.rings.map((q) => Object.assign({ passed: false, missed: false }, q)) };
   }
 
   /* Un obstacle à la distance d. Retourne la longueur de couloir occupée (0 = rien posé). */
@@ -310,6 +316,15 @@
       this.envFrom = null; this.envT = 1;
       this.pending = [];                                // chars à créer (un par image)
       this.ensure(-1);
+      this.announce(0);
+    }
+    // v036 : la zone change → fonds sonores, musique, silhouettes lointaines (aucune annonce écrite)
+    announce(zi) {
+      const T = this.T, g = this.game, env = T.env(zi), zone = T.zoneOrder[zi % T.zoneOrder.length], dark = env.dark > 0.4;
+      this.darkNow = dark; this.zoneNow = zone;
+      if (g.horizon) g.horizon.setZone(zone, dark, (T.seed ^ (zi * 2654435)) >>> 0);
+      if (g.audio) g.audio.setZone(zone, dark);
+      if (g.horizon) g.horizon.setEnv(env);
     }
     // construit les tronçons jusqu'à `ahead` devant la tête, détruit ceux trop loin derrière
     ensure(kHead) {
@@ -346,7 +361,7 @@
       L.aaThreat = param(cfg.threat, this.dist); L.aaSalvo = st >= 2; L.aaMaxAlive = cfg.maxMissiles[st];
       // zone de décor : l'ambiance glisse en 3 s vers celle de la nouvelle zone
       const zi = this.T.zoneIndex(this.dist);
-      if (zi !== this.zone) { this.envFrom = this.T.env(this.zone); this.zone = zi; this.envT = 0; }
+      if (zi !== this.zone) { this.envFrom = this.T.env(this.zone); this.zone = zi; this.envT = 0; this.announce(zi); }
       if (this.envT < 1) {
         this.envT = Math.min(1, this.envT + dt / 3);
         L.env = lerpEnv(this.envFrom, this.T.env(this.zone), this.envT);

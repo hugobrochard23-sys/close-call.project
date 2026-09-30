@@ -25,16 +25,24 @@
     port:   { elev: 0,   vol: 50, y: [6, 34],  amp: 0.85 },
     sky:    { elev: 170, vol: 75, y: [10, 64], amp: 1.3 },
     mini:   { elev: 0,   vol: 42, y: [5, 24],  amp: 0.85 },
+    chute:  { elev: 0,   vol: 46, y: [8, 248], amp: 1.1, drift: [245, 22] },     // chute libre : on tombe de 245 m à 22 m le long d'immeubles géants
+    tour:   { elev: 0,   vol: 36, y: [8, 250], amp: 0.8, drift: [12, 236] },     // ascension : on monte de 12 m à 236 m le long d'une tour
+    eau:    { elev: -70, vol: 52, y: [6, 44],  amp: 1.2 },                        // sous l'eau : le fond est à −70 m
+    usine:  { elev: 0,   vol: 38, y: [6, 40],  amp: 0.7 },                        // halle d'usine
   };
   Z.PROFILE = PROFILE;
   // zones voisines autorisées (le sol ne saute jamais de la base aérienne au métro)
   const NEXT = {
-    city:   ['forest', 'metro', 'port', 'sky', 'mini'],
-    forest: ['city', 'port', 'mini', 'sky'],
-    metro:  ['city', 'port', 'forest', 'mini'],
-    port:   ['city', 'sky', 'metro', 'forest'],
-    sky:    ['city', 'port', 'forest'],
+    city:   ['forest', 'metro', 'port', 'tour', 'mini', 'usine'],
+    forest: ['city', 'port', 'mini', 'tour', 'usine'],
+    metro:  ['city', 'port', 'forest', 'mini', 'usine'],
+    port:   ['city', 'eau', 'metro', 'forest', 'usine', 'tour'],
+    sky:    ['chute', 'city', 'port'],
     mini:   ['city', 'forest', 'port'],
+    chute:  ['city', 'port', 'forest', 'metro', 'eau'],
+    tour:   ['sky'],
+    eau:    ['port', 'city', 'forest'],
+    usine:  ['city', 'port', 'metro', 'forest', 'mini', 'tour'],
   };
   Z.order = function (seed, allowed, n) {
     const r = G.stream(seed, 'zorder'), ok = (id) => !allowed || allowed.includes(id), out = ['city'];
@@ -89,14 +97,69 @@
     postfx: { vignette: 0.5, vignetteColor: '#2a1a0a', halftone: 0.35, lift: '#0a0604', saturation: 1.0 },
   }) });
 
+  E('neonNight', { label: 'NUIT NEON', dark: 0.75, vis: 0.6, skyline: '#2a1650', make: (r) => ({
+    sky: { top: '#0a0a26', horizon: '#5a1f6a', bottom: '#140a2a', stars: true, sunColor: '#9aa8ff', sunSize: 260 },
+    fog: { color: '#2e1a58', near: 70, far: r.between([600, 680]) },
+    hemi: { sky: '#8a7ac8', ground: '#2a2040', intensity: 0.95 }, ambient: { color: '#8a80c0', intensity: 0.42 },
+    sun: { color: '#9ab4ff', intensity: 0.5, dir: SUN(r, [0.5, 0.75]) },
+    postfx: { vignette: 0.5, vignetteColor: '#0a0418', chromatic: 0.004, halftone: 0.3, lift: '#140a26', saturation: 1.1, bloomThreshold: 0.6, bloomStrength: 0.75 },
+  }) });
+  E('altitudeDusk', { label: 'ALTITUDE COUCHANT', dark: 0.2, vis: 1, skyline: '#f0b898', make: (r) => ({
+    sky: { top: '#2a2a6a', horizon: '#ffb080', bottom: '#f0a890', sunColor: '#ffc090', sunSize: 420 },
+    fog: { color: '#f0b898', near: 220, far: r.between([1150, 1300]) },
+    hemi: { sky: '#ffe0d0', ground: '#8a6a7a', intensity: 0.72 }, ambient: { color: '#ffe0d0', intensity: 0.28 },
+    sun: { color: '#ffb880', intensity: 0.85, dir: SUN(r, [0.12, 0.24]) },
+    postfx: { vignette: 0.45, vignetteColor: '#2a1430', halftone: 0.35, lift: '#0a0410', saturation: 1.0 },
+  }) });
+  E('forestDay', { label: 'FORET', dark: 0.05, vis: 0.85, skyline: '#cfe0cc', make: (r) => ({
+    sky: { top: '#6aa0c8', horizon: '#dfeee0', bottom: '#b8c8b0', sunColor: '#fff0c8', sunSize: 500 },
+    fog: { color: '#cfe0cc', near: 60, far: r.between([640, 760]) },
+    hemi: { sky: '#dcecd8', ground: '#4a5a3a', intensity: 0.8 }, ambient: { color: '#f0f8e8', intensity: 0.28 },
+    sun: { color: '#fff0c8', intensity: 0.7, dir: SUN(r, [0.45, 0.7]) },
+    postfx: { vignette: 0.5, vignetteColor: '#10200a', halftone: 0.4, lift: '#040a04', saturation: 0.95 },
+  }) });
+  E('forestDusk', { label: 'FORET AU COUCHANT', dark: 0.3, vis: 0.75, skyline: '#8a7a78', make: (r) => ({
+    sky: { top: '#2a3a5a', horizon: '#f0a878', bottom: '#5a4a50', sunColor: '#ffc090', sunSize: 500 },
+    fog: { color: '#94807e', near: 50, far: r.between([560, 660]) },
+    hemi: { sky: '#d8c0c0', ground: '#3a4a30', intensity: 0.7 }, ambient: { color: '#ffd8c0', intensity: 0.28 },
+    sun: { color: '#ffb080', intensity: 0.7, dir: SUN(r, [0.12, 0.24]) },
+    postfx: { vignette: 0.52, vignetteColor: '#1a0a10', halftone: 0.4, lift: '#0a0408', saturation: 0.95 },
+  }) });
+  E('forestNight', { label: 'FORET LA NUIT', dark: 0.55, vis: 0.6, skyline: '#0e2230', make: (r) => ({
+    sky: { top: '#050a18', horizon: '#14323e', bottom: '#050e14', stars: true, sunColor: '#b0c8ff', sunSize: 300 },
+    fog: { color: '#0e2230', near: 40, far: r.between([500, 580]) },
+    hemi: { sky: '#6a90b0', ground: '#14241c', intensity: 1.1 }, ambient: { color: '#8ab0d0', intensity: 0.45 },
+    sun: { color: '#b0c8ff', intensity: 0.75, dir: SUN(r, [0.55, 0.8]) },
+    postfx: { vignette: 0.55, vignetteColor: '#000408', chromatic: 0.004, halftone: 0.3, lift: '#06101a', saturation: 1.0, bloomThreshold: 0.65, bloomStrength: 0.65 },
+  }) });
+  E('deepSea', { label: 'PROFONDEUR', dark: 0.3, vis: 0.5, skyline: '#0a4a5a', make: (r) => ({
+    sky: { top: '#04303a', horizon: '#0a4a5a', bottom: '#021018' },
+    fog: { color: '#0a4a5a', near: 10, far: r.between([250, 300]) },
+    hemi: { sky: '#7ad0e0', ground: '#0a2a34', intensity: 0.95 }, ambient: { color: '#9ad8e8', intensity: 0.42 },
+    sun: { color: '#bff4ff', intensity: 0.5, dir: [0.1, 1, 0.1], shadow: false },
+    postfx: { vignette: 0.6, vignetteColor: '#001018', halftone: 0.3, lift: '#00141c', saturation: 0.95, tint: '#d8f8ff' },
+  }) });
+  E('factoryHall', { label: 'USINE', dark: 0.5, vis: 0.6, skyline: '#3a342c', make: (r) => ({
+    sky: { top: '#2a2622', horizon: '#3a342c', bottom: '#1c1814' },
+    fog: { color: '#3a342c', near: 40, far: r.between([420, 480]) },
+    hemi: { sky: '#d8c8a8', ground: '#3a3028', intensity: 1.0 }, ambient: { color: '#ffe8c8', intensity: 0.42 },
+    sun: { color: '#ffd8a0', intensity: 0.3, dir: [0.3, 0.9, 0.3], shadow: false },
+    postfx: { vignette: 0.55, vignetteColor: '#140c04', halftone: 0.35, lift: '#100804', saturation: 0.95 },
+  }) });
+
   // méta-données des zones pour endless.js (libellé, ambiances, sol)
-  Z.meta.city = { label: 'AVENUE', envs: ['day', 'overcast', 'harborDusk'], ground: 'asphalt', groundTint: '#ffffff', city: true,
+  Z.meta.city = { label: 'AVENUE', envs: ['day', 'overcast', 'harborDusk', 'neonNight'], ground: 'asphalt', groundTint: '#ffffff', city: true,
     wall: (r) => ({ mat: { side: r.pick(['facade', 'facadePink', 'facadeTan']), top: 'concrete', bottom: 'concreteDark' }, tint: r.pick(['#ffffff', '#f2eee8', '#e8ecf0']) }), obstacle: 'concrete', obstacleTint: '#d8d4cc' };
   Z.meta.metro = { label: 'METRO', envs: ['metroLight'], ground: 'concreteDark', groundTint: '#b8bcc0', wall: () => ({ mat: { side: 'concrete', top: 'concreteDark' }, tint: '#c8ccd0' }), obstacle: 'concrete', obstacleTint: '#c8ccd0' };
-  Z.meta.port = { label: 'PORT', envs: ['harbor', 'harborDusk'], ground: 'concrete', groundTint: '#d8d8d4', wall: () => ({ mat: { side: 'corrugated', top: 'metal' }, tint: '#c8ccd0' }), obstacle: 'metal', obstacleTint: '#c8ccd4' };
-  Z.meta.sky = { label: 'BASE AERIENNE', envs: ['altitude'], ground: 'concreteDark', groundTint: '#b8bcc4', wall: () => ({ mat: { side: 'metal', top: 'concreteDark' }, tint: '#d0d4dc' }), obstacle: 'metal', obstacleTint: '#d0d4dc' };
+  Z.meta.port = { label: 'PORT', envs: ['harbor', 'harborDusk', 'neonNight'], ground: 'concrete', groundTint: '#d8d8d4', wall: () => ({ mat: { side: 'corrugated', top: 'metal' }, tint: '#c8ccd0' }), obstacle: 'metal', obstacleTint: '#c8ccd4' };
+  Z.meta.sky = { label: 'BASE AERIENNE', envs: ['altitude', 'altitudeDusk'], ground: 'concreteDark', groundTint: '#b8bcc4', wall: () => ({ mat: { side: 'metal', top: 'concreteDark' }, tint: '#d0d4dc' }), obstacle: 'metal', obstacleTint: '#d0d4dc' };
   Z.meta.mini = { label: 'MONDE MINIATURE', envs: ['miniRoom'], ground: 'planks', groundTint: '#d8b888', wall: () => ({ mat: { side: 'concreteWarm', top: 'concrete' }, tint: '#e8d8b8' }), obstacle: 'planks', obstacleTint: '#d8b888' };
-  Z.meta.forest = { label: 'FORET', envs: ['dusk', 'moonlit', 'fog'], ground: 'dirt', groundTint: '#5a6a48', wall: (r) => ({ mat: { side: 'rock', top: 'grass' }, tint: r.pick(['#8a9a82', '#7a8a72']) }), obstacle: 'rock', obstacleTint: '#8a9a82' };
+  Z.meta.forest = { label: 'FORET', envs: ['forestDay', 'forestDusk', 'forestNight'], ground: 'dirt', groundTint: '#5a6a48', wall: (r) => ({ mat: { side: 'rock', top: 'grass' }, tint: r.pick(['#8a9a82', '#7a8a72']) }), obstacle: 'rock', obstacleTint: '#8a9a82' };
+
+  Z.meta.chute = { label: 'CHUTE', envs: ['altitude', 'altitudeDusk', 'neonNight'], ground: 'asphalt', groundTint: '#b8b8b8', wall: Z.meta.city.wall, obstacle: 'concrete', obstacleTint: '#d8d4cc' };
+  Z.meta.tour = { label: 'ASCENSION', envs: ['altitude', 'altitudeDusk', 'neonNight'], ground: 'asphalt', groundTint: '#b8b8b8', wall: Z.meta.city.wall, obstacle: 'concrete', obstacleTint: '#d8d4cc' };
+  Z.meta.eau = { label: 'PROFONDEUR', envs: ['deepSea'], ground: 'sand', groundTint: '#8aa8a0', wall: () => ({ mat: { side: 'rock', top: 'sand' }, tint: '#6a8a90' }), obstacle: 'rock', obstacleTint: '#6a8a90' };
+  Z.meta.usine = { label: 'USINE', envs: ['factoryHall'], ground: 'concreteDark', groundTint: '#a8a49c', wall: () => ({ mat: { side: 'corrugated', top: 'metal' }, tint: '#b8b4a8' }), obstacle: 'metal', obstacleTint: '#b8b4a8' };
 
   // ---------- profil interpolé : transitions autour de chaque frontière de zone ----------
   // hw(k) : demi-largeur de la transition à la frontière k (plus le sol monte, plus elle est longue)
@@ -107,6 +170,12 @@
     const hw = Z.hw(T, k0);
     if (Math.abs(d - B) > hw) { const z = T.zoneOrder[T.zoneIndex(d) % T.zoneOrder.length]; return { z0: z, z1: z, t: 1, k: 0 }; }
     return { z0: T.zoneOrder[(k0 - 1) % T.zoneOrder.length], z1: T.zoneOrder[k0 % T.zoneOrder.length], t: U.smooth(B - hw, B + hw, d), k: k0 };
+  };
+  // centre de la plage de hauteur de vol d'une zone à la distance d (les zones à dérive montent ou descendent sur toute leur longueur)
+  Z.yCenter = (T, zone, zi, d) => {
+    const P = PROFILE[zone];
+    if (!P.drift) return (P.y[0] + P.y[1]) / 2;
+    const L = C().zoneLen, k = U.clamp((d - zi * L) / L, 0, 1); return P.drift[0] + (P.drift[1] - P.drift[0]) * k;
   };
   Z.prof = (T, d, key) => {
     const tr = Z.trans(T, d), a = PROFILE[tr.z0][key], b = PROFILE[tr.z1][key];
@@ -198,6 +267,28 @@
       if (y1 < lo + totH) this.bx(dc, lx, (y1 + lo + totH) / 2, holeW + 0.2, lo + totH - y1, dd, mat, tint);
       if (y0 > lo + 0.3) this.bx(dc, lx, (lo + y0) / 2, holeW + 0.2, y0 - lo, dd, mat, tint);
     }
+    // mur entre xl et xr (travers) et y0..y1 (hauteur), percé ou non d'un trou { lx, yc, w, h } : jusqu'à 4 boîtes
+    wall(dc, xl, xr, y0, y1, dd, mat, tint, hole) {
+      const box = (a, b, c, d) => { if (b - a > 0.05 && d - c > 0.05) this.bx(dc, (a + b) / 2, (c + d) / 2, b - a, d - c, dd, mat, tint); };
+      if (!hole) { box(xl, xr, y0, y1); return; }
+      const hl = hole.lx - hole.w / 2, hr = hole.lx + hole.w / 2, hb = hole.yc - hole.h / 2, ht = hole.yc + hole.h / 2;
+      box(xl, hl, y0, y1); box(hr, xr, y0, y1); box(hl, hr, ht, y1); box(hl, hr, y0, hb);
+    }
+    // anneaux d'or (séries) : n anneaux espacés de gap m à partir de dc, sur la trajectoire ; le passage à travers tous = SERIE PARFAITE
+    rings(dc, n, gap, radius) {
+      const gid = this.sc.key + '_' + dc, rad = radius || 8;
+      for (let i = 0; i < n; i++) { const d = dc + i * gap; if (!this.inClip(d)) continue; const L = this.lane(d);
+        this.ctx.rings.push({ d, lx: L.lx, y: L.y, rad, gid, n, i });
+        for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, off = rad + 0.4; this.bxr(d, L.lx + Math.sin(a) * off, L.y + Math.cos(a) * off, 2 * rad * Math.tan(Math.PI / 8) + 0.9, 0.7, 0.7, 'basic:#ffc820', undefined, -a * DEG, 0, false); }
+        this.gate(d, L.lx, L.y); }
+    }
+    // enseigne lumineuse (néon) : barre émissive + halo ; ne s'allume que la nuit (this.dark)
+    neon(dc, lx, yc, w, h, dd, color, glowSize) {
+      if (!this.inClip(dc)) return;
+      this.bx(dc, lx, yc, w, h, dd, 'basic:' + color, undefined, false, { shadow: false });
+      this.glow(dc, lx, yc, color, glowSize || Math.max(w, h, dd) * 1.6 + 3);
+    }
+    glow(dc, lx, y, color, size) { if (!this.inClip(dc) || !this.ctx.glows) return; const p = this.T.at(dc, lx, y); this.ctx.glows.push({ x: p[0], y: p[1], z: p[2], c: color, s: size || 6 }); }
     // tube polygonal autour de l'axe du couloir (fuselage, tunnel) : n panneaux, rayon intérieur rad, épaisseur th
     tube(dc, lx, yc, rad, len, mat, tint, sides, th, collide) {
       const n = sides || 8, w = 2 * rad * Math.tan(Math.PI / n) + th * 1.6;
@@ -260,6 +351,14 @@
       slab(-2, 2 * hw, 4, 'concreteDark', '#b0b6c0');
       slab(-46, 2 * hw - 18, 88, 'rock', '#9aa0aa', { collide: true });              // le plateau sous la piste
       b.box({ p: [T.cx(m), ym - 120, -m], s: [2600, 2, len + 4], mat: 'basic:#e8eef8', collide: false, shadow: false });   // mer de nuages très loin au-dessous
+    } else if (zone === 'chute' || zone === 'tour') {
+      slab(-1, 300, 2, 'asphalt', '#9a9a9a');
+    } else if (zone === 'eau') {
+      slab(-1, 2 * (T.vol(m) + 60), 2, 'sand', '#8aa8a0');
+      b.box({ p: [T.cx(m), -3.6, -m], s: [2 * (T.vol(m) + 80), 0.4, len], mat: 'water', collide: false, shadow: false });      // la surface, vue d'en dessous
+    } else if (zone === 'usine') {
+      slab(-1, 2 * (T.vol(m) + 8), 2, 'concreteDark', '#b0aca0');
+      for (const s of [-1, 1]) b.box({ p: [T.cx(m) + s * (T.vol(m) - 6), ym + 0.06, -m], s: [1.0, 0.1, len], r: [pitch, 0, 0], mat: 'hazard', collide: false, shadow: false });
     } else if (zone === 'mini') {
       slab(-1, 2 * (T.vol(m) + 14), 2, 'planks', '#e0c090', { tile: [18, 18] });
     } else {
@@ -275,7 +374,7 @@
       const e0 = T.elev(k - 1), e1 = T.elev(k), hw = Z.hw(T, k), z0 = T.zoneOrder[(k - 1) % T.zoneOrder.length], z1 = T.zoneOrder[k % T.zoneOrder.length];
       const sc = new Scene(ctx, { name: 'passage', d0: B - hw, d1: B + hw, zone: z1, zi: k, key: 'p' + k, stage: 0 });
       // tranchée ou vallée : deux murs continus dont le sommet reste au niveau le plus haut (+ marge)
-      if (e0 !== e1) {
+      if (e0 !== e1 && z0 !== 'eau' && z1 !== 'eau') {
         const top = Math.max(e0, e1) + 14, rock = Math.abs(e1 - e0) > 100 || z0 === 'forest' || z1 === 'forest';
         const step = 24;
         for (let d = B - hw; d < B + hw; d += step) {
@@ -326,6 +425,7 @@
         sd.build(S);
       }
     }
+    if (CC.Life && CC.Life.flushGlows) CC.Life.flushGlows(ctx);
   };
   // zones de l'ancien système (forêt) : décor par côtés + structures, bornés à la scène
   function legacy(ctx, sc, zone) {
@@ -336,11 +436,13 @@
     const po = { stage: Math.min(3, Math.floor(c0 / C().stageLen)), zone, ZONES, busy: ctx.busy, reserved: ctx.reserved, bridges: [], env: T.env(sc.zi), special: null };
     CC.Pieces.build(ctx.b, T, ctx.r, c0, c1, po);
     CC.Pieces.far(ctx.b, T, ctx.r, c0, c1, po);
+    if (CC.Zones.forestLife) CC.Zones.forestLife(new Scene(ctx, sc));
   }
 
   // allures des ennemis autorisés par zone (chars au sol, lance-missiles, hélicoptères)
-  Z.enemies = (zone) => ({ city: { tank: 1, sam: 1, heli: 1 }, forest: { tank: 1, sam: 1, heli: 1 }, metro: { tank: 0, sam: 0, heli: 0 }, port: { tank: 1, sam: 1, heli: 1 }, sky: { tank: 0, sam: 1, heli: 1 }, mini: { tank: 0, sam: 0, heli: 0 } }[zone] || { tank: 1, sam: 1, heli: 1 });
+  Z.noTargets = { chute: 1, tour: 1, eau: 1 };
+  Z.enemies = (zone) => ({ city: { tank: 1, sam: 1, heli: 1 }, forest: { tank: 1, sam: 1, heli: 1 }, metro: { tank: 0, sam: 0, heli: 0 }, chute: { tank: 0, sam: 0, heli: 1 }, tour: { tank: 0, sam: 0, heli: 0 }, eau: { tank: 0, sam: 0, heli: 0 }, usine: { tank: 0, sam: 0, heli: 0 }, port: { tank: 1, sam: 1, heli: 1 }, sky: { tank: 0, sam: 1, heli: 1 }, mini: { tank: 0, sam: 0, heli: 0 } }[zone] || { tank: 1, sam: 1, heli: 1 });
   // où poser une cible (sol) : sur la colonne vertébrale
-  Z.targetLx = (T, d, zone) => { const lim = { port: 10, metro: 9, sky: 18, mini: 20, city: 12, forest: 14 }[zone] || 12; return U.clamp(T.laneX(d), -lim, lim); };
+  Z.targetLx = (T, d, zone) => { const lim = { port: 10, metro: 9, sky: 18, mini: 20, city: 12, forest: 14, usine: 14 }[zone] || 12; return U.clamp(T.laneX(d), -lim, lim); };
   Z.edgeLx = (T, d, side, zone) => side * (zone === 'port' ? 12 : zone === 'sky' ? 34 : Math.max(8, T.vol(d) - 6));
 })();

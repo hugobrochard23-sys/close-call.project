@@ -16,6 +16,19 @@
     return g;
   }
 
+  /* v036 : toutes les couleurs unies ('col:#hex', 'basic:#hex') partagent UN lot de géométrie (blanc) et passent leur couleur en teinte par
+   * sommet : un tronçon du mode CLASSIQUE passe de ~60 lots (donc ~60 appels de dessin, doublés par la passe d'ombres) à ~15. Rendu identique. */
+  const _n1 = new THREE.Color(), _n2 = new THREE.Color();
+  function normMat(mat, tint, shadow) {
+    if (typeof mat !== 'string') return [mat, tint];
+    const k = mat.startsWith('col:') ? 'col:' : mat.startsWith('basic:') ? 'basic:' : null;
+    if (!k) return [mat, tint];
+    const hex = mat.slice(k.length);
+    if (hex === '#ffffff' || hex === '#fefefe') return [mat, tint];
+    let t = hex; if (tint) { _n1.set(hex).multiply(_n2.set(tint)); t = '#' + _n1.getHexString(); }
+    return [k + (shadow === false ? '#fefefe' : '#ffffff'), t];   // les boîtes sans ombre ont leur propre lot (un seul lot sans ombre désactiverait l'ombre de tout le lot)
+  }
+
   class LevelBuilder {
     constructor(scene, world, level) {
       this.scene = scene; this.world = world; this.level = level;
@@ -38,7 +51,7 @@
     mat(key) {
       if (this.materials.has(key)) return this.materials.get(key);
       let m;
-      if (key.startsWith('basic:')) m = new THREE.MeshBasicMaterial({ color: key.slice(6), fog: true });
+      if (key.startsWith('basic:')) m = new THREE.MeshBasicMaterial({ color: key.slice(6), fog: true, vertexColors: true });
       else if (key.startsWith('col:')) m = new THREE.MeshLambertMaterial({ color: key.slice(4), vertexColors: true });
       else if (key === 'glass') m = new THREE.MeshLambertMaterial({ color: '#8fd0ff', transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide });
       else if (key === 'glassWarm') m = new THREE.MeshLambertMaterial({ color: '#d8d28a', transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide });
@@ -82,6 +95,7 @@
     }
 
     addBoxGeometry(pos, q, w, h, d, mat, tint, tileOverride, shadow) {
+      [mat, tint] = normMat(mat, tint, shadow);
       const faces = [
         { n: [1, 0, 0], k: 'side', a: (x, y, z) => d / 2 - z, b: (x, y, z) => y + h / 2, c: [[w / 2, -h / 2, d / 2], [w / 2, -h / 2, -d / 2], [w / 2, h / 2, -d / 2], [w / 2, h / 2, d / 2]] },
         { n: [-1, 0, 0], k: 'side', a: (x, y, z) => z + d / 2, b: (x, y, z) => y + h / 2, c: [[-w / 2, -h / 2, -d / 2], [-w / 2, -h / 2, d / 2], [-w / 2, h / 2, d / 2], [-w / 2, h / 2, -d / 2]] },
@@ -118,6 +132,7 @@
 
     /* Ajoute une BufferGeometry quelconque (cylindres, cônes...) transformée dans un lot. */
     addGeometry(geom, pos, q, scale, mat, tint, uvScale) {
+      [mat, tint] = normMat(mat, tint);
       const bt = this.batch(mat);
       const g = geom;
       const P = g.attributes.position, N = g.attributes.normal, UV = g.attributes.uv;
