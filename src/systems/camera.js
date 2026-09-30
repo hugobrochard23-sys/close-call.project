@@ -10,7 +10,7 @@
   const U = CC.U;
   // v030 (mobile) : objets de calcul réutilisés — la caméra est mise à jour à chaque image
   const _f = new V(), _u = new V(), _o = new V(), _z = new V(0, 0, 1), _y = new V(0, 1, 0), _t1 = new V(), _t2 = new V(), _t3 = new V();
-  const _m = new THREE.Matrix4(), _q = new THREE.Quaternion();
+  const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _tq = new THREE.Quaternion();
 
   class CameraRig {
     constructor(camera, game) {
@@ -23,6 +23,10 @@
       this.offset = new V(0, 0.5, 2);
       this.camDir = new V(0, 0, -1); this.camRight = new V(1, 0, 0); this.camUp = new V(0, 1, 0);
       this.upRef = new V(0, 1, 0); this.prevCamDir = new V(0, 0, -1); this.camNose = new V(0, 0, -1);
+      // v034 : caméra du lanceur (posée par CC.Pad chaque image), passage lanceur → poursuite (travelling), boost
+      this.padPos = new V(); this.padLook = new V(); this.padFov = 44;
+      this.handT = -1; this.fromPos = new V(); this.fromQuat = new THREE.Quaternion(); this.fromFov = 60; this.fromLook = new V();
+      this.pull = 0; this.punch = 0;
     }
 
     // Offset angulaire vertical du réticule (MESURÉ y = 40,2 %).
@@ -49,7 +53,16 @@
       if (rollAngle) this.cam.quaternion.multiply(_q.setFromAxisAngle(_z, rollAngle));
     }
 
-    startLauncher(eyePos) { this.mode = 'launcher'; this.eye.copy(eyePos); this.pos.copy(eyePos); this.roll = 0; }
+    startLauncher(eyePos) { this.mode = 'launcher'; this.eye.copy(eyePos); this.pos.copy(eyePos); this.roll = 0; this.handT = -1; }
+    startPad() { this.mode = 'pad'; this.t = 0; this.handT = -1; this.pull = 0; this.punch = 0; this.zoom = 1; }
+    // v034 : à l'allumage, la caméra du lanceur (ou celle de l'explosion, au revive) glisse vers la poursuite : elle regarde
+    // d'abord la roquette partir (travelling), puis s'aligne derrière elle
+    // useOffset : la vue de départ regardait un point décalé de la roquette (lanceur) ; sinon (revive) elle la regarde en plein
+    startHandoff(useOffset) {
+      this.handT = 0; this.fromPos.copy(this.cam.position); this.fromQuat.copy(this.cam.quaternion); this.fromFov = this.cam.fov;
+      if (useOffset) this.fromLook.copy(this.padLook).sub(this.game.pad.origin); else this.fromLook.set(0, 0, 0);
+    }
+    boostKick() { this.punch = 1; }
     startFlight() {
       this.mode = 'transition'; this.t = 0;
       this.camDir.copy(this.aimDir); this.prevCamDir.copy(this.aimDir); this.camNose.copy(this.aimDir); this.upRef.copy(this.up);
@@ -67,7 +80,7 @@
 
     // décalage caméra→roquette (repère de visée) ; seul ce décalage est lissé : la caméra ne traîne pas derrière la roquette,
     // mais la roquette dérive à l'écran quand la visée tourne (OBSERVÉ : tuyère entre 44 et 57 % en x, 57 et 74 % en y)
-    wantedOffset(out) { return out.copy(this.camDir).multiplyScalar(-this.cfg.distance).addScaledVector(this.camUp, this.cfg.height); }
+    wantedOffset(out) { return out.copy(this.camDir).multiplyScalar(-(this.cfg.distance + this.pull)).addScaledVector(this.camUp, this.cfg.height); }
 
     chaseTarget(rocket, out) {
       out.copy(rocket.pos).add(this.offset);
@@ -109,9 +122,9 @@
         this.offset.lerp(this.wantedOffset(_t1), U.damp(c.offsetLag, dt));
         const want = this.chaseTarget(rk, _t2);
         if (this.mode === 'transition') {
-          const k = U.smooth(0.08, c.launchBlend + 0.08, this.t);     // MESURÉ : rattrapage ≈ 0,5 s
-          this.pos.copy(this.eye).lerp(want, k);
-          if (this.t > c.launchBlend + 0.1) this.mode = 'chase';
+          if (this.handT >= 0) this.pos.copy(want);    // v034 : le travelling est fait plus bas (startHandoff)
+          else { const k = U.smooth(0.08, c.launchBlend + 0.08, this.t); this.pos.copy(this.eye).lerp(want, k); }   // MESURÉ : rattrapage ≈ 0,5 s
+          if (this.t > (this.handT >= 0 ? c.handoff : c.launchBlend) + 0.1) this.mode = 'chase';
         } else {
           this.pos.copy(want);
         }
@@ -124,15 +137,37 @@
         const m = _m.lookAt(this.pos, this.focus, _y);
         const q = _q.setFromRotationMatrix(m);
         cam.quaternion.slerp(q, U.damp(3, dt));
+      } else if (this.mode === 'pad') {
+        cam.position.copy(this.padPos);
+        cam.lookAt(this.padLook);
       } else if (this.mode === 'menu') {
         const a = this.t * 0.06;
         cam.position.set(this.focus.x + Math.sin(a) * this.orbitR, this.focus.y + this.orbitH, this.focus.z + Math.cos(a) * this.orbitR);
         cam.lookAt(this.focus);
       }
       // v026 : léger zoom avant pendant le boost, retour progressif ensuite
+      // v034 (CLASSIQUE) : l'inverse — le boost ÉLARGIT le champ (les murs filent), avec un « punch » à l'allumage et un léger recul
+      // de la caméra ; le jeu paraît plus rapide sans que la roquette change de vitesse
       const boosting = (this.mode === 'chase' || this.mode === 'transition') && rk.active && rk.thrusting;
-      this.zoom += ((boosting ? c.boostZoom : 1) - this.zoom) * U.damp(boosting ? c.zoomIn : c.zoomOut, dt);
-      const fov = (this.game.baseFov || c.fovV) * this.zoom;
+      const endless = !!this.game.endlessRun, boostZ = endless ? c.boostFov : c.boostZoom;
+      this.zoom += ((boosting ? boostZ : 1) - this.zoom) * U.damp(boosting ? c.zoomIn : c.zoomOut, dt);
+      this.punch = Math.max(0, this.punch - dt * 3);
+      this.pull += (((boosting && endless && !rk.freeBoost) ? c.boostPull : 0) - this.pull) * U.damp(3.5, dt);
+      let fov = (this.game.baseFov || c.fovV) * this.zoom * (1 + (endless ? c.boostPunch : 0) * this.punch * this.punch);
+      if (this.mode === 'pad') fov = this.padFov;
+      // travelling lanceur → poursuite : position et orientation, puis champ de vision
+      if (this.handT >= 0) {
+        this.handT += dt;
+        const D = c.handoff, kp = U.smooth(0, D, this.handT), ko = U.smooth(0.22 * D, D, this.handT);
+        cam.position.lerpVectors(this.fromPos, cam.position, kp);
+        // orientation : d'abord on regarde la roquette s'éloigner, puis on glisse vers la vue de poursuite
+        const look = _t1.copy(rk.pos).addScaledVector(this.fromLook, 1 - kp);
+        const m2 = _m.lookAt(cam.position, look, _y);
+        const qTrack = _q.setFromRotationMatrix(m2);
+        cam.quaternion.copy(qTrack).slerp(_tq.copy(cam.quaternion), ko);
+        fov = U.lerp(this.fromFov, fov, U.smooth(0, D * 0.9, this.handT));
+        if (this.handT > D + 0.05) this.handT = -1;
+      }
       if (Math.abs(cam.fov - fov) > 1e-3) { cam.fov = fov; cam.updateProjectionMatrix(); }
       if (this.shake > 0) {
         this.shake = Math.max(0, this.shake - dt * 2.5);

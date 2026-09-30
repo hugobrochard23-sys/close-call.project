@@ -1,49 +1,60 @@
 /* Publicités d'EXEMPLE (v030) — aucune régie, aucun lien, aucune donnée envoyée : des emplacements factices qui montrent
  * où et comment des publicités s'intégreraient au jeu. Annonceurs inventés, mention « SAMPLE AD » sur chaque visuel.
- *  - bannière : bas du menu principal (jamais en partie) ;
- *  - interstitielle : en quittant l'écran de résultats, au plus une fois tous les `interstitialEvery` niveaux terminés
- *    et `minGap` s, jamais après le tout premier niveau ; fermable après `skipAfter` s ;
- *  - récompensée : facultative, sur l'écran de résultats (« WATCH AD: CASH X2 »), `rewardTime` s à regarder.
- * Réglages : CC.CONFIG.ads ; le joueur peut les couper (SAMPLE ADS: OFF). Désactivées au banc de test. */
+ *
+ * v034 — politique « la rétention avant la quantité » : le joueur choisit presque toutes ses publicités.
+ *  - RECOMPENSEES (choisies) : CONTINUER après un crash (revive), XP ×2 sur l'écran de fin, cosmétique de la boutique.
+ *    Une publicité récompensée compte comme vue : elle repousse l'interstitielle de `minGap` s.
+ *  - INTERSTITIELLE (imposée, rare) : entre l'écran de fin et le vol suivant, jamais pendant une partie ; au plus une tous les
+ *    `interstitialEvery` vols, jamais avant `graceRuns` vols, jamais dans les `minGap` s après une autre publicité, jamais après
+ *    un record ou une montée de niveau (le joueur est heureux : on ne casse pas ça), jamais après un vol de moins de
+ *    `minRunTime` s. Fermable après `skipAfter` s.
+ *  - BANNIERE : supprimée de l'accueil (le lanceur reste la seule invitation) ; réglage `banner` pour la remettre.
+ * Réglages : CC.CONFIG.ads ; le joueur peut les couper (RÉGLAGES). Désactivées au banc de test. */
 (function () {
   const U = CC.U;
   // annonceurs fictifs (dessinés par le code, aucune image externe)
   const CREATIVES = [
-    { brand: 'SKYLINE SODA', line: 'THE FIZZ THAT FLIES', bg: '#1f5fa8', fg: '#ffffff', accent: '#ffd23a', art: 'can' },
-    { brand: 'TURBO KART LEGENDS', line: 'NEW SEASON - PLAY FREE', bg: '#b8321f', fg: '#fff2d0', accent: '#2ae07a', art: 'kart' },
-    { brand: 'PIXEL PIZZA', line: 'HOT IN 15 MIN OR IT IS FREE', bg: '#2a7a3a', fg: '#fff8e0', accent: '#ff7a1a', art: 'pizza' },
-    { brand: 'NOVA HEADPHONES', line: 'HEAR EVERY EXPLOSION', bg: '#23202e', fg: '#e8e0ff', accent: '#ff3aa8', art: 'phones' },
+    { brand: 'SKYLINE SODA', line: 'LA BULLE QUI VOLE', bg: '#1f5fa8', fg: '#ffffff', accent: '#ffd23a', art: 'can' },
+    { brand: 'TURBO KART LEGENDS', line: 'NOUVELLE SAISON - JOUE GRATUIT', bg: '#b8321f', fg: '#fff2d0', accent: '#2ae07a', art: 'kart' },
+    { brand: 'PIXEL PIZZA', line: 'CHAUDE EN 15 MIN OU OFFERTE', bg: '#2a7a3a', fg: '#fff8e0', accent: '#ff7a1a', art: 'pizza' },
+    { brand: 'NOVA HEADPHONES', line: 'ENTENDS CHAQUE EXPLOSION', bg: '#23202e', fg: '#e8e0ff', accent: '#ff3aa8', art: 'phones' },
   ];
 
   class Ads {
     constructor(game) {
       this.game = game; this.cfg = CC.CONFIG.ads;
-      this.ends = 0; this.lastAd = -Infinity; this.cur = null; this.bannerI = 0; this.bannerT = 0;
+      this.ends = 0; this.lastAd = performance.now() / 1000; this.cur = null; this.bannerI = 0; this.bannerT = 0;
+      this.sinceAd = 0; this.lastRun = null;   // v034 : vols terminés depuis la dernière interstitielle ; dernier vol (pour la règle « pas après un record »)
     }
     enabled() { const g = this.game; return this.cfg.enabled && !g.testMode && g.settings.ads !== false; }
     now() { return performance.now() / 1000; }
 
-    // fin de niveau (écran de résultats)
-    onLevelEnd() { this.ends++; }
+    // fin de niveau (écran de résultats des modes DÉFI / niveaux)
+    onLevelEnd() { this.ends++; this.sinceAd++; this.lastRun = null; }
+    // v034 : fin d'un vol du mode CLASSIQUE (avec ses résultats : record, niveau gagné, durée)
+    onRunEnd(res) { this.ends++; this.sinceAd++; this.lastRun = { newRecord: !!res.newRecord, levelUp: res.levelUps > 0, time: res.time }; }
 
     // en quittant l'écran de résultats : interstitielle éventuelle, puis `then`
     beforeContinue(then) {
-      const due = this.enabled() && this.ends >= this.cfg.interstitialEvery && this.ends % this.cfg.interstitialEvery === 0 &&
-        this.now() - this.lastAd > this.cfg.minGap && !this.shownFor(this.ends);
-      if (!due) { then(); return; }
-      this.shown = this.ends;
+      if (!this.interstitialDue()) { then(); return; }
       this.open('interstitial', then);
     }
-    shownFor(n) { return this.shown === n; }
+    interstitialDue() {
+      const C = this.cfg, g = this.game, runs = g.progress ? g.progress.P.runs : this.ends, L = this.lastRun;
+      if (!this.enabled() || this.sinceAd < C.interstitialEvery || runs <= C.graceRuns) return false;
+      if (this.now() - this.lastAd < C.minGap) return false;
+      if (L && (L.newRecord || L.levelUp || L.time < C.minRunTime)) return false;   // jamais sur une bonne nouvelle, ni sur un vol éclair
+      return true;
+    }
 
     // récompensée : `grant` appelé seulement si la publicité a été regardée jusqu'au bout ; `seconds` : durée (v031 : une
     // minute pour débloquer un cosmétique, faite d'annonces de `adSegment` s qui s'enchaînent)
-    rewarded(grant, seconds) { this.open('rewarded', null, grant, seconds); }
+    rewarded(grant, seconds, purpose) { this.open('rewarded', null, grant, seconds, purpose); }
 
-    open(kind, then, grant, seconds) {
+    open(kind, then, grant, seconds, purpose) {
       const g = this.game;
       const c0 = Math.floor(Math.random() * CREATIVES.length);
-      this.cur = { kind, t: 0, then, grant, done: false, seconds, c0, c: CREATIVES[c0], back: g.ui.overlay };   // v031 : on revient où l'on était (boutique)
+      this.cur = { kind, t: 0, then, grant, done: false, seconds, c0, c: CREATIVES[c0], back: g.ui.overlay, purpose };   // v031 : on revient où l'on était (boutique)
       this.lastAd = this.now();
       g.ui.overlay = 'ad';
       this.duck(true);
@@ -54,7 +65,11 @@
       if (!A) return;
       this.cur = null; g.ui.overlay = A.back === 'shop' ? 'shop' : null;
       this.duck(false);
+      if (A.kind === 'interstitial') this.sinceAd = 0;
+      if (A.kind === 'rewarded') this.sinceAd = 0;   // v034 : une publicité regardée repart à zéro le compteur
       if (A.kind === 'rewarded' && watched && A.grant) A.grant();
+      // v034 : offre de continuer refusée / fermée avant la fin → écran de fin (jamais un retour à l'offre : elle est consommée)
+      else if (A.kind === 'rewarded' && A.purpose === 'revive' && g.state === 'REVIVE') g.finishEndless();
       if (A.then) A.then();
     }
     // musique baissée pendant la publicité (une vraie publicité aurait son propre son)
@@ -90,9 +105,9 @@
       const tw = w - h * 1.3 - h * 1.1, px = Math.min(h * 0.075, tw / CC.Font.measure(c.brand, 1)), px2 = Math.min(px * 0.7, tw / CC.Font.measure(c.line, 1));
       ui.text(ctx, c.brand, x + h * 1.15, y + h * 0.2, px, c.fg, {});
       ui.text(ctx, c.line, x + h * 1.15, y + h * 0.6, px2, c.accent, {});
-      const bpx = Math.min(h * 0.03, (h * 0.95) / CC.Font.measure('SAMPLE AD', 1));
+      const bpx = Math.min(h * 0.03, (h * 0.95) / CC.Font.measure('PUB EXEMPLE', 1));
       ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(x + w - h * 1.05, y + h * 0.08, h * 0.97, bpx * 11);
-      ui.text(ctx, 'SAMPLE AD', x + w - h * 0.56, y + h * 0.08 + bpx * 2, bpx, '#ffffff', { align: 'center' });
+      ui.text(ctx, 'PUB EXEMPLE', x + w - h * 0.56, y + h * 0.08 + bpx * 2, bpx, '#ffffff', { align: 'center' });
     }
 
     // interstitielle / récompensée : plein écran
@@ -112,25 +127,25 @@
       const px = ui.fitPx([c.brand], cw * 0.9, ch * 0.012);
       ui.text(ctx, c.brand, W / 2, cy + ch * 0.66, px, c.fg, { align: 'center', skew: -0.15 });
       ui.text(ctx, c.line, W / 2, cy + ch * 0.8, ui.fitPx([c.line], cw * 0.9, px * 0.55), c.accent, { align: 'center' });
-      const lab = ui.fitPx(['SAMPLE AD - FICTIONAL ADVERTISER - NO LINK'], W * 0.92, Math.max(H * 0.0026, HH * 0.0022));
-      ui.text(ctx, 'SAMPLE AD - FICTIONAL ADVERTISER - NO LINK', W / 2, cy - HH * 0.035, lab, '#9a9a9a', { align: 'center' });
+      const lab = ui.fitPx(['PUB D EXEMPLE - ANNONCEUR FICTIF - AUCUN LIEN'], W * 0.92, Math.max(H * 0.0026, HH * 0.0022));
+      ui.text(ctx, 'PUB D EXEMPLE - ANNONCEUR FICTIF - AUCUN LIEN', W / 2, cy - HH * 0.035, lab, '#9a9a9a', { align: 'center' });
       // barre de progression + commandes
       const total = total0;
-      if (nSeg > 1) ui.text(ctx, 'AD ' + (iSeg + 1) + '/' + nSeg, cx, cy - HH * 0.07, ui.fitPx(['AD 1/4'], W * 0.3, Math.max(H * 0.0026, HH * 0.0022)), '#cfcfcf', {});
+      if (nSeg > 1) ui.text(ctx, 'PUB ' + (iSeg + 1) + '/' + nSeg, cx, cy - HH * 0.07, ui.fitPx(['AD 1/4'], W * 0.3, Math.max(H * 0.0026, HH * 0.0022)), '#cfcfcf', {});
       const k = U.clamp(A.t / total, 0, 1);
       ctx.fillStyle = '#333'; ctx.fillRect(cx, cy + ch + HH * 0.02, cw, HH * 0.01);
       ctx.fillStyle = col.yellow; ctx.fillRect(cx, cy + ch + HH * 0.02, cw * k, HH * 0.01);
       const by = cy + ch + HH * 0.09, bpx = Math.max(H * 0.0042, HH * 0.0038);
       if (A.kind === 'rewarded') {
-        if (A.t >= total) ui.button(ctx, 'COLLECT REWARD', W / 2, by, ui.fitPx(['COLLECT REWARD'], W * 0.8, bpx), () => this.close(true), { color: col.yellow, box: true });
+        if (A.t >= total) ui.button(ctx, 'RECUPERER LA RECOMPENSE', W / 2, by, ui.fitPx(['RECUPERER LA RECOMPENSE'], W * 0.8, bpx), () => this.close(true), { color: col.yellow, box: true, hitW: W * 0.9 });
         else {
-          ui.text(ctx, 'REWARD IN ' + Math.ceil(total - A.t) + 'S', W / 2, by, bpx, '#f4f4f4', { align: 'center' });
-          ui.button(ctx, 'CLOSE (NO REWARD)', W / 2, by + HH * 0.08, ui.fitPx(['CLOSE (NO REWARD)'], W * 0.8, bpx * 0.7), () => this.close(false), { color: '#9a9a9a' });
+          ui.text(ctx, 'RECOMPENSE DANS ' + Math.ceil(total - A.t) + ' S', W / 2, by, ui.fitPx(['RECOMPENSE DANS 00 S'], W * 0.9, bpx), '#f4f4f4', { align: 'center' });
+          ui.button(ctx, 'FERMER SANS RECOMPENSE', W / 2, by + HH * 0.08, ui.fitPx(['FERMER SANS RECOMPENSE'], W * 0.8, bpx * 0.7), () => this.close(false), { color: '#9a9a9a', hitW: W * 0.9 });
         }
       } else {
         const skip = this.cfg.skipAfter;
-        if (A.t >= skip || A.t >= total) ui.button(ctx, 'CLOSE AD  X', W / 2, by, bpx, () => this.close(true), { box: true });
-        else ui.text(ctx, 'CLOSE IN ' + Math.ceil(skip - A.t) + 'S', W / 2, by, bpx, '#bdbdbd', { align: 'center' });
+        if (A.t >= skip || A.t >= total) ui.button(ctx, 'FERMER LA PUB  X', W / 2, by, ui.fitPx(['FERMER LA PUB  X'], W * 0.8, bpx), () => this.close(true), { box: true, hitW: W * 0.8 });
+        else ui.text(ctx, 'FERMER DANS ' + Math.ceil(skip - A.t) + ' S', W / 2, by, ui.fitPx(['FERMER DANS 00 S'], W * 0.8, bpx), '#bdbdbd', { align: 'center' });
         if (A.t >= total) this.close(true);
       }
     }

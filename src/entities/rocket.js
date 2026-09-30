@@ -31,6 +31,9 @@
       this.rope = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new V(), new V()]), new THREE.LineBasicMaterial({ color: '#111111' }));
       this.rope.frustumCulled = false; this.rope.visible = false;
       game.scene.add(this.rope);
+      // v034 : bouclier du revive — sphère cyan qui clignote autour de la roquette
+      this.shieldMesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 8), new THREE.MeshBasicMaterial({ color: '#39d4ff', transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false }));
+      this.shieldMesh.visible = false; this.shieldMesh.renderOrder = 6; game.scene.add(this.shieldMesh);
       this.ropePts = new Float32Array(3 * 24);
       this.rope.geometry.setAttribute('position', new THREE.BufferAttribute(this.ropePts, 3));
       this.pos = new V(); this.vel = new V(); this.fwd = new V(0, 0, -1);
@@ -48,6 +51,7 @@
       this.grapple = { active: false, anchor: new V(), length: 0, t: 0, shootT: 0, point: null };
       this.sliding = 0; this.gForce = 0; this.aLat = 0; this.roll = 0; this.speed = 0;
       this.flightDist = 0;
+      this.fbTime = this.cfg.freeBoost; this.shieldT = 0; this.shieldMesh.visible = false;   // v034
     }
 
     /* Cosmétique équipé (v007) : reconstruit le maillage et la couleur de flamme. */
@@ -64,12 +68,18 @@
       this.light.color.set(skin.flame || '#ff8a2a');
     }
 
-    launch(pos, dir) {
+    /* opts (v034) : { speed, ignited, freeBoost } — départ du lanceur du mode CLASSIQUE : vitesse de sortie de rail plus basse,
+     * moteur déjà allumé (la charge a eu lieu) et poussée gratuite plus longue : on voit la roquette accélérer. */
+    launch(pos, dir, opts) {
+      opts = opts || {};
       this.reset();
       this.active = true; this.mesh.visible = true;
       this.pos.copy(pos); this.fwd.copy(dir).normalize();
-      this.vel.copy(this.fwd).multiplyScalar(this.cfg.ejectSpeed);   // MESURÉ 31 m/s
-      this.speed = this.cfg.ejectSpeed;
+      const sp = opts.speed !== undefined ? opts.speed : this.cfg.ejectSpeed;
+      this.vel.copy(this.fwd).multiplyScalar(sp);   // MESURÉ 31 m/s
+      this.speed = sp;
+      if (opts.freeBoost !== undefined) this.fbTime = opts.freeBoost;
+      if (opts.ignited) this.age = this.cfg.ignitionDelay;   // allumage immédiat au premier pas
       this.lastNozzle.copy(this.nozzle(_a));
       this.updateMesh(0);
     }
@@ -91,7 +101,7 @@
     // OBSERVÉ (séq. 4) : pendant les rétro-fusées la flamme principale est éteinte
     get thrusting() { return this.active && this.ignited && !this.grapple.active && !this.retroActive && (this.freeBoost || (this.throttle && this.fuel > 0)); }
     // v009 : poussée automatique et gratuite pendant les premières secondes après l'allumage
-    get freeBoost() { return this.ignited && this.age < this.cfg.ignitionDelay + this.cfg.freeBoost; }
+    get freeBoost() { return this.ignited && this.age < this.cfg.ignitionDelay + this.fbTime; }
 
     /* Un pas physique. input : { aimDir, retro, grappleHeld } */
     step(dt, input) {
@@ -161,7 +171,8 @@
         const hit = CC.World.segBox(t.obb, this.pos, d, r + 0.1, _hit);
         if (hit) { this.pos.addScaledVector(d, hit.t); game.onTargetHit(t, this); return; }
       }
-      const hit = world.sweep(this.pos, p1, r);
+      // v034 : bouclier du revive — la roquette traverse le décor (elle repart au milieu d'un couloir qu'elle n'a pas fini de franchir)
+      const hit = this.shieldT > 0 ? null : world.sweep(this.pos, p1, r);
       if (!hit) {
         this.flightDist += this.vel.length() * dt;
         this.pos.copy(p1);
@@ -262,6 +273,14 @@
         this.gauge = Math.min(1, this.gauge + ac.gaugeRegen * dt);
         this.gaugeShowT = Math.max(0, this.gaugeShowT - dt);
       }
+      if (this.shieldT > 0) {
+        this.shieldT -= dt;
+        // fin du bouclier : on ne le retire jamais tant que la roquette est encore dans un mur (sinon crash immédiat)
+        if (this.shieldT <= 0 && this.game.world.sweep(this.pos, this.pos, this.cfg.radius)) this.shieldT = 0.25;
+        const blink = this.shieldT > 0.8 || Math.floor(this.shieldT * 12) % 2 === 0;
+        this.shieldMesh.visible = this.shieldT > 0 && blink;
+        this.shieldMesh.position.copy(this.pos); this.shieldMesh.scale.setScalar(1 + 0.08 * Math.sin(this.age * 25));
+      } else this.shieldMesh.visible = false;
       this.updateMesh(dt);
       this.emitEffects(dt);
     }

@@ -42,18 +42,24 @@
     draw(ctx, game, W, H) {
       this.buttons = []; this.hover = -1;
       const col = CC.CONFIG.hud.colors;
-      if (game.state === 'MENU') this.drawMenu(ctx, game, W, H);
-      else if (game.state === 'RESULTS') this.drawResults(ctx, game, W, H);
+      if (game.state === 'MENU' && !this.overlay && game.padMode) CC.Home.drawHome(this, ctx, game, W, H);   // v034 : accueil = le lanceur
+      else if (game.state === 'MENU' && !game.padMode) this.drawMenu(ctx, game, W, H);
+      else if (game.state === 'LAUNCH') CC.Home.drawHome(this, ctx, game, W, H);                            // s'efface pendant la charge
+      else if (game.state === 'RESULTS' && !this.overlay) this.drawResults(ctx, game, W, H);
       else if (game.paused && !this.overlay) this.drawPause(ctx, game, W, H);
       if (this.overlay === 'settings') this.drawSettings(ctx, game, W, H);
       else if (this.overlay === 'binds') this.drawBinds(ctx, game, W, H);
       // Surcouches exclusives : elles repartent d'une liste de boutons vide (aucun clic ne doit passer au travers).
       else if (this.overlay === 'missions' || this.overlay === 'difficulty') { this.buttons = []; this.drawMissions(ctx, game, W, H); }
       else if (this.overlay === 'defi') { this.buttons = []; this.drawDefi(ctx, game, W, H); }   // v033
+      else if (this.overlay === 'quests') { this.buttons = []; CC.Home.drawQuests(this, ctx, game, W, H); }        // v034
+      else if (this.overlay === 'progress') { this.buttons = []; CC.Home.drawProgress(this, ctx, game, W, H); }
+      else if (this.overlay === 'msettings') { this.buttons = []; CC.Home.drawSettings(this, ctx, game, W, H); }
+      else if (this.overlay === 'revive') { this.buttons = []; CC.Home.drawRevive(this, ctx, game, W, H); }
       else if (this.overlay === 'generating') { this.buttons = []; this.drawGenerating(ctx, game, W, H); }
       else if (this.overlay === 'shop') { this.buttons = []; if (!this.shop) this.shop = new CC.Shop(this); this.shop.draw(ctx, game, W, H); }
       else if (this.overlay === 'ad' && game.ads) { this.buttons = []; game.ads.draw(ctx, game, W, H, this); }
-      if (game.state === 'MENU' && !this.overlay && game.ads) this.drawMenuBanner(ctx, game, W, H);
+      if (game.state === 'MENU' && !this.overlay && game.ads && CC.CONFIG.ads.banner && !game.padMode) this.drawMenuBanner(ctx, game, W, H);
       if (game.notice) {   // v031 : message passager (achat confirmé au retour du paiement)
         const T = -(this.offsetY || 0), HH = this.fullH || H, px = this.fitPx([game.notice], W * 0.86, HH * 0.004);
         ctx.fillStyle = 'rgba(10,40,14,0.9)'; ctx.fillRect(W * 0.04, T + HH * 0.012, W * 0.92, px * 13);
@@ -62,6 +68,9 @@
       }
       if (game.state === 'BOOT') { this.dim(ctx, W, H, 1); this.text(ctx, 'LOADING...', W / 2, H / 2, H * 0.004, col.white, { align: 'center' }); }
       if (game.genDebug && game.level && game.level.plan && CC.Gen.drawDebugOverlay && !this.overlay) CC.Gen.drawDebugOverlay(ctx, game, W, H, this);   // v032
+      // v034 : fondu au noir (retour à l'accueil : le temps de bâtir un nouveau couloir, puis la scène réapparaît)
+      const fa = game.pendingHome ? 1 : game.fadeIn > 0 ? Math.min(1, game.fadeIn / 0.45) : 0;
+      if (fa > 0) { ctx.fillStyle = 'rgba(4,6,10,' + fa + ')'; ctx.fillRect(0, -(this.offsetY || 0), W, this.fullH || H); }
     }
 
     /* v033 : menu d'accueil à trois gros boutons (façon Block Blast) : CLASSIQUE (couloir infini), DÉFI (cartes numérotées
@@ -292,49 +301,32 @@
       game.applySettings();
     }
     drawPause(ctx, game, W, H) {
-      this.dim(ctx, W, H, 0.55);
-      const touch = document.body.classList.contains('cc-touch'), s = game.settings;
-      const px = H * (touch ? 0.0056 : 0.0042), step = touch ? 0.115 : 0.09;
-      const pT = touch && this.portrait ? -(this.offsetY || 0) : 0, pH = touch && this.portrait ? (this.fullH || H) : H;
-      this.text(ctx, 'PAUSED', W / 2, pT + pH * (touch ? 0.09 : 0.2), this.fitPx(['PAUSED'], W * 0.6, H * 0.009), '#f4f4f4', { align: 'center', skew: -0.2 });
-      const rows = [
-        ['RESUME', () => game.resume()],
-        ['SOUND: ' + (s.sfx > 0 ? 'ON' : 'OFF'), () => this.toggleVolume(game, 'sfx')],
-        ['MUSIC: ' + (s.music > 0 ? 'ON' : 'OFF'), () => this.toggleVolume(game, 'music')],
-        [touch ? 'RESTART' : 'RESTART (R)', () => { game.resume(); game.restartLevel(); }],
-      ];
-      // v023 : niveau suivant, seulement s'il est débloqué (niveau en cours déjà terminé une fois)
-      const next = game.nextUnlocked();
-      if (next >= 0) rows.push(['NEXT LEVEL', () => { game.resume(); game.startLevel(next); }]);
-      if (!touch) rows.push(['SETTINGS (TAB)', () => { this.overlay = 'settings'; }]);
-      if (touch) {   // v024 : intensité des vibrations (OFF / LOW / MEDIUM / HIGH)
-        const names = ['OFF', 'LOW', 'MEDIUM', 'HIGH'], v = s.vibration !== undefined ? s.vibration : 2;
-        rows.splice(3, 0, ['VIBRATION: ' + names[v], () => {
-          s.vibration = (v + 1) % 4;
-          if (CC.Haptics) { CC.Haptics.setLevel(s.vibration); CC.Haptics.tick('fire'); }   // on sent tout de suite la nouvelle force
-          game.applySettings();
-        }]);
+      this.dim(ctx, W, H, 0.7);
+      const touch = document.body.classList.contains('cc-touch'), s = game.settings, endless = !!game.endlessRun;
+      const T = -(this.offsetY || 0), HH = this.fullH || H, u = this.portrait ? W : Math.min(W, HH * 0.62);
+      this.text(ctx, 'PAUSE', W / 2, T + HH * 0.09, this.fitPx(['PAUSE'], W * 0.6, u * 0.013), '#f4f4f4', { align: 'center', skew: -0.2 });
+      const vib = ['NON', 'FAIBLE', 'MOYEN', 'FORT'], vv = s.vibration !== undefined ? s.vibration : 2;
+      const rows = [['REPRENDRE', () => game.resume(), CC.CONFIG.hud.colors.yellow]];
+      if (endless) {
+        rows.push(['RECOMMENCER', () => { game.resume(); game.restartLevel(); }]);
+        rows.push(['TERMINER ET VOIR MES GAINS', () => { game.resume(); game.finishEndless(); }]);   // quitter n'efface pas la progression : le vol rapporte de l'XP
+      } else {
+        rows.push([touch ? 'RECOMMENCER' : 'RECOMMENCER (R)', () => { game.resume(); game.restartLevel(); }]);
+        const next = game.nextUnlocked();
+        if (next >= 0) rows.push(['NIVEAU SUIVANT', () => { game.resume(); game.startLevel(next); }]);
+        if (game.generated && game.mission && !game.mission.challenge) rows.push(['NOUVELLE MISSION', () => { game.resume(); game.requestMission(game.mission.difficulty); }]);
       }
-      if (touch) {   // v030 : qualité graphique et publicités d'exemple, réglables en partie
-        rows.push(['GRAPHICS: ' + this.graphicsLabel(game), () => this.cycleGraphics(game)]);
-        rows.push(['SAMPLE ADS: ' + (s.ads === false ? 'OFF' : 'ON'), () => { s.ads = s.ads === false; game.applySettings(); }]);
-      }
-      if (game.generated && game.mission && !game.mission.challenge) rows.splice(rows.findIndex((r) => r[0].startsWith('RESTART')) + 1, 0, ['NOUVELLE MISSION', () => { game.resume(); game.requestMission(game.mission.difficulty); }]);   // v032
-      rows.push(['MAIN MENU', () => game.toMenu()]);
+      rows.push(['SON : ' + (s.sfx > 0 ? 'OUI' : 'NON'), () => this.toggleVolume(game, 'sfx')]);
+      rows.push(['MUSIQUE : ' + (s.music > 0 ? 'OUI' : 'NON'), () => this.toggleVolume(game, 'music')]);
+      if (touch) rows.push(['VIBRATION : ' + vib[vv], () => { s.vibration = (vv + 1) % 4; if (CC.Haptics) { CC.Haptics.setLevel(s.vibration); CC.Haptics.tick('fire'); } game.applySettings(); }]);
+      else rows.push(['REGLAGES (TAB)', () => { this.overlay = 'settings'; }]);
+      rows.push(['ACCUEIL', () => { if (endless) game.goHome({}); else game.toMenu(); }]);
       if (game.generated && game.mission) {   // v032 : graine visible (partage, défi)
         const m = game.mission, t = m.challenge ? 'DÉFI ' + m.label + '  CARTE ' + m.challenge.n + '/' + CC.CONFIG.challenge.maps : 'GRAINE ' + m.seed + '  ' + m.label + '  ' + m.biome;
-        const pT2 = this.portrait ? -(this.offsetY || 0) : 0, pH2 = this.portrait ? (this.fullH || H) : H;
-        this.text(ctx, t, W / 2, pT2 + pH2 * (touch ? 0.145 : 0.29), this.fitPx([t], W * 0.9, H * 0.0028), CC.CONFIG.hud.colors.yellow, { align: 'center' });
+        this.text(ctx, t, W / 2, T + HH * 0.145, this.fitPx([t], W * 0.9, HH * 0.0028), CC.CONFIG.hud.colors.yellow, { align: 'center' });
       }
-      if (touch) {   // v030 : pleine hauteur de l'écran, police ajustée à la largeur, un bouton ≥ 44 points par ligne
-        const T = this.portrait ? -(this.offsetY || 0) : 0, HH = this.portrait ? (this.fullH || H) : H;
-        const top = T + HH * 0.2, gap = Math.min(HH * 0.085, (HH * 0.74) / rows.length);
-        const bpx = this.fitPx(rows.map((r) => r[0]), W * 0.8, Math.min(px, gap * 0.07));
-        rows.forEach((r, i) => this.button(ctx, r[0], W / 2, top + i * gap, bpx, r[1], { hitW: W * 0.84 }));
-        return;
-      }
-      const top = 0.36, gap = Math.min(step, (0.95 - top) / rows.length);   // v024 : 7 lignes tiennent à l'écran
-      rows.forEach((r, i) => this.button(ctx, r[0], W / 2, H * (top + i * gap), px, r[1]));
+      const top = T + HH * 0.2, gap = Math.min(HH * 0.085, (HH * 0.74) / rows.length), bpx = this.fitPx(rows.map((r) => r[0]), W * 0.78, gap * 0.07);
+      rows.forEach((r, i) => this.button(ctx, r[0], W / 2, top + i * gap, bpx, r[1], { hitW: W * 0.86, box: true, color: r[2] }));
     }
 
     // v030 : GRAPHICS : AUTO (niveau choisi par le jeu, affiché entre parenthèses) → HIGH → MEDIUM → LOW → AUTO
@@ -351,7 +343,8 @@
     }
 
     drawResults(ctx, game, W, H) {
-      if (game.results && (game.results.endless || game.results.challenge)) { this.drawResultsV33(ctx, game, W, H); return; }
+      if (game.results && game.results.endless) { CC.Home.drawResults(this, ctx, game, W, H); return; }   // v034 : récompenses animées
+      if (game.results && game.results.challenge) { this.drawResultsV33(ctx, game, W, H); return; }
       this.dim(ctx, W, H, 0.5);
       const r = game.results, col = CC.CONFIG.hud.colors;
       // v030 : en portrait sur téléphone, toute la hauteur de l'écran et des boutons ≥ 44 points bien espacés
@@ -455,6 +448,9 @@
       });
       this.button(ctx, 'BACK (F1)', W / 2, H * 0.88, px, () => { this.overlay = null; });
     }
+
+    // v034 : un bouton est-il sous ce point ? (le toucher sur le lanceur ne doit pas passer à travers les icônes)
+    hitTest(x, y) { return this.buttons.some((b) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h); }
 
     click(x, y) {
       for (const b of this.buttons) {

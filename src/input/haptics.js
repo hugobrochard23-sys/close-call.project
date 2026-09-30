@@ -24,7 +24,21 @@
   const H = {
     level: 2,
     // impulsions (ms) selon l'intensité : [OFF, LOW, MEDIUM, HIGH]
-    pulses: { warn: [0, 30, 60, 90], touch: [0, 4, 8, 12], button: [0, 8, 15, 25], fire: [0, 20, 40, 70], boost: [0, 25, 45, 80] },
+    // v034 : + ignite (allumage du lanceur), collect (éclat, très léger), gold, boostKick (départ du boost)
+    pulses: { warn: [0, 30, 60, 90], touch: [0, 4, 8, 12], button: [0, 8, 15, 25], fire: [0, 20, 40, 70], boost: [0, 25, 45, 80],
+      ignite: [0, 45, 90, 140], collect: [0, 3, 5, 8], gold: [0, 14, 26, 40], boostKick: [0, 30, 55, 95] },
+    // v034 : motifs [vibrer, pause, vibrer, …] en ms (durées de vibration mises à l'échelle du réglage)
+    patterns: {
+      charge: [8, 92, 12, 80, 16, 70, 20, 60, 24, 48, 30, 36, 36, 24, 42, 12],   // 0,9 s : de plus en plus rapprochées et fortes
+      levelUp: [30, 50, 30, 50, 60, 60, 120], mission: [25, 60, 45], record: [20, 40, 20, 40, 20, 40, 90],
+    },
+    pattern(name) {
+      const p = this.patterns[name];
+      if (!p || !this.level) return;
+      const f = [0, 0.5, 1, 1.6][this.level], arr = p.map((v, i) => (i % 2 ? v : Math.max(4, Math.round(v * f))));
+      if (canVibrate) { try { navigator.vibrate(arr); } catch (e) { /* ignoré */ } }
+      else { let t = 0; arr.forEach((v, i) => { if (i % 2 === 0) setTimeout(iosTick, t); t += v; }); }
+    },
     // vibration continue du boost : [durée vibrée, pause] par cycle ; iPhone : intervalle entre deux tics (ms)
     cont: [null, [14, 56], [28, 32], [60, 10]], iosEvery: [0, 220, 130, 75],
     timer: null,
@@ -36,7 +50,7 @@
     boostStart() {
       this.boostStop();
       if (!this.level) return;
-      this.tick('boost');
+      this.tick('boostKick');
       if (canVibrate) {
         const [on, off] = this.cont[this.level], pattern = [];
         for (let t = 0; t < 4000; t += on + off) pattern.push(on, off);

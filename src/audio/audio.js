@@ -215,6 +215,23 @@
       }
     }
 
+    /* v034 : montée en puissance du lanceur (durée dur s) : sirène qui monte, souffle qui s'ouvre, grave qui gonfle.
+     * Elle s'arrête d'elle-même à l'allumage (le grondement du réacteur prend le relais). */
+    chargeWhine(dur) {
+      const ctx = this.ctx, t = ctx.currentTime, out = this.dest || this.sfx;
+      const o = ctx.createOscillator(); o.type = 'sawtooth';
+      o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(460, t + dur);
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.Q.value = 3;
+      f.frequency.setValueAtTime(180, t); f.frequency.exponentialRampToValueAtTime(3400, t + dur);
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.26, t + dur * 0.9); g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.04);
+      o.connect(f); f.connect(g); g.connect(out); o.start(t); o.stop(t + dur + 0.08);
+      const sub = ctx.createOscillator(); sub.type = 'sine';
+      sub.frequency.setValueAtTime(38, t); sub.frequency.exponentialRampToValueAtTime(96, t + dur);
+      const sg = ctx.createGain(); sg.gain.setValueAtTime(0.0001, t); sg.gain.exponentialRampToValueAtTime(0.5, t + dur * 0.95); sg.gain.linearRampToValueAtTime(0.0001, t + dur + 0.05);
+      sub.connect(sg); sg.connect(out); sub.start(t); sub.stop(t + dur + 0.1);
+      this.sweep(260, 2800, 'bandpass', 1.1, 0.3, dur);
+    }
+
     play(name, pos, param) {
       if (!this.ctx || this.muted) return;
       const dg = this.distGain(pos);
@@ -247,6 +264,19 @@
         case 'engineOff': this.sweep(1200, 250, 'lowpass', 0.8, 0.2, 0.3); break;
         case 'warnMissile': this.tone('square', 1320, 1320, 0.07, 0.05); this.tone('square', 1320, 1320, 0.07, 0.05, 0.09); break;   // v026 : bip-bip d'alerte
         case 'warnFuel': this.tone('triangle', 880, 880, 0.12, 0.12); this.tone('triangle', 587, 587, 0.12, 0.2, 0.15); break;     // v026 : deux notes descendantes
+        // v034 : lanceur — verrous qui claquent + sirène de charge ; allumage : détonation sourde, souffle, coup de grave
+        case 'padArm': this.tone('square', 190, 80, 0.32, 0.09); this.noiseHit(1100, 'bandpass', 2, 0.4, 0.06); this.tone('square', 260, 120, 0.2, 0.07, 0.11); this.chargeWhine(CC.CONFIG.pad.chargeTime); break;
+        case 'padIgnite': this.explosion(0.55); this.sweep(180, 2600, 'bandpass', 0.9, 0.75, 0.55); this.tone('sine', 62, 28, 0.95, 0.7); this.noiseHit(3500, 'highpass', 0.7, 0.4, 0.09); break;
+        // v034 : éclat ramassé — gamme pentatonique montante (param = rang dans la série : plus on enchaîne, plus c'est aigu)
+        case 'cell': { const sc = [0, 2, 4, 7, 9, 12, 14, 16], f = 660 * Math.pow(2, sc[Math.min(sc.length - 1, param | 0)] / 12); this.tone('square', f, f * 1.01, 0.05, 0.07); this.tone('triangle', f * 2, f * 2, 0.04, 0.09, 0.02); break; }
+        case 'gold': [784, 988, 1175, 1568].forEach((f, i) => this.tone('square', f, f, 0.08, 0.16, i * 0.055)); this.noiseHit(6000, 'highpass', 1, 0.12, 0.2); break;
+        case 'mult': this.sweep(400, 3200, 'bandpass', 1.3, 0.3, 0.35); [523, 784, 1046].forEach((f, i) => this.tone('triangle', f, f, 0.12, 0.2, 0.08 + i * 0.07)); break;
+        case 'xpTick': this.tone('square', 1300 + (param || 0) * 60, 1300 + (param || 0) * 60, 0.035, 0.03); break;
+        case 'levelUp': [523, 659, 784, 1046, 1318].forEach((f, i) => { this.tone('square', f, f, 0.09, 0.28, i * 0.085); this.tone('triangle', f / 2, f / 2, 0.12, 0.3, i * 0.085); }); this.sweep(800, 5200, 'highpass', 0.8, 0.14, 0.6, 0.1); break;
+        case 'mission': this.tone('triangle', 784, 784, 0.14, 0.14); this.tone('triangle', 1175, 1175, 0.14, 0.34, 0.12); this.tone('square', 1568, 1568, 0.05, 0.3, 0.12); break;
+        case 'boostOn': this.sweep(450, 3200, 'bandpass', 1.2, 0.36, 0.3); this.tone('sine', 96, 44, 0.55, 0.24); this.noiseHit(2600, 'highpass', 0.8, 0.16, 0.09); break;
+        case 'shield': this.sweep(300, 2400, 'bandpass', 1.4, 0.3, 0.4); this.tone('triangle', 880, 1320, 0.1, 0.3); break;
+        case 'record': [659, 784, 988, 1318].forEach((f, i) => this.tone('square', f, f, 0.08, 0.2, i * 0.07)); break;
       }
     }
   }
