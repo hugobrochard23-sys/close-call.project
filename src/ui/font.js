@@ -95,13 +95,13 @@
     return c;
   }
 
-  Font.measure = function (text, px) {
+  Font.measurePixel = function (text, px) {
     return text.length * Font.advance * px * Font.cellW - 2 * px * Font.cellW;
   };
 
   /* Dessine un texte. segments : chaîne, ou tableau [{t:'TEXTE', c:'#fff'}] pour les couleurs multiples.
    * opts : align ('left'|'center'|'right'), outline (couleur), skew (italique), alpha. */
-  Font.draw = function (ctx, segments, x, y, px, color, opts) {
+  Font.drawPixel = function (ctx, segments, x, y, px, color, opts) {
     opts = opts || {};
     if (typeof segments === 'string') segments = [{ t: segments, c: color }];
     let total = 0;
@@ -128,6 +128,47 @@
         cx += adv;
       }
     }
+    ctx.restore();
+    return width;
+  };
+
+
+  /* v034 : police MODERNE des menus et du HUD du CLASSIQUE — capitales grasses et italiques, contour sombre épais (lisible sur
+   * n'importe quel décor, comme les jeux mobiles), remplace la police pixel qui jurait avec les graphismes. Mêmes règles de taille :
+   * `px` reste « un pixel de la police 5×7 » (capitales ≈ 7 px de haut), donc toute la mise en page existante est conservée.
+   * Le HUD des niveaux d'origine (DÉFI) garde la police pixel (opts.pixel) : il reproduit celui de la vidéo. */
+  const STACK = '"Arial Black","Segoe UI Black","Helvetica Neue",Impact,"Trebuchet MS",sans-serif';
+  const FS = 9.4;                                    // taille de police pour 1 px de « pixel »
+  let mctx = null; const mcache = new Map();
+  const wAt100 = (t) => {
+    let w = mcache.get(t);
+    if (w === undefined) { if (!mctx) mctx = document.createElement('canvas').getContext('2d'); mctx.font = '900 italic 100px ' + STACK; w = mctx.measureText(t).width; if (mcache.size > 3000) mcache.clear(); mcache.set(t, w); }
+    return w;
+  };
+  Font.measure = function (text, px, pixel) {
+    if (pixel) return Font.measurePixel(text, px);
+    return wAt100(String(text).toUpperCase()) * (px * FS / 100);
+  };
+  Font.draw = function (ctx, segments, x, y, px, color, opts) {
+    opts = opts || {};
+    if (opts.pixel) return Font.drawPixel(ctx, segments, x, y, px, color, opts);
+    if (typeof segments === 'string') segments = [{ t: segments, c: color }];
+    const size = px * FS, widths = segments.map((s) => wAt100(s.t.toUpperCase()) * size / 100);
+    let width = 0; for (const w of widths) width += w;
+    let cx = x; if (opts.align === 'center') cx = x - width / 2; else if (opts.align === 'right') cx = x - width;
+    const outline = opts.outline === undefined ? CC.CONFIG.hud.colors.outline : opts.outline;
+    ctx.save();
+    if (opts.alpha !== undefined) ctx.globalAlpha = opts.alpha;
+    ctx.font = '900 italic ' + size.toFixed(1) + 'px ' + STACK; ctx.textBaseline = 'alphabetic'; ctx.lineJoin = 'round'; ctx.miterLimit = 2;
+    const base = y + px * 7.2;
+    if (opts.skew) { ctx.translate(0, base); ctx.transform(1, 0, opts.skew * 0.6, 1, 0, 0); ctx.translate(0, -base); }
+    let px0 = cx;
+    segments.forEach((sg, i) => {
+      const t = sg.t.toUpperCase();
+      if (outline) { ctx.strokeStyle = outline; ctx.lineWidth = Math.max(2, px * 2.6); ctx.strokeText(t, px0, base); }
+      ctx.fillStyle = sg.c || color; ctx.fillText(t, px0, base);
+      px0 += widths[i];
+    });
     ctx.restore();
     return width;
   };

@@ -315,7 +315,7 @@ CC.CONFIG = {
     recordXp: 25,                // XP d'un nouveau record
     firstRunXp: 30,              // XP du tout premier vol
     levelBase: 80, levelStep: 40,   // XP pour passer du niveau n au suivant : base + step × (n − 1)
-    missionSlots: 3,
+    missionSlots: 1,
     worlds: { city: 1, desert: 2, snow: 3, industry: 4, canyon: 5, night: 6 },   // niveau qui débloque chaque décor
     ranks: ['RECRUE', 'PILOTE', 'AS', 'CAPITAINE', 'MAJOR', 'COMMANDANT', 'LEGENDE'],
   },

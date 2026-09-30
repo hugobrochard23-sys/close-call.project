@@ -14,16 +14,14 @@ body.cc-touch, body.cc-touch * { -webkit-user-select: none; user-select: none; -
 body.cc-touch { touch-action: none; align-items: flex-start; justify-content: flex-start; }
 .cc-pause {
   position: fixed; z-index: 5; box-sizing: border-box; touch-action: none;
-  top: calc(env(safe-area-inset-top, 0px) + 12px); right: calc(env(safe-area-inset-right, 0px) + 12px);
-  width: 60px; height: 60px; border-radius: 50%;
-  background: var(--cc-glass); border: 3px solid var(--cc-white); box-shadow: 0 0 0 2px var(--cc-ink);
+  top: calc(env(safe-area-inset-top, 0px) + 10px); left: calc(env(safe-area-inset-left, 0px) + 10px);
+  width: 52px; height: 52px; border-radius: 15px;
+  background: linear-gradient(#5ab8ff, #1f7fd6); border: 3px solid rgba(255,255,255,0.9); box-shadow: 0 3px 0 #0e4f94, 0 4px 10px rgba(0,0,0,0.35);
 }
 /* deux barres de pause, dessinées en CSS (aucune image à charger) */
-.cc-pause::before, .cc-pause::after {
-  content: ''; position: absolute; top: 17px; width: 7px; height: 20px; background: var(--cc-white); box-shadow: 0 0 0 2px var(--cc-ink);
-}
-.cc-pause::before { left: 17px; }
-.cc-pause::after { right: 17px; }
+.cc-pause::before, .cc-pause::after { content: ''; position: absolute; top: 13px; width: 8px; height: 20px; border-radius: 2px; background: #fff; box-shadow: 0 1px 0 rgba(0,0,0,0.25); }
+.cc-pause::before { left: 12px; }
+.cc-pause::after { right: 12px; }
 
 /* v032 : saisie d'une graine (générateur de missions) — champ au-dessus du jeu, style du HUD */
 #cc-seedbox {

@@ -12,12 +12,12 @@
     // v017 : tailles de texte rapportées à refH (= hauteur, sauf en vertical où la largeur limite : les textes du HUD,
     // pensés pour un écran 16:9, tiennent ainsi dans la largeur du téléphone)
     text(str, x, y, pxFrac, color, opts) {
-      return CC.Font.draw(this.ctx, str, x, y, pxFrac * this.refH, color, opts);
+      return CC.Font.draw(this.ctx, str, x, y, pxFrac * this.refH, color, Object.assign({ pixel: !this.modern }, opts));   // HUD des niveaux d'origine : police pixel de la vidéo
     }
 
     draw(game, dt) {
       const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
-      this.portrait = !!game.portrait;
+      this.portrait = !!game.portrait; this.modern = !!game.endlessRun;   // CLASSIQUE : police moderne ; niveaux d'origine : police pixel de la vidéo
       this.refH = this.portrait ? Math.min(H, W * 0.95) : H;
       ctx.clearRect(0, 0, W, H);
       ctx.imageSmoothingEnabled = false;
@@ -77,100 +77,88 @@
       }
     }
 
-    /* v034 : HUD du mode CLASSIQUE — « si je joue d'une main, ai-je besoin de voir ça ? » Restent seulement :
-     *   SCORE (gros, en haut au centre) · JAUGE D'ESSENCE juste dessous (là où l'œil est déjà, jamais sous le pouce) ·
-     *   RECORD (petit) · journal de 3 lignes (« FROLE +12 ») · éclats ramassés et ×2 (haut gauche) · mission suivie (bas gauche).
-     * Supprimés : chrono (infini, sans intérêt), vitesse (on la ressent), essence en chiffres (17,86 ne dit rien), STYLE (son
-     * effet, recharger l'essence, se lit sur la jauge), rappel des touches (bureau uniquement), palier écrit en permanence. */
+    /* v034 : HUD du mode CLASSIQUE, façon jeu mobile (pastilles arrondies, pause en haut à gauche, compteur en haut à droite) :
+     *   haut : PAUSE (gauche) · pastille SCORE (centre, avec ×2 quand actif) · pastille ÉCLATS (droite)
+     *   côté droit : JAUGE D'ESSENCE verticale (comme la jauge de bonus des jeux de course infinie) — jamais sous le pouce
+     *   sous le score : une seule ligne de journal (« FROLE +12 ») ; « NOUVEAU RECORD » quand on bat son record
+     * Rien d'autre : ni chrono, ni vitesse, ni record permanent, ni mission (elle n'apparaît qu'une fois accomplie), ni touches. */
     drawClassic(game, W, H, C, col, rk) {
-      const ctx = this.ctx, run = game.endlessRun, F = CC.Font, P = this.portrait, s = game.state;
-      const u = P ? W : Math.min(W, H * 0.62);
+      const ctx = this.ctx, run = game.endlessRun, F = CC.Font, s = game.state;
       const flying = s === 'FLIGHT' || s === 'IMPACT' || s === 'CRASHED' || s === 'RESPAWN' || s === 'REVIVE' || s === 'AIM';
       if (!flying) return;
-      const alive = s === 'FLIGHT' || s === 'AIM';
-      // traits de vitesse : rayons qui filent du centre vers les bords pendant le boost (et un peu à grande vitesse)
+      const alive = s === 'FLIGHT' || s === 'AIM', U2 = Math.min(W, H * 0.62), pillH = Math.max(34, Math.min(W * 0.115, H * 0.062)), top = Math.max(8, H * 0.014);
       const speedK = alive && rk.active ? Math.max(game.boostK, U.clamp((rk.speed - 45) / 60, 0, 0.35)) : 0;
       if (speedK > 0.02) this.drawSpeedLines(W, H, speedK);
-      // ---- score
-      const spx = Math.min(W * 0.0105, H * 0.0062), sy = H * 0.028, sc = U.formatInt(run.score), rec = game.progress.P.best;
-      const broke = rec > 0 && run.score > rec;
-      ctx.save();
-      if (game.cellBump > 0) { const k = 1 + 0.12 * Math.min(1, game.cellBump); ctx.translate(W / 2, sy + spx * 3.5); ctx.scale(k, k); ctx.translate(-W / 2, -(sy + spx * 3.5)); }
-      F.draw(ctx, sc, W / 2, sy, spx, broke ? C.colors.yellow : '#ffffff', { align: 'center', outline: '#101010' });
+      const rec = game.progress.P.best, broke = rec > 0 && run.score > rec, Home = CC.Home;
+      // ---- pastille du score (centre) ; ×2 collé à gauche quand actif
+      const px = pillH * 0.075, sc = U.formatInt(run.score), sw = Math.max(F.measure('0.000', px), F.measure(sc, px)), pw = sw + pillH * 1.0;
+      let bump = 1 + 0.1 * Math.min(1, game.cellBump);
+      ctx.save(); ctx.translate(W / 2, top + pillH / 2); ctx.scale(bump, bump); ctx.translate(-W / 2, -(top + pillH / 2));
+      Home.pill(ctx, W / 2 - pw / 2, top, pw, pillH, broke ? 'rgba(90,70,0,0.72)' : 'rgba(10,16,28,0.66)', broke ? '#ffd23a' : 'rgba(255,255,255,0.35)');
+      F.draw(ctx, sc, W / 2, top + pillH / 2 - px * 3.6, px, broke ? '#ffe45a' : '#ffffff', { align: 'center', outline: '#0a0e16' });
       ctx.restore();
-      // ---- jauge d'essence (10 segments de 2 s) juste sous le score
-      const bw = Math.min(W * 0.5, u * 0.55), bh = Math.max(9, H * 0.017), bx = W / 2 - bw / 2 + bh * 0.9, by = sy + spx * 8.6;
-      this.drawFuelBar(game, rk, bx - bh * 0.9, by, bw, bh);
-      // ---- record (petit) ou « NOUVEAU RECORD »
-      const ry = by + bh + H * 0.011, rpx = Math.min(W * 0.0042, H * 0.0026);
-      if (rec > 0) {
-        if (broke) { if (Math.floor(performance.now() / 350) % 2 === 0) F.draw(ctx, 'NOUVEAU RECORD', W / 2, ry, rpx * 1.2, C.colors.yellow, { align: 'center', outline: '#101010' }); }
-        else F.draw(ctx, 'RECORD ' + U.formatInt(rec), W / 2, ry, rpx, 'rgba(230,236,246,0.75)', { align: 'center', outline: '#101010' });
-      }
-      // ---- journal (3 lignes qui montent et s'estompent)
-      const fpx = Math.min(W * 0.0052, H * 0.0031);
-      game.hudFeed.forEach((f, i) => {
-        const a = f.t < 0.12 ? f.t / 0.12 : 1 - U.clamp((f.t - 1.3) / 0.6, 0, 1); if (a <= 0) return;
-        ctx.globalAlpha = a;
-        F.draw(ctx, f.text, W / 2, ry + H * 0.03 + i * fpx * 10.5 - (1 - Math.min(1, f.t * 6)) * fpx * 3, fpx, f.color, { align: 'center', outline: '#101010' });
-      });
-      ctx.globalAlpha = 1;
-      // ---- éclats ramassés (haut gauche) et multiplicateur ×2
-      const gx = W * 0.05, gy = H * 0.036, gr = Math.min(W * 0.03, H * 0.018) * (1 + 0.25 * Math.min(1.6, game.cellBump));
-      CC.Home.icon.gem(ctx, gx + gr, gy + gr, gr, '#39d4ff');
-      F.draw(ctx, String(run.stats.cells), gx + gr * 2.7, gy + gr * 0.2, Math.min(W * 0.0062, H * 0.0037), '#e8f8ff', { outline: '#101010' });
       if (run.multT > 0) {
-        const mpx = Math.min(W * 0.0055, H * 0.0033), lab = 'X2  ' + Math.ceil(run.multT) + 'S', my = gy + gr * 3.3, mw = F.measure(lab, mpx) + mpx * 6;
-        ctx.fillStyle = 'rgba(70,10,64,0.85)'; ctx.fillRect(gx, my, mw, mpx * 12); ctx.fillStyle = '#ff5be0'; ctx.fillRect(gx, my + mpx * 10.6, mw * (run.multT / CC.CONFIG.score.multTime), mpx * 1.4);
-        F.draw(ctx, lab, gx + mpx * 3, my + mpx * 2.4, mpx, '#ffd0f4', {});
+        const mh = pillH * 0.8, mw = pillH * 1.5, mx = W / 2 - pw / 2 - mw - pillH * 0.15, my = top + (pillH - mh) / 2;
+        Home.pill(ctx, mx, my, mw, mh, '#c020a8', '#ffb0f0');
+        F.draw(ctx, 'X2', mx + mw / 2, my + mh / 2 - px * 3.3, px * 0.9, '#ffffff', { align: 'center', outline: '#500848' });
+        ctx.fillStyle = '#ffd0f4'; ctx.fillRect(mx + mh * 0.3, my + mh - mh * 0.14, (mw - mh * 0.6) * (run.multT / CC.CONFIG.score.multTime), Math.max(2, mh * 0.08));
       }
-      // ---- mission suivie (bas gauche)
-      const m = game.progress.tracked();
-      if (m && alive) {
-        const mpx = Math.min(W * 0.0045, H * 0.0028), txt = game.progress.missionText(m), mw = Math.min(W * 0.6, F.measure(txt, mpx) + mpx * 12), mh = mpx * 19, mx = W * 0.04, my = H * 0.945 - mh;
-        ctx.fillStyle = 'rgba(8,12,20,0.62)'; ctx.fillRect(mx, my, mw, mh);
-        F.draw(ctx, txt, mx + mpx * 3, my + mpx * 3, Math.min(mpx, (mw - mpx * 6) / Math.max(1, F.measure(txt, 1))), '#f4f4f4', { outline: '#101010' });
-        ctx.fillStyle = '#2a2f3a'; ctx.fillRect(mx + mpx * 3, my + mpx * 12.5, mw - mpx * 6, mpx * 2.6);
-        ctx.fillStyle = '#ff7c1f'; ctx.fillRect(mx + mpx * 3, my + mpx * 12.5, (mw - mpx * 6) * U.clamp(m.progress / m.target, 0, 1), mpx * 2.6);
+      // ---- pastille des éclats (haut droite)
+      const gw = pillH * 2.3, gx = W - gw - Math.max(10, W * 0.03), gr = pillH * 0.3 * (1 + 0.25 * Math.min(1.6, game.cellBump));
+      Home.pill(ctx, gx, top, gw, pillH, 'rgba(10,16,28,0.66)', 'rgba(255,255,255,0.35)');
+      Home.icon.gem(ctx, gx + pillH * 0.55, top + pillH / 2, gr, '#39d4ff');
+      F.draw(ctx, String(run.stats.cells), gx + gw - pillH * 0.4, top + pillH / 2 - px * 3.6, px * 0.95, '#ffffff', { align: 'right', outline: '#0a0e16' });
+      // ---- jauge d'essence verticale (bord droit, sous la pastille des éclats)
+      const gh = Math.min(H * 0.3, 260), gwid = Math.max(14, pillH * 0.36), gxx = W - gwid - Math.max(14, W * 0.045), gy = top + pillH + H * 0.03;
+      this.drawFuelBar(game, rk, gxx, gy, gwid, gh);
+      // ---- une ligne de journal, sous le score
+      const fpx = pillH * 0.05, f = game.hudFeed[0], fy = top + pillH + H * 0.012;
+      if (broke) { if (Math.floor(performance.now() / 350) % 2 === 0) F.draw(ctx, 'NOUVEAU RECORD', W / 2, fy, fpx * 1.15, '#ffe45a', { align: 'center', outline: '#0a0e16' }); }
+      else if (f) {
+        const a = f.t < 0.12 ? f.t / 0.12 : 1 - U.clamp((f.t - 1.2) / 0.6, 0, 1);
+        if (a > 0) { ctx.globalAlpha = a; F.draw(ctx, f.text, W / 2, fy - (1 - Math.min(1, f.t * 6)) * fpx * 3, fpx * 1.1, f.color, { align: 'center', outline: '#0a0e16' }); ctx.globalAlpha = 1; }
       }
-      // ---- mission accomplie (bandeau au centre haut)
+      // ---- mission accomplie (bandeau)
       for (const t of game.progress.toasts) {
-        const a = Math.min(1, t.t * 6, (2.4 - t.t) * 3), y = H * 0.27;
-        ctx.globalAlpha = a; const tpx = Math.min(W * 0.0082, H * 0.005);
-        ctx.fillStyle = 'rgba(6,30,10,0.85)'; ctx.fillRect(W * 0.1, y - tpx * 3, W * 0.8, tpx * 26); ctx.fillStyle = C.colors.green; ctx.fillRect(W * 0.1, y - tpx * 3, W * 0.8, 3);
-        F.draw(ctx, t.text, W / 2, y + tpx * 1.5, Math.min(tpx, W * 0.72 / F.measure(t.text, 1)), C.colors.green, { align: 'center', outline: '#101010' });
-        F.draw(ctx, t.sub, W / 2, y + tpx * 12.5, tpx * 0.95, '#ffffff', { align: 'center', outline: '#101010' });
+        const a = Math.min(1, t.t * 6, (2.4 - t.t) * 3), bh = pillH * 1.7, y = H * 0.27, bw = Math.min(W * 0.86, pillH * 9);
+        ctx.globalAlpha = a;
+        Home.pill(ctx, W / 2 - bw / 2, y, bw, bh, 'rgba(8,60,20,0.88)', '#56ff5a');
+        Home.icon.check(ctx, W / 2 - bw / 2 + bh * 0.5, y + bh / 2, bh * 0.26, '#56ff5a');
+        F.draw(ctx, t.text, W / 2 + bh * 0.3, y + bh * 0.16, Math.min(px * 1.15, (bw - bh * 1.3) / Math.max(1, F.measure(t.text, 1))), '#ffffff', { align: 'center', outline: '#0a0e16' });
+        F.draw(ctx, t.sub, W / 2 + bh * 0.3, y + bh * 0.58, px * 0.95, '#56ff5a', { align: 'center', outline: '#0a0e16' });
         ctx.globalAlpha = 1;
       }
-      // ---- bureau : rappel des commandes pendant les premiers vols seulement (sur téléphone : le tutoriel gestuel)
+      // ---- bureau : rappel des commandes pendant les premiers vols seulement
       if (!document.body.classList.contains('cc-touch') && s === 'FLIGHT' && (game.progress.P.launches || 0) <= 3 && game.flightTime < 6) {
-        const hint = 'SOURIS OU ZQSD : DIRIGER    ESPACE : BOOST', hp = Math.min(W * 0.0055, H * 0.0034);
-        F.draw(ctx, hint, W / 2, H * 0.23, Math.min(hp, W * 0.9 / F.measure(hint, 1)), '#ffffff', { align: 'center', outline: '#101010' });
+        const hint = 'SOURIS OU ZQSD : DIRIGER    ESPACE : BOOST';
+        F.draw(ctx, hint, W / 2, H * 0.23, Math.min(px * 0.9, W * 0.9 / F.measure(hint, 1)), '#ffffff', { align: 'center', outline: '#0a0e16' });
       }
       // ---- alarme d'altitude
-      if (run.altT > 0 && s === 'FLIGHT' && Math.floor(run.altT * 6) % 2 === 0) F.draw(ctx, 'TROP HAUT ! DESCENDS', W / 2, H * 0.3, Math.min(W * 0.0068, H * 0.004), C.colors.red, { align: 'center', outline: '#101010' });
+      if (run.altT > 0 && s === 'FLIGHT' && Math.floor(run.altT * 6) % 2 === 0) F.draw(ctx, 'TROP HAUT !', W / 2, H * 0.3, px * 1.6, C.colors.red, { align: 'center', outline: '#0a0e16' });
     }
 
-    // jauge d'essence : icône de flamme + 10 segments (chacun = 2 s de poussée) ; pas un seul chiffre
+    // jauge d'essence VERTICALE : capsule sombre, remplissage du bas vers le haut en 10 segments (2 s chacun), flamme en bas
     drawFuelBar(game, rk, x, y, w, h) {
-      const ctx = this.ctx, C = CC.CONFIG.hud.colors;
+      const ctx = this.ctx, C = CC.CONFIG.hud.colors, Home = CC.Home;
       const max = rk.fuelMax || 20, fuel = rk.active ? rk.fuel : max, k = U.clamp(fuel / max, 0, 1);
       const free = rk.active && rk.freeBoost, boosting = rk.active && rk.thrusting && !free, low = k < 0.25 && !free;
       const blink = low && Math.floor(performance.now() / 220) % 2 === 0;
-      let color = C.orange; if (free) color = C.blue; else if (boosting) color = '#ffd23a'; else if (low) color = blink ? '#ffffff' : C.red;
-      CC.Home.icon.flame(ctx, x + h * 0.6, y + h * 0.5, h * 0.95, blink ? '#ffffff' : (low ? C.red : color));
-      const bx = x + h * 1.8, bw = w - h * 1.8 + h * 0.9;
-      if (boosting) { ctx.fillStyle = 'rgba(255,210,58,' + (0.35 + 0.2 * Math.sin(performance.now() * 0.02)) + ')'; ctx.fillRect(bx - 6, y - 6, bw + 12, h + 12); }
-      ctx.fillStyle = '#05070b'; ctx.fillRect(bx - 3, y - 3, bw + 6, h + 6);
-      ctx.fillStyle = '#2a2f3a'; ctx.fillRect(bx, y, bw, h);
-      ctx.fillStyle = color; ctx.fillRect(bx, y, bw * k, h);
-      ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.fillRect(bx, y, bw * k, Math.max(1, h * 0.3));
-      const n = Math.round(max / 2); ctx.fillStyle = '#05070b';
-      for (let i = 1; i < n; i++) ctx.fillRect(bx + bw * i / n - 1, y, 2, h);
-      if (rk.active && fuel <= 0) CC.Font.draw(ctx, 'PANNE', bx + bw / 2, y + h * 0.5 - h * 0.28, h * 0.11, '#ffffff', { align: 'center', outline: '#ff3b2e' });
+      let c1 = '#ffb020', c2 = '#ff6a10'; if (free) { c1 = '#7fd0ff'; c2 = '#2a90ff'; } else if (boosting) { c1 = '#fff27a'; c2 = '#ffb020'; } else if (low) { c1 = blink ? '#ffffff' : '#ff6a5a'; c2 = '#ff2a1a'; }
+      const r = w / 2, fh = h - w * 1.7;   // hauteur utile (la flamme occupe le bas)
+      if (boosting) { ctx.fillStyle = 'rgba(255,220,90,' + (0.25 + 0.15 * Math.sin(performance.now() * 0.02)) + ')'; Home.rr(ctx, x - 5, y - 5, w + 10, h + 10, r + 5); ctx.fill(); }
+      Home.pill(ctx, x, y, w, h, 'rgba(8,12,20,0.7)', low && blink ? '#ff3b2e' : 'rgba(255,255,255,0.4)');
+      const n = Math.round(max / 2), pad = w * 0.16, sh = (fh - pad) / n, iw = w - pad * 2;
+      for (let i = 0; i < n; i++) {
+        const sy = y + pad + (n - 1 - i) * sh, on = (i + 1) / n <= k + 1e-6 || (i / n < k && k < (i + 1) / n);
+        const part = on ? U.clamp((k - i / n) * n, 0, 1) : 0;
+        ctx.fillStyle = 'rgba(255,255,255,0.09)'; ctx.fillRect(x + pad, sy + sh * 0.12, iw, sh * 0.76);
+        if (part > 0) { const g = ctx.createLinearGradient(0, sy, 0, sy + sh); g.addColorStop(0, c1); g.addColorStop(1, c2); ctx.fillStyle = g; const hh = sh * 0.76 * part; ctx.fillRect(x + pad, sy + sh * 0.12 + sh * 0.76 - hh, iw, hh); }
+      }
+      Home.icon.flame(ctx, x + w / 2, y + h - w * 0.8, w * 0.52, blink ? '#ffffff' : (low ? '#ff3b2e' : c1));
+      if (rk.active && fuel <= 0) CC.Font.draw(ctx, 'PANNE', x + w / 2, y - w * 1.0, w * 0.075, '#ffffff', { align: 'center', outline: '#ff3b2e' });
       // fine barre jaune : reposer le doigt relance le boost aussitôt (tactile)
       const T = game.input.touch, left = T && T.reboostUntil ? (T.reboostUntil - performance.now()) / CC.CONFIG.input.touch.reboostMs : 0;
-      if (rk.active && left > 0 && left <= 1) { ctx.fillStyle = C.yellow; ctx.fillRect(bx, y + h + 5, bw * left, Math.max(2, h * 0.22)); }
+      if (rk.active && left > 0 && left <= 1) { ctx.fillStyle = C.yellow; ctx.fillRect(x - w * 0.35, y + h * (1 - left), Math.max(3, w * 0.12), h * left); }
     }
 
     // rayons qui filent du centre : lignes fines déterministes qui avancent vers les bords
@@ -216,7 +204,7 @@
       if (lite) this.drawTutorial(game, W, H);
       const msg = game.centerMsg || (lite && game.state === 'AIM' && !game.endlessRun ? 'TOUCHE POUR TIRER    MAINTIENS : BOOST' : null);
       // v032 : réduit si le message dépasse la largeur de l'écran (brief de mission long, téléphone en portrait)
-      const cpx = msg ? Math.min(C.center.px, 0.94 * W / Math.max(1, CC.Font.measure(msg, this.refH))) : 0;
+      const cpx = msg ? Math.min(C.center.px, 0.94 * W / Math.max(1, CC.Font.measure(msg, this.refH, !this.modern))) : 0;
       if (msg && !game.paused) this.text(msg, 0.5 * W, C.center.y * H, cpx, '#101010', { align: 'center', outline: '#f0f0f0' });   // v024 : pas par-dessus le menu pause
     }
 
@@ -228,7 +216,7 @@
       const i = Math.floor(t / 3.2);
       if (i >= steps.length) return;
       const [label, kind] = steps[i], k = (t % 3.2) / 3.2, a = Math.min(1, k * 6, (1 - k) * 6);
-      const ctx = this.ctx, px = this.refH * 0.0042, w = CC.Font.measure(label, px) + px * 14, h = px * 16, x = W / 2 - w / 2, y = H * 0.23;
+      const ctx = this.ctx, px = this.refH * 0.0042, w = CC.Font.measure(label, px, !this.modern) + px * 14, h = px * 16, x = W / 2 - w / 2, y = H * 0.23;
       ctx.globalAlpha = a;
       ctx.fillStyle = 'rgba(10,10,14,0.72)'; ctx.fillRect(x, y, w, h);
       ctx.strokeStyle = '#fdfd02'; ctx.lineWidth = Math.max(1, px * 0.5); ctx.strokeRect(x, y, w, h);
