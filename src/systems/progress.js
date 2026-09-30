@@ -14,15 +14,15 @@
   // ---------- missions : types, libellés (police ASCII : pas d'accents), mesure, barème ----------
   // scope 'run' : la meilleure valeur atteinte en un vol ; scope 'total' : cumul sur tous les vols
   const TYPES = {
-    dist:    { scope: 'run',   min: 0, text: (n) => 'ATTEINDRE ' + U.formatInt(n) + ' M',                 unit: 'M',  gen: (lv) => nice(500 + 130 * lv, 100),  xp: 1.0 },
-    score:   { scope: 'run',   min: 2, text: (n) => 'FAIRE ' + U.formatInt(n) + ' POINTS',                unit: '',   gen: (lv) => nice(900 + 300 * lv, 100),  xp: 1.1 },
-    time:    { scope: 'run',   min: 1, text: (n) => 'SURVIVRE ' + n + ' SECONDES',                        unit: 'S',  gen: (lv) => nice(28 + 4 * lv, 5),       xp: 0.9 },
-    targets: { scope: 'total', min: 0, text: (n) => 'DETRUIRE ' + n + ' CIBLES',                          unit: '',   gen: (lv) => nice(4 + lv, 1),            xp: 1.0 },
-    series:  { scope: 'run',   min: 1, text: (n) => 'DETRUIRE ' + n + ' CIBLES EN UN VOL',                unit: '',   gen: (lv) => Math.min(6, 2 + Math.floor(lv / 3)), xp: 1.2 },
-    boosts:  { scope: 'total', min: 0, text: (n) => 'UTILISER ' + n + ' BOOSTS',                          unit: '',   gen: (lv) => nice(8 + 2 * lv, 2),        xp: 0.8 },
-    cells:   { scope: 'total', min: 0, text: (n) => 'RAMASSER ' + n + ' ECLATS',                          unit: '',   gen: (lv) => nice(60 + 15 * lv, 10),     xp: 0.9 },
-    close:   { scope: 'total', min: 1, text: (n) => 'FROLER ' + n + ' FOIS LES MURS',                     unit: '',   gen: (lv) => nice(6 + lv, 1),            xp: 1.0 },
-    gold:    { scope: 'total', min: 2, text: (n) => 'PRENDRE ' + n + ' ETOILES DOREES',                   unit: '',   gen: (lv) => Math.min(8, 2 + Math.floor(lv / 2)), xp: 1.3 },
+    dist:    { scope: 'run',   min: 0, text: (n) => 'VOLE ' + U.formatInt(n) + ' M',                 unit: 'M',  gen: (lv) => nice(500 + 130 * lv, 100),  xp: 1.0 },
+    score:   { scope: 'run',   min: 2, text: (n) => 'MARQUE ' + U.formatInt(n) + ' POINTS',                unit: '',   gen: (lv) => nice(900 + 300 * lv, 100),  xp: 1.1 },
+    time:    { scope: 'run',   min: 1, text: (n) => 'TIENS ' + n + ' SECONDES',                        unit: 'S',  gen: (lv) => nice(28 + 4 * lv, 5),       xp: 0.9 },
+    targets: { scope: 'total', min: 0, text: (n) => 'DETRUIS ' + n + ' CIBLES',                          unit: '',   gen: (lv) => nice(4 + lv, 1),            xp: 1.0 },
+    series:  { scope: 'run',   min: 1, text: (n) => 'DETRUIS ' + n + ' CIBLES EN 1 VOL',                unit: '',   gen: (lv) => Math.min(6, 2 + Math.floor(lv / 3)), xp: 1.2 },
+    boosts:  { scope: 'total', min: 0, text: (n) => 'FAIS ' + n + ' BOOSTS',                          unit: '',   gen: (lv) => nice(8 + 2 * lv, 2),        xp: 0.8 },
+    cells:   { scope: 'total', min: 0, text: (n) => 'RAMASSE ' + n + ' ECLATS',                          unit: '',   gen: (lv) => nice(60 + 15 * lv, 10),     xp: 0.9 },
+    close:   { scope: 'total', min: 1, text: (n) => 'FROLE LES MURS ' + n + ' FOIS',                     unit: '',   gen: (lv) => nice(6 + lv, 1),            xp: 1.0 },
+    gold:    { scope: 'total', min: 2, text: (n) => 'PRENDS ' + n + ' ETOILES',                   unit: '',   gen: (lv) => Math.min(8, 2 + Math.floor(lv / 2)), xp: 1.3 },
   };
   function nice(v, step) { return Math.max(step, Math.round(v / step) * step); }
 
@@ -53,6 +53,7 @@
     fill() {
       const P = this.P, slots = C().missionSlots;
       P.missions = (P.missions || []).filter((m) => m && TYPES[m.type]);
+      P.missions.sort((a, b) => (b.progress / b.target) - (a.progress / a.target)); P.missions.length = Math.min(P.missions.length, slots);   // une seule mission à la fois : la plus avancée
       while (P.missions.length < slots) P.missions.push(this.makeMission());
     }
     makeMission() {
@@ -140,7 +141,7 @@
       P.missions = P.missions.filter((m) => !m.done);
       this.fill();
       this.run = null;
-      return { lines, gained, before, after, levelUps: after.level - before.level, newWorlds, missions, score, dist, bonus, newRecord, first, best: P.best,
+      return { mission: missions[0], lines, gained, before, after, levelUps: after.level - before.level, newWorlds, missions, score, dist, bonus, newRecord, first, best: P.best,
         stats: { cells: r.cells || 0, targets: r.targets || 0, boosts: r.boosts || 0, gold: r.gold || 0 } };
     }
     addXp(n) {

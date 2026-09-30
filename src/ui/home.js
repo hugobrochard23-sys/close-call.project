@@ -24,24 +24,59 @@
   const text = (ui, ctx, s, x, y, px, color, o) => F.draw(ctx, s, x, y, px, color, o || {});
   const tw = (s, px) => F.measure(s, px);
 
-  // rectangle « pixel » : coins échancrés d'un cran (identité du jeu), fond + liseré
-  function pxRect(ctx, x, y, w, h, fill, stroke, n, lw) {
-    n = n === undefined ? Math.max(2, Math.round(h * 0.09)) : n; lw = lw || Math.max(1.5, h * 0.045);
-    const path = () => { ctx.beginPath(); ctx.moveTo(x + n, y); ctx.lineTo(x + w - n, y); ctx.lineTo(x + w, y + n); ctx.lineTo(x + w, y + h - n); ctx.lineTo(x + w - n, y + h); ctx.lineTo(x + n, y + h); ctx.lineTo(x, y + h - n); ctx.lineTo(x, y + n); ctx.closePath(); };
-    if (fill) { path(); ctx.fillStyle = fill; ctx.fill(); }
-    if (stroke) { path(); ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+  // ---------- formes arrondies « jeu mobile » : pastilles, boutons 3D, jauges ----------
+  function rr(ctx, x, y, w, h, r) {
+    r = Math.min(r, h / 2, w / 2);
+    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
-  Home.pxRect = pxRect;
+  // pastille : fond translucide, reflet léger sur la moitié haute, liseré
+  function pill(ctx, x, y, w, h, fill, stroke, r) {
+    r = r === undefined ? h / 2 : r;
+    rr(ctx, x, y, w, h, r); ctx.fillStyle = fill; ctx.fill();
+    const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, 'rgba(255,255,255,0.16)'); g.addColorStop(0.5, 'rgba(255,255,255,0.03)'); g.addColorStop(1, 'rgba(0,0,0,0.12)');
+    rr(ctx, x, y, w, h, r); ctx.fillStyle = g; ctx.fill();
+    if (stroke) { rr(ctx, x, y, w, h, r); ctx.strokeStyle = stroke; ctx.lineWidth = Math.max(1.5, h * 0.045); ctx.stroke(); }
+  }
+  // ancien nom conservé : rectangle arrondi (le paramètre `n` ne sert plus)
+  function pxRect(ctx, x, y, w, h, fill, stroke, n, lw) { pill(ctx, x, y, w, h, fill || 'rgba(0,0,0,0)', stroke, Math.min(h * 0.26, 22)); }
+  // bouton 3D : lèvre sombre dessous, dégradé, reflet brillant, léger liseré clair
+  function button3d(ctx, x, y, w, h, c1, c2, lip, pulse) {
+    const r = h * 0.3, d = h * 0.09, hh = h - d;
+    ctx.save(); if (pulse && pulse !== 1) { ctx.translate(x + w / 2, y + h / 2); ctx.scale(pulse, pulse); ctx.translate(-(x + w / 2), -(y + h / 2)); }
+    rr(ctx, x, y + d, w, hh, r); ctx.fillStyle = lip; ctx.fill();
+    const g = ctx.createLinearGradient(0, y, 0, y + hh); g.addColorStop(0, c1); g.addColorStop(1, c2);
+    rr(ctx, x, y, w, hh, r); ctx.fillStyle = g; ctx.fill();
+    const gl = ctx.createLinearGradient(0, y, 0, y + hh * 0.55); gl.addColorStop(0, 'rgba(255,255,255,0.55)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
+    rr(ctx, x + w * 0.02, y + hh * 0.05, w * 0.96, hh * 0.5, r * 0.8); ctx.fillStyle = gl; ctx.fill();
+    rr(ctx, x, y, w, hh, r); ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = Math.max(1.5, h * 0.03); ctx.stroke();
+    ctx.restore();
+  }
+  // jauge arrondie : rail sombre, remplissage en dégradé avec reflet
+  function meter(ctx, x, y, w, h, k, c1, c2) {
+    rr(ctx, x - 2, y - 2, w + 4, h + 4, h); ctx.fillStyle = 'rgba(4,8,16,0.85)'; ctx.fill();
+    const f = Math.max(0, Math.min(1, k)) * w;
+    if (f > 1) {
+      const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, c1); g.addColorStop(1, c2);
+      rr(ctx, x, y, Math.max(f, h), h, h / 2); ctx.fillStyle = g; ctx.fill();
+      rr(ctx, x + h * 0.15, y + h * 0.12, Math.max(f, h) - h * 0.3, h * 0.32, h * 0.16); ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fill();
+    }
+  }
+  // badge de niveau : carré arrondi doré avec le numéro
+  function badge(ctx, x, y, size, level, ui) {
+    const g = ctx.createLinearGradient(0, y, 0, y + size); g.addColorStop(0, '#ffe45a'); g.addColorStop(1, '#e08a00');
+    rr(ctx, x, y, size, size, size * 0.26); ctx.fillStyle = g; ctx.fill(); rr(ctx, x, y, size, size, size * 0.26); ctx.strokeStyle = '#fff6b0'; ctx.lineWidth = Math.max(2, size * 0.05); ctx.stroke();
+    text(ui, ctx, 'NIV', x + size / 2, y + size * 0.1, size * 0.026, '#7a4a00', { align: 'center', outline: null });
+    const s = String(level), px = Math.min(size * 0.075, size * 0.66 / Math.max(1, F.measure(s, 1)));
+    text(ui, ctx, s, x + size / 2, y + size * 0.36, px, '#ffffff', { align: 'center', outline: '#8a5200' });
+  }
+  Home.rr = rr; Home.pill = pill; Home.button3d = button3d; Home.meter = meter; Home.badge = badge;
+  const F2 = F;
+
   const hit = (ui, x, y, w, h, action) => ui.buttons.push({ x, y, w, h, action });
   const inRect = (ui, x, y, w, h) => !ui.isTouch() && ui.mouse.x >= x && ui.mouse.x <= x + w && ui.mouse.y >= y && ui.mouse.y <= y + h;
 
-  // barre de progression pixel (fond sombre, remplissage, reflet)
-  function bar(ctx, x, y, w, h, k, color, back) {
-    ctx.fillStyle = '#05070b'; ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
-    ctx.fillStyle = back || '#2a2f3a'; ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = color; ctx.fillRect(x, y, Math.max(0, w * U.clamp(k, 0, 1)), h);
-    ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.fillRect(x, y, Math.max(0, w * U.clamp(k, 0, 1)), Math.max(1, h * 0.28));
-  }
+  // barre de progression (alias de meter)
+  function bar(ctx, x, y, w, h, k, color) { meter(ctx, x, y, w, h, k, color, color); }
   Home.bar = bar;
 
   // ---------- pictogrammes ----------
@@ -96,11 +131,7 @@
 
   // ---------- badge de niveau + barre d'XP ----------
   function levelBadge(ui, ctx, game, L, x, y, size, action) {
-    const P = game.progress, lv = P.level;
-    pxRect(ctx, x, y, size, size, 'rgba(8,12,20,0.85)', GOLD, Math.round(size * 0.16), Math.max(2, size * 0.06));
-    text(ui, ctx, 'NIV', x + size / 2, y + size * 0.13, size * 0.03, '#c8d0dc', { align: 'center' });
-    const s = String(lv), px = Math.min(size * 0.075, size * 0.72 / (s.length * 8.4));
-    text(ui, ctx, s, x + size / 2, y + size * 0.42, px, GOLD, { align: 'center' });
+    badge(ctx, x, y, size, game.progress.level, ui);
     if (action) hit(ui, x, y, size, size, action);
   }
   Home.levelBadge = levelBadge;
@@ -134,7 +165,6 @@
     const best = prog.P.best;
     if (best > 0) text(ui, ctx, 'RECORD ' + U.formatInt(best), W / 2, ly + lpx * 9.5, ui.fitPx(['RECORD 000.000'], W * 0.5, u * 0.0058), '#ffd23a', { align: 'center' });
     // 1. la roquette : anneau pulsant + doigt qui touche (les 3 premiers vols : consigne écrite en plus)
-    if (game.state === 'MENU' && pad.mode === 'idle') this.cue(ui, ctx, game, L, touch);
     // 3. mission la plus avancée
     const m = prog.tracked();
     if (m) {
@@ -207,7 +237,7 @@
 
   // MISSIONS : trois lignes (libellé, barre, récompense)
   Home.drawQuests = function (ui, ctx, game, W, H) {
-    const L = frame(ui, ctx, game, W, H, 'MISSIONS', ORANGE), { HH, u, Y, P } = L, prog = game.progress;
+    const L = frame(ui, ctx, game, W, H, 'MISSION', ORANGE), { HH, u, Y, P } = L, prog = game.progress;
     const rowH = Math.min(u * 0.34, HH * 0.19), x0 = W * 0.06, w = W * 0.88;
     text(ui, ctx, 'CHAQUE MISSION FINIE RAPPORTE DE L\'XP', W / 2, Y(0.115), ui.fitPx(['CHAQUE MISSION FINIE RAPPORTE DE L\'XP'], w, u * 0.0052), '#9fb0c8', { align: 'center' });
     prog.P.missions.forEach((m, i) => {
@@ -222,7 +252,7 @@
       text(ui, ctx, cnt, tx + tW * 0.66, y + rowH * 0.595 - np * 3.5, np, '#dfe6f0', {});
       text(ui, ctx, done ? 'TERMINEE' : '+' + m.xp + ' XP', tx, y + rowH * 0.76, ui.fitPx(['+000 XP'], tW * 0.5, rowH * 0.028), done ? GREEN : CY, {});
     });
-    const tip = 'ELLES SE RENOUVELLENT APRES CHAQUE VOL';
+    const tip = 'UNE NOUVELLE MISSION APRES CHAQUE VOL';
     text(ui, ctx, tip, W / 2, Y(0.16) + 3 * (rowH + HH * 0.02) + HH * 0.01, ui.fitPx([tip], w, u * 0.0048), '#7f8da3', { align: 'center' });
     backButton(ui, ctx, L, ui.key('RETOUR', 'ESC'), () => { ui.overlay = null; });
   };
@@ -316,130 +346,96 @@
   const levelOf = (prog, abs) => { let l = 1; while (abs >= prog.need(l)) { abs -= prog.need(l); l++; } return { level: l, xp: abs }; };
   const ease = (k) => 1 - Math.pow(1 - U.clamp(k, 0, 1), 3);
 
+  // ÉCRAN DE FIN — volontairement minimal : SCORE, niveau + barre d'XP (« +39 XP »), UNE mission, deux boutons.
   Home.drawResults = function (ui, ctx, game, W, H) {
     const L = Home.layout(ui, W, H), { T, HH, P, u, Y } = L, r = game.results, prog = game.progress;
-    ui.dim(ctx, W, H, 0.78);
+    ui.dim(ctx, W, H, 0.8);
     const t = r.t, al = (t0, dur) => U.clamp((t - t0) / (dur || 0.25), 0, 1);
-    // échelle : tailles pensées pour un écran de 390 points de large ; réduites si la hauteur manque
-    const q = P ? Math.min(W / 390, HH / 780) : Math.min(HH / 470, W / 900), S = (v) => v * q;
-    const colA = P ? { x: W / 2, w: W * 0.92 } : { x: W * 0.27, w: W * 0.46 };
-    const colB = P ? colA : { x: W * 0.74, w: W * 0.44 };
+    const q = P ? Math.min(W / 390, HH / 760) : Math.min(HH / 440, W / 900), S = (v) => v * q;
+    const colA = P ? { x: W / 2, w: W * 0.9 } : { x: W * 0.27, w: W * 0.44 };
+    const colB = P ? colA : { x: W * 0.74, w: W * 0.42 };
     const fitq = (label, w, px) => Math.min(S(px), w / Math.max(1, F.measure(label, 1)));
-    let y = T + S(P ? 16 : 14);
-    // -- titre
-    const ttl = 'PARTIE TERMINEE  -  ' + r.cause, tp = fitq(ttl, colA.w, 1.7);
-    text(ui, ctx, ttl, colA.x, y, tp, '#9fb0c8', { align: 'center' }); y += tp * 7 + S(12);
-    // -- score : compte à rebours depuis 0
+    let y = T + S(P ? 40 : 26);
+    // -- SCORE : compte depuis 0
     const sk = ease((t - 0.15) / 1.0), shown = Math.round(r.score * sk);
     if (t > 0.15 && sk < 1 && (r.tickAt || 0) + 0.07 < t) { r.tickAt = t; game.audio.play('xpTick', null, Math.floor(sk * 8)); }
     if (sk >= 1 && !r.scoreDone) { r.scoreDone = true; if (r.newRecord) { game.audio.play('record'); if (CC.Haptics) CC.Haptics.pattern('record'); } }
-    text(ui, ctx, 'SCORE', colA.x, y, S(1.6), '#9fb0c8', { align: 'center' }); y += S(1.6) * 7 + S(6);
-    const spx = fitq('000.000', colA.w * 0.8, 5.4);
-    text(ui, ctx, U.formatInt(shown), colA.x, y, spx, '#ffffff', { align: 'center', outline: '#0b0e14' }); y += spx * 7 + S(12);
-    const rk = r.newRecord ? 'NOUVEAU RECORD !' : r.first ? 'PREMIER VOL !' : 'MEILLEUR ' + U.formatInt(r.best);
-    const rp = fitq(rk, colA.w, 2.4), pulse = r.newRecord ? 0.75 + 0.25 * Math.sin(t * 8) : 1;
+    text(ui, ctx, 'SCORE', colA.x, y, S(2.0), '#9fb0c8', { align: 'center' }); y += S(2.0) * 7 + S(8);
+    const spx = fitq('000.000', colA.w * 0.8, 8.5);
+    text(ui, ctx, U.formatInt(shown), colA.x, y, spx, '#ffffff', { align: 'center', outline: '#0b0e14' }); y += spx * 7 + S(14);
+    const rk = r.newRecord ? 'NOUVEAU RECORD !' : 'MEILLEUR  ' + U.formatInt(r.best), rp = fitq(rk, colA.w, 2.8), pulse = r.newRecord ? 0.75 + 0.25 * Math.sin(t * 8) : 1;
     ctx.globalAlpha = al(1.1, 0.3) * pulse;
-    text(ui, ctx, rk, colA.x, y, rp, r.newRecord || r.first ? GOLD : '#c8d0dc', { align: 'center' }); ctx.globalAlpha = 1;
-    y += rp * 7 + S(14);
-    // -- pastilles : distance, éclats, cibles
-    const chips = [['rocket', U.formatInt(r.dist) + ' M', '#8fd0ff'], ['gem', String(r.stats.cells), CY], ['target', String(r.stats.targets), ORANGE]];
-    const gap = colA.w * 0.03, chw = (colA.w - gap * 2) / 3, chh = S(46);
-    chips.forEach((c, i) => {
-      const x = colA.x - colA.w / 2 + i * (chw + gap);
-      ctx.globalAlpha = al(1.0 + i * 0.12, 0.25);
-      pxRect(ctx, x, y, chw, chh, 'rgba(12,18,30,0.9)', 'rgba(159,176,200,0.5)', Math.round(chh * 0.14));
-      ICON[c[0]](ctx, x + chh * 0.5, y + chh * 0.5, chh * 0.24, c[2]);
-      const cp = fitq(c[1], chw - chh * 0.95, 2.0);
-      text(ui, ctx, c[1], x + chh * 0.92, y + chh * 0.5 - cp * 3.5, cp, '#ffffff', {});
-    });
-    ctx.globalAlpha = 1; y += chh + S(16);
-    // -- XP : lignes qui apparaissent une à une, puis total et barre (qui se remplit et monte de niveau)
-    const tL = 1.3, lp = fitq('NOUVEAU RECORD   +000', colA.w * 0.9, 2.0), lineH = lp * 7 + S(7);
-    r.lines.forEach((l, i) => {
-      const a = al(tL + i * 0.3, 0.2); if (a <= 0) return;
-      ctx.globalAlpha = a; const ly = y + i * lineH;
-      text(ui, ctx, l.label, colA.x - colA.w * 0.45, ly, lp, '#dfe6f0', {});
-      text(ui, ctx, '+' + l.v, colA.x + colA.w * 0.45, ly, lp, CY, { align: 'right' });
-      if (!r['ln' + i]) { r['ln' + i] = true; game.audio.play('xpTick', null, i); }
-    });
-    ctx.globalAlpha = 1; y += r.lines.length * lineH + S(8);
-    const tBar = tL + r.lines.length * 0.3 + 0.25, tot = r.gained + (r.xpDoubled ? r.gained : 0);
-    ctx.globalAlpha = al(tBar - 0.2, 0.3);
-    const xp = fitq('XP +0000', colA.w * 0.7, 3.8);
-    text(ui, ctx, 'XP  +' + tot, colA.x, y, xp, CY, { align: 'center', outline: '#0b0e14' }); ctx.globalAlpha = 1;
-    y += xp * 7 + S(12);
-    // segments de la barre : [avant → après] puis [après → après la pub]
-    const dur0 = U.clamp(0.7 + r.gained / 140, 0.8, 2.2);
+    text(ui, ctx, rk, colA.x, y, rp, r.newRecord ? GOLD : '#c8d0dc', { align: 'center' }); ctx.globalAlpha = 1;
+    y += rp * 7 + S(P ? 40 : 26);
+    // -- XP : niveau + barre qui se remplit (et monte de niveau)
+    const tBar = 1.3, dur0 = U.clamp(0.7 + r.gained / 140, 0.8, 2.2);
     const segs = [{ from: absXp(prog, r.before.level, r.before.xp), to: absXp(prog, r.after.level, r.after.xp), t0: tBar, dur: dur0 }];
     if (r.dbl) segs.push({ from: segs[0].to, to: absXp(prog, r.dbl.after.level, r.dbl.after.xp), t0: r.dbl.t0, dur: dur0 });
     let cur = segs[0].from;
     for (const s of segs) if (t >= s.t0) cur = s.from + (s.to - s.from) * ease((t - s.t0) / s.dur);
-    const at = levelOf(prog, cur);
+    const at = levelOf(prog, cur), tot = r.gained + (r.xpDoubled ? r.gained : 0);
     if (r.lvShown === undefined) r.lvShown = r.before.level;
     if (at.level > r.lvShown) { r.lvShown = at.level; r.lvFlash = t; game.audio.play('levelUp'); if (CC.Haptics) CC.Haptics.pattern('levelUp'); r.lvNew = at.level; }
-    // badge de niveau (niveau animé) + barre
-    const bs = S(50), bx0 = colA.x - colA.w / 2;
-    pxRect(ctx, bx0, y, bs, bs, 'rgba(8,12,20,0.9)', GOLD, Math.round(bs * 0.16), Math.max(2, bs * 0.06));
-    text(ui, ctx, 'NIV', bx0 + bs / 2, y + bs * 0.12, bs * 0.03, '#c8d0dc', { align: 'center' });
-    { const s = String(at.level), px = Math.min(bs * 0.08, bs * 0.7 / (s.length * 8.4)); text(ui, ctx, s, bx0 + bs / 2, y + bs * 0.4, px, GOLD, { align: 'center' }); }
-    const bxx = bx0 + bs + S(10), bww = colA.w - bs - S(10), bh = S(20);
-    bar(ctx, bxx, y + bs * 0.5 - bh / 2, bww, bh, at.xp / prog.need(at.level), CY);
-    { const lab = Math.round(at.xp) + ' / ' + prog.need(at.level); text(ui, ctx, lab, bxx + bww / 2, y + bs * 0.5 - S(1.6) * 3.5, S(1.6), '#ffffff', { align: 'center', outline: '#0b0e14' }); }
-    y += bs + S(16);
-    // -- missions (paysage : colonne de droite)
-    let my = P ? y : T + S(24);
-    const tM = tBar + dur0 * 0.6;
-    text(ui, ctx, 'MISSIONS', colB.x - colB.w / 2, my, S(1.7), '#9fb0c8', {}); my += S(1.7) * 7 + S(8);
-    const mrh = S(50);
-    r.missions.forEach((m, i) => {
-      const a = al(tM + i * 0.15, 0.25); if (a <= 0) return;
-      ctx.globalAlpha = a; const yy = my + i * (mrh + S(7)), mx = colB.x - colB.w / 2;
-      pxRect(ctx, mx, yy, colB.w, mrh, 'rgba(12,18,30,0.9)', m.justDone ? GREEN : 'rgba(159,176,200,0.45)', Math.round(mrh * 0.12));
-      const tp2 = fitq(m.text, colB.w - S(104), 1.9);
-      text(ui, ctx, m.text, mx + S(10), yy + S(8), tp2, '#f4f4f4', {});
-      bar(ctx, mx + S(10), yy + mrh - S(18), colB.w - S(104), S(9), m.progress / m.target, m.done ? GREEN : ORANGE);
-      const np = S(1.7);
-      if (m.justDone) { ICON.check(ctx, mx + colB.w - S(30), yy + mrh * 0.36, S(11), GREEN); text(ui, ctx, '+' + m.xp + ' XP', mx + colB.w - S(30), yy + mrh - S(20), np * 0.9, GREEN, { align: 'center' }); }
-      else text(ui, ctx, m.progress + '/' + m.target, mx + colB.w - S(10), yy + mrh * 0.5 - np * 3.5, np, '#c8d0dc', { align: 'right' });
+    const bs = S(64), bx0 = colA.x - colA.w / 2, bh = S(26), bxx = bx0 + bs + S(12), bww = colA.w - bs - S(12);
+    ctx.globalAlpha = al(tBar - 0.2, 0.3);
+    Home.badge(ctx, bx0, y, bs, at.level, ui);
+    text(ui, ctx, '+' + tot + ' XP', bxx, y + bs * 0.02, fitq('+000 XP', bww, 3.4), CY, { outline: '#0b0e14' });
+    Home.meter(ctx, bxx, y + bs - bh - S(2), bww, bh, at.xp / prog.need(at.level), CY, '#1a7ad0');
+    ctx.globalAlpha = 1;
+    y += bs + S(P ? 36 : 20);
+    // -- UNE mission
+    const m = r.mission, tM = tBar + dur0 * 0.6;
+    let my = P ? y : T + S(40);
+    if (m) {
+      const a = al(tM, 0.3), mx = colB.x - colB.w / 2, mh = S(74);
+      ctx.globalAlpha = a;
+      Home.pill(ctx, mx, my, colB.w, mh, 'rgba(12,20,34,0.9)', m.justDone ? GREEN : 'rgba(255,255,255,0.3)', S(14));
+      Home.icon.target(ctx, mx + mh * 0.5, my + mh * 0.5, mh * 0.24, m.justDone ? GREEN : ORANGE);
+      const tx = mx + mh * 0.95, tw2 = colB.w - mh * 0.95 - S(16);
+      text(ui, ctx, m.text, tx, my + S(12), fitq(m.text, tw2, 2.4), '#ffffff', {});
+      Home.meter(ctx, tx, my + mh - S(30), tw2 - S(58), S(14), m.progress / m.target, m.justDone ? GREEN : ORANGE, m.justDone ? '#20a030' : '#d05a10');
+      if (m.justDone) { Home.icon.check(ctx, tx + tw2 - S(30), my + mh - S(23), S(11), GREEN); }
+      else text(ui, ctx, m.progress + '/' + m.target, tx + tw2, my + mh - S(30) - S(2.2) * 1.5, S(2.2), '#dfe6f0', { align: 'right' });
+      if (m.justDone) text(ui, ctx, '+' + m.xp + ' XP', tx + tw2, my + S(12), S(2.2), GREEN, { align: 'right' });
       ctx.globalAlpha = 1;
-    });
-    my += 3 * (mrh + S(7));
-    // niveau gagné : bandeau qui claque (avec les décors débloqués)
+    }
+    // niveau gagné : bandeau qui claque (avec le décor débloqué)
     if (r.lvFlash !== undefined && t - r.lvFlash < 2.2) {
       const k = t - r.lvFlash, a = Math.min(1, k * 8, (2.2 - k) * 3), sc = 1 + 0.25 * Math.max(0, 1 - k * 5);
       ctx.save();
-      const bh2 = S(120), by2 = Y(0.4); ctx.globalAlpha = a * 0.94; ctx.fillStyle = 'rgba(6,8,14,0.95)'; ctx.fillRect(0, by2, W, bh2);
+      const bh2 = S(120), by2 = Y(0.4); ctx.globalAlpha = a * 0.95; ctx.fillStyle = 'rgba(6,8,14,0.95)'; ctx.fillRect(0, by2, W, bh2);
       ctx.fillStyle = GOLD; ctx.fillRect(0, by2, W, 3); ctx.fillRect(0, by2 + bh2 - 3, W, 3);
       ctx.globalAlpha = a;
       const s1 = 'NIVEAU ' + r.lvNew + ' !';
-      text(ui, ctx, s1, W / 2, by2 + bh2 * 0.14, fitq(s1, W * 0.85, 6.4 * sc), GOLD, { align: 'center', skew: -0.2, outline: '#0b0e14' });
+      text(ui, ctx, s1, W / 2, by2 + bh2 * 0.12, fitq(s1, W * 0.85, 9 * sc), GOLD, { align: 'center', skew: -0.2, outline: '#0b0e14' });
       const nw = r.newWorlds && r.newWorlds.length && r.lvNew === r.after.level ? r.newWorlds : [];
       const s2 = nw.length ? 'NOUVEAU DECOR : ' + nw.map((w) => prog.worldName(w)).join(', ') : prog.rank(r.lvNew);
-      text(ui, ctx, s2, W / 2, by2 + bh2 * 0.68, fitq(s2, W * 0.92, 2.3), '#ffffff', { align: 'center' });
+      text(ui, ctx, s2, W / 2, by2 + bh2 * 0.68, fitq(s2, W * 0.92, 3), '#ffffff', { align: 'center' });
       ctx.restore();
     }
-    // -- boutons : XP ×2 (publicité récompensée), REJOUER — ancrés en bas de l'écran
+    // -- boutons ancrés en bas : XP x2 (publicité), REJOUER
     const ready = t > 0.9, xpDone = t > segs[0].t0 + segs[0].dur;
     const bw2 = P ? W * 0.9 : colB.w, bxb = P ? W * 0.05 : colB.x - colB.w / 2;
     const adOk = game.ads && game.ads.enabled() && !r.xpDoubled && r.gained >= 25 && !game.testMode;
-    const bh1 = Math.max(S(64), 56 * ui.pixelRatio()), bh0 = Math.max(S(46), 46 * ui.pixelRatio());
-    const yRe = Y(0.975) - bh1 - (P ? S(6) : 0), yAd = yRe - S(10) - bh0;
+    const bh1 = Math.max(S(72), 60 * ui.pixelRatio()), bh0 = Math.max(S(54), 48 * ui.pixelRatio());
+    const yRe = Y(0.975) - bh1 - (P ? S(8) : 0), yAd = yRe - S(12) - bh0;
     if (adOk && xpDone) {
-      const on = inRect(ui, bxb, yAd, bw2, bh0), pl = 0.85 + 0.15 * Math.sin(t * 5);
-      pxRect(ctx, bxb, yAd, bw2, bh0, on ? 'rgba(57,212,255,0.4)' : 'rgba(57,212,255,' + (0.16 * pl) + ')', CY, undefined, Math.max(2.5, bh0 * 0.05));
-      ICON.play(ctx, bxb + bh0 * 0.5, yAd + bh0 / 2, bh0 * 0.2, CY);
-      const lbl = 'XP X2  +' + r.gained + '   PUB', lpx = fitq(lbl, bw2 - bh0 * 1.2, 2.3);
-      text(ui, ctx, lbl, bxb + bh0 * 0.95, yAd + bh0 / 2 - lpx * 3.5, lpx, '#ffffff', {});
+      const on = inRect(ui, bxb, yAd, bw2, bh0), pl = 0.92 + 0.08 * Math.sin(t * 5);
+      Home.button3d(ctx, bxb, yAd, bw2, bh0, on ? '#5ee0ff' : '#39c0f0', '#1a86d0', '#0e5a95', pl);
+      Home.icon.play(ctx, bxb + bh0 * 0.55, yAd + bh0 / 2 - bh0 * 0.03, bh0 * 0.2, '#ffffff');
+      const lbl = 'XP X2', lpx = fitq(lbl, bw2 - bh0 * 1.2, 3.6);
+      text(ui, ctx, lbl, bxb + bh0 * 1.0, yAd + bh0 / 2 - lpx * 3.6 - bh0 * 0.03, lpx, '#ffffff', { outline: '#0e4a80' });
+      text(ui, ctx, 'PUB', bxb + bw2 - bh0 * 0.4, yAd + bh0 / 2 - S(2.6) * 3.6 - bh0 * 0.03, S(2.6), '#d6f4ff', { align: 'right', outline: '#0e4a80' });
       hit(ui, bxb, yAd, bw2, bh0, () => game.ads.rewarded(() => Home.doubleXp(game), null, 'xp'));
     }
     if (ready) {
-      const on = inRect(ui, bxb, yRe, bw2, bh1), pl = 1 + 0.025 * Math.sin(t * 5), w = bw2 * pl, x = bxb - (w - bw2) / 2;
-      pxRect(ctx, x, yRe, w, bh1, on ? '#ffe45a' : GOLD, '#fff6b0', undefined, Math.max(3, bh1 * 0.05));
-      const lpx = fitq('REJOUER', bw2 * 0.6, 4.2);
-      text(ui, ctx, 'REJOUER', bxb + bw2 / 2, yRe + bh1 / 2 - lpx * 3.5, lpx, '#1a1a1a', { align: 'center', skew: -0.15, outline: 'rgba(255,255,255,0)' });
+      const on = inRect(ui, bxb, yRe, bw2, bh1, 0), pl = 1 + 0.02 * Math.sin(t * 5), w = bw2 * pl, x = bxb - (w - bw2) / 2;
+      Home.button3d(ctx, x, yRe, w, bh1, on ? '#fff06a' : '#ffe040', '#ffb000', '#b87800', 1);
+      const lpx = fitq('REJOUER', bw2 * 0.7, 5.2);
+      text(ui, ctx, 'REJOUER', bxb + bw2 / 2, yRe + bh1 / 2 - lpx * 3.6 - bh1 * 0.03, lpx, '#ffffff', { align: 'center', outline: '#8a5200' });
       hit(ui, x, yRe, w, bh1, () => { const go = () => game.goHome({ autoLaunch: false }); game.ads ? game.ads.beforeContinue(go) : go(); });
     }
-    // taper ailleurs : termine les animations d'un coup (REJOUER reste le seul geste qui quitte l'écran)
+    // taper ailleurs : termine les animations d'un coup
     ui.buttons.push({ x: 0, y: T, w: W, h: HH, action: () => { r.t = Math.max(r.t, 6); } });
   };
 

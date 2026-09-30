@@ -24,8 +24,7 @@
       const col = hot ? CC.CONFIG.hud.colors.yellow : (opts.color || '#f4f4f4');
       if ((opts.box || touch) && opts.box !== false) {
         const pad = Math.max(2, px);
-        ctx.fillStyle = opts.fill || 'rgba(255,255,255,0.07)'; ctx.fillRect(bx, by + pad * 0.5, w, h - pad);
-        ctx.strokeStyle = opts.color || 'rgba(244,244,244,0.55)'; ctx.lineWidth = Math.max(1, px * 0.45); ctx.strokeRect(bx, by + pad * 0.5, w, h - pad);
+        CC.Home.pill(ctx, bx, by + pad * 0.5, w, h - pad, hot ? 'rgba(255,255,255,0.22)' : (opts.fill || 'rgba(20,30,50,0.72)'), opts.color || 'rgba(244,244,244,0.6)', Math.min((h - pad) * 0.3, 22));   // v034 : bouton arrondi
       }
       if (hot) this.text(ctx, '>', bx - px * 6, y, px, col);
       this.text(ctx, label, opts.align === 'left' ? x : x, y, px, col, { align: opts.align || 'center' });
