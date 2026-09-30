@@ -44,7 +44,7 @@
   function param(arr, d) {
     const L = C().stageLen, x = Math.max(0, d), i = Math.min(3, Math.floor(x / L));
     if (i >= 3) return arr[3];
-    const f = x - i * L, k = U.clamp((f - (L - 150)) / 150, 0, 1), s = k * k * (3 - 2 * k);
+    const f = x - i * L, k = U.clamp((f - (L - 300)) / 300, 0, 1), s = k * k * (3 - 2 * k);
     return arr[i] + (arr[i + 1] - arr[i]) * s;
   }
 
@@ -60,6 +60,17 @@
       const rz = G.stream(seed, 'zones');
       for (let i = rest.length - 1; i > 0; i--) { const j = Math.floor(rz() * (i + 1)); const t = rest[i]; rest[i] = rest[j]; rest[j] = t; }
       this.zoneOrder = ['city'].concat(rest);
+      // v034b : altitude du sol de chaque zone (0, 10, 18 ou 26 m) ; on y monte par une rampe autour de la frontière, sous un pont
+      const re = G.stream(seed, 'elev'); this.elevs = [0];
+      for (let i = 1; i < 80; i++) this.elevs.push(this.elevs[i - 1] > 0 ? re.weighted({ 0: 3, 10: 1, 18: 1 }) | 0 : re.weighted({ 0: 1.5, 10: 2, 18: 2, 26: 1.5 }) | 0);
+    }
+    elev(zi) { return +this.elevs[Math.min(Math.max(0, zi), this.elevs.length - 1)]; }
+    base(d) {
+      if (d <= 0) return 0;
+      const L = C().zoneLen, k0 = Math.round(d / L), B = k0 * L;
+      if (k0 < 1 || Math.abs(d - B) > 130) return this.elev(this.zoneIndex(d));
+      const t = U.smooth(B - 130, B + 130, d);
+      return this.elev(k0 - 1) + (this.elev(k0) - this.elev(k0 - 1)) * t;
     }
     cx(d) {
       const a = param(C().bend, d), fade = U.clamp(d / 120, 0, 1);   // départ en ligne droite
@@ -83,7 +94,7 @@
     // repère local du couloir en d : position monde d'un point (lx en travers, y au-dessus du sol), cap des objets en travers
     at(d, lx, y) {
       const s = this.slope(d), n = Math.sqrt(1 + s * s);
-      return [this.cx(d) + lx / n, y, -d + lx * s / n];
+      return [this.cx(d) + lx / n, y + this.base(d), -d + lx * s / n];
     }
     yawAcross(d) { return -Math.atan(this.slope(d)) * DEG; }
   }
@@ -122,25 +133,12 @@
     const busy = [];                                    // tranches de d déjà occupées (cibles, obstacles)
     const free = (d, m) => d > d0 + 8 && d < d1 - 8 && busy.every((q) => Math.abs(q - d) > m);
 
-    // sol (bande large centrée sur le couloir) et parois en polyligne
+    // sol (relief : pente autour des frontières de zone) et décor des deux côtés (quartiers, parcs, zones ouvertes, falaises…)
     const midD = (d0 + d1) / 2, Zg = ZONES[T.zoneId(Math.max(0, midD))];
-    b.box({ p: [T.cx(midD), -1, -midD], s: [260, 2, cfg.chunkLen + 2], mat: Zg.ground, tint: Zg.groundTint, ground: true });
-    for (const side of [-1, 1]) {
-      let d = d0;
-      while (d < d1 - 0.01) {
-        const Z = ZONES[T.zoneId(Math.max(0, d))];
-        const len = Math.min(d1 - d, Z.city ? r.between([12, 24]) : r.between([18, 30]));
-        const e = d + len;
-        const ax = T.cx(d) + side * T.half(d), az = -d, bx = T.cx(e) + side * T.half(e), bz = -e;
-        const dx = bx - ax, dz = bz - az, cl = Math.hypot(dx, dz), psi = Math.atan2(dx, dz);
-        let ox = Math.cos(psi), oz = -Math.sin(psi);                 // axe x local de la boîte = normale de la corde
-        if (ox * side < 0) { ox = -ox; oz = -oz; }                   // vers l'extérieur du couloir
-        const depth = Z.city ? r.between([14, 22]) : 26, h = cfg.ceiling + (Z.city ? r.between([6, 46]) : r.between([10, 30]));
-        const w = Z.wall(r);
-        b.box({ p: [(ax + bx) / 2 + ox * depth / 2, h / 2 - 0.5, (az + bz) / 2 + oz * depth / 2], s: [depth, h, cl + 0.5], r: [0, psi * DEG, 0], mat: w.mat, tint: w.tint });
-        d = e;
-      }
-    }
+    CC.Scenery.groundSlices(b, T, d0, d1, Zg, cfg);
+    for (const side of [-1, 1]) CC.Scenery.side(b, T, r, d0, d1, side, ZONES, game);
+    // pont de passage à chaque frontière de zone
+    for (let B = Math.ceil(Math.max(1, d0) / cfg.zoneLen) * cfg.zoneLen; B < d1; B += cfg.zoneLen) if (B >= d0) { CC.Scenery.bridge(b, T, r, B, T.zoneId(B - 1), gates); busy.push(B); }
 
     // cibles en route : on les place d'abord (les obstacles s'écartent)
     const st = stageOf(d0);
@@ -195,8 +193,17 @@
       if (!free(d, 14)) continue;
       const side = r() < 0.5 ? -1 : 1, lx = side * (T.half(d) - 4);
       const p = T.at(d, lx, 0);
-      tanks.push({ pos: p, yaw: 180 - side * 20 });
+      tanks.push({ type: 'tank', pos: p, yaw: 180 - side * 20 });
       busy.push(d);
+    }
+    // v034b : lance-missiles au pied des parois et hélicoptères de garde en altitude (palier DIFFICILE et plus), en nombre limité
+    for (let i = 0; i < (cfg.sams[st] || 0); i++) {
+      const d = d0 + cfg.chunkLen * r.between([0.15, 0.85]); if (!free(d, 20)) continue;
+      const side = r() < 0.5 ? -1 : 1; tanks.push({ type: 'sam', pos: T.at(d, side * (T.half(d) - 4), 0), yaw: 180 - side * 15 }); busy.push(d);
+    }
+    for (let i = 0; i < (cfg.helis[st] || 0); i++) {
+      const d = d0 + cfg.chunkLen * r.between([0.2, 0.8]); if (!free(d, 25)) continue;
+      const side = r() < 0.5 ? -1 : 1; tanks.push({ type: 'heli', pos: T.at(d, side * T.half(d) * 0.5, r.between([24, 34])), yaw: 180 }); busy.push(d);
     }
 
     b.finish();
@@ -222,10 +229,10 @@
     const stripe = (lx, y, w) => b.box({ p: T.at(d, lx, y), s: [w, 0.25, 3.2], r: [0, yaw, 0], mat: 'hazard', collide: false, shadow: false });
     const gate = (lx, y) => gates.push({ d: d - 45, lx, y }, { d: d - 25, lx, y }, { d: d - 10, lx, y }, { d, lx, y }, { d: d + 12, lx, y });
     const weights = [
-      { beamLow: 2, beamHigh: 2, pillar: 3, glass: 2, bridge: 2, hole: 1 },
-      { beamLow: 2, beamHigh: 2, pillar: 2, glass: 1, bridge: 1.5, hole: 2, laser: 1.5, slalom: 1.5 },
-      { beamLow: 1.5, beamHigh: 1.5, pillar: 1.5, bridge: 1, hole: 3, laser: 2, slalom: 2, window: 2 },
-      { beamLow: 1, beamHigh: 1, pillar: 1, hole: 3.5, laser: 2, slalom: 2.5, window: 2.5 },
+      { beamLow: 2, beamHigh: 2, pillar: 3, glass: 2, bridge: 2, hole: 1, smash: 4 },
+      { beamLow: 2, beamHigh: 2, pillar: 2, glass: 1, bridge: 1.5, hole: 2, laser: 1.5, slalom: 1.5, smash: 4 },
+      { beamLow: 1.5, beamHigh: 1.5, pillar: 1.5, bridge: 1, hole: 3, laser: 2, slalom: 2, window: 2, smash: 3.5 },
+      { beamLow: 1, beamHigh: 1, pillar: 1, hole: 3.5, laser: 2, slalom: 2.5, window: 2.5, smash: 3 },
     ][st];
     const type = r.weighted(weights);
     (T.log || (T.log = [])).push({ d: Math.round(d), type, st });   // journal (banc de test, débogage)
@@ -241,6 +248,13 @@
       const s = r() < 0.5 ? -1 : 1;
       across(s * half / 2, top / 2, half + 4, top, 5);
       gate(-s * (half / 2 + 1), cfg.cruise);
+    } else if (type === 'smash') {                       // mur à casser : on le traverse (matériaux !) ou on passe par-dessus
+      const bw = 6, bh = 6, cols = Math.ceil((2 * half + 6) / bw), rows = 4, blocks = [], zn = T.zoneId(d);
+      for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) blocks.push(T.at(d, -half - 3 + (i + 0.5) * (2 * half + 6) / cols, bh / 2 + j * bh));
+      const M = { city: ['brick', 'brick'], night: ['concreteWarm', 'brick'], desert: ['sand', 'planks'], snow: ['white', 'planks'], industry: ['corrugated', 'planks'], canyon: ['rock', 'brick'] }[zn] || ['brick', 'brick'];
+      b.smashWall({ blocks, size: [(2 * half + 6) / cols + 0.05, bh, 2.6], yaw, mat: M[0], shatter: M[1], reward: 4 });
+      b.box({ p: T.at(d, 0, rows * bh + 0.4), s: [2 * half + 6, 0.8, 3], r: [0, yaw, 0], mat: 'hazard', collide: false, shadow: false });   // bandeau hachuré en haut du mur
+      gate(0, 10);
     } else if (type === 'glass') {                       // vitre géante : on la traverse (elle ralentit un peu)
       const s = T.at(d, 0, 14);
       b.glass(s, [2 * half + 1, 28, 0.3], [0, yaw, 0]);
@@ -298,7 +312,7 @@
       this.dist = 0; this.stage = 0; this.zone = 0;
       this.fuelGain = 0; this.fuelGainT = 0; this.altT = 0;
       // v034 : points de bonus (éclats, cibles, frôlements), multiplicateur ×2, série d'éclats
-      this.bonus = 0; this.multT = 0; this.chain = 0; this.chainT = 0; this.stats = { cells: 0, gold: 0, targets: 0, close: 0, boosts: 0 };
+      this.bonus = 0; this.shown = 0; this.multT = 0; this.chain = 0; this.chainT = 0; this.stats = { cells: 0, gold: 0, targets: 0, close: 0, boosts: 0 };
       this.envFrom = null; this.envT = 1;
       this.pending = [];                                // chars à créer (un par image)
       this.ensure(-1);
@@ -323,7 +337,7 @@
       this.ensure(Math.floor(this.dist / cfg.chunkLen));
       const job = this.pending.shift();
       if (job && this.chunks.get(job.c.k) === job.c) {
-        const e = job.c.builder.guard('tank', job.t.pos, job.t.yaw, {});   // s'ajoute aux listes du tronçon
+        const e = job.c.builder.guard(job.t.type || 'tank', job.t.pos, job.t.yaw, {});   // s'ajoute aux listes du tronçon
         g.targets.push(e); g.entities.push(e);
       }
       // palier de difficulté
@@ -331,14 +345,14 @@
       if (st !== this.stage) {
         this.stage = st;
         const D = G.Difficulties.get(G.difficultyIds()[st]);
-        g.centerMsg = 'PALIER ' + D.label; g.centerMsgT = 2.2;
-        g.audio.play('popup', null, 1.5);
+        // v034b : plus d'annonce (ni de palier ni de zone) : le changement se voit, on passe sous un pont
+        void D;
       }
       const L = this.level;
       L.aaThreat = param(cfg.threat, this.dist); L.aaSalvo = st >= 2; L.aaMaxAlive = cfg.maxMissiles[st];
       // zone de décor : l'ambiance glisse en 3 s vers celle de la nouvelle zone
       const zi = this.T.zoneIndex(this.dist);
-      if (zi !== this.zone) { this.envFrom = this.T.env(this.zone); this.zone = zi; this.envT = 0; g.centerMsg = ZONES[this.T.zoneId(this.dist)].label; g.centerMsgT = 2; }
+      if (zi !== this.zone) { this.envFrom = this.T.env(this.zone); this.zone = zi; this.envT = 0; }
       if (this.envT < 1) {
         this.envT = Math.min(1, this.envT + dt / 3);
         L.env = lerpEnv(this.envFrom, this.T.env(this.zone), this.envT);
@@ -349,7 +363,7 @@
       if (this.chainT > 0 && (this.chainT -= dt) <= 0) this.chain = 0;
       // plafond : au-dessus, alarme puis explosion (le couloir est le terrain de jeu)
       if (rk.active && g.state === 'FLIGHT') {
-        this.altT = rk.pos.y > cfg.ceiling ? this.altT + dt : 0;
+        this.altT = rk.pos.y - this.T.base(this.dist) > cfg.ceiling ? this.altT + dt : 0;
         if (this.altT > cfg.ceilingGrace) { this.altT = 0; g.onRocketCrash('altitude', rk.pos.clone(), null); }
       } else this.altT = 0;
     }

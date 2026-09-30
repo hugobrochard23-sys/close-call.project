@@ -14,13 +14,13 @@
   // ---------- missions : types, libellés (police ASCII : pas d'accents), mesure, barème ----------
   // scope 'run' : la meilleure valeur atteinte en un vol ; scope 'total' : cumul sur tous les vols
   const TYPES = {
-    dist:    { scope: 'run',   min: 0, text: (n) => 'VOLE ' + U.formatInt(n) + ' M',                 unit: 'M',  gen: (lv) => nice(500 + 130 * lv, 100),  xp: 1.0 },
-    score:   { scope: 'run',   min: 2, text: (n) => 'MARQUE ' + U.formatInt(n) + ' POINTS',                unit: '',   gen: (lv) => nice(900 + 300 * lv, 100),  xp: 1.1 },
-    time:    { scope: 'run',   min: 1, text: (n) => 'TIENS ' + n + ' SECONDES',                        unit: 'S',  gen: (lv) => nice(28 + 4 * lv, 5),       xp: 0.9 },
-    targets: { scope: 'total', min: 0, text: (n) => 'DETRUIS ' + n + ' CIBLES',                          unit: '',   gen: (lv) => nice(4 + lv, 1),            xp: 1.0 },
+    dist:    { scope: 'run',   min: 0, text: (n) => 'VOLE ' + U.formatInt(n) + ' M',                 unit: 'M',  gen: (lv) => nice(1500 + 350 * lv, 500),  xp: 1.0 },
+    score:   { scope: 'run',   min: 2, text: (n) => 'MARQUE ' + U.formatInt(n) + ' POINTS',                unit: '',   gen: (lv) => nice(3000 + 800 * lv, 500),  xp: 1.1 },
+    time:    { scope: 'run',   min: 1, text: (n) => 'TIENS ' + n + ' SECONDES',                        unit: 'S',  gen: (lv) => nice(70 + 10 * lv, 10),       xp: 0.9 },
+    targets: { scope: 'total', min: 0, text: (n) => 'DETRUIS ' + n + ' CIBLES',                          unit: '',   gen: (lv) => nice(6 + lv, 1),            xp: 1.0 },
     series:  { scope: 'run',   min: 1, text: (n) => 'DETRUIS ' + n + ' CIBLES EN 1 VOL',                unit: '',   gen: (lv) => Math.min(6, 2 + Math.floor(lv / 3)), xp: 1.2 },
-    boosts:  { scope: 'total', min: 0, text: (n) => 'FAIS ' + n + ' BOOSTS',                          unit: '',   gen: (lv) => nice(8 + 2 * lv, 2),        xp: 0.8 },
-    cells:   { scope: 'total', min: 0, text: (n) => 'RAMASSE ' + n + ' ECLATS',                          unit: '',   gen: (lv) => nice(60 + 15 * lv, 10),     xp: 0.9 },
+    boosts:  { scope: 'total', min: 0, text: (n) => 'FAIS ' + n + ' BOOSTS',                          unit: '',   gen: (lv) => nice(12 + 3 * lv, 2),        xp: 0.8 },
+    cells:   { scope: 'total', min: 0, text: (n) => 'RAMASSE ' + n + ' MATERIAUX',                          unit: '',   gen: (lv) => nice(150 + 40 * lv, 10),     xp: 0.9 },
     close:   { scope: 'total', min: 1, text: (n) => 'FROLE LES MURS ' + n + ' FOIS',                     unit: '',   gen: (lv) => nice(6 + lv, 1),            xp: 1.0 },
     gold:    { scope: 'total', min: 2, text: (n) => 'PRENDS ' + n + ' ETOILES',                   unit: '',   gen: (lv) => Math.min(8, 2 + Math.floor(lv / 2)), xp: 1.3 },
   };
@@ -30,7 +30,7 @@
     constructor(game) {
       this.game = game;
       const S = game.save;
-      S.prog = Object.assign({ xp: 0, level: 1, runs: 0, best: 0, seed: 1, stats: {}, missions: [], seen: 1, launches: 0 }, S.prog || {});
+      S.prog = Object.assign({ materials: 0, xp: 0, level: 1, runs: 0, best: 0, seed: 1, stats: {}, missions: [], seen: 1, launches: 0 }, S.prog || {});
       S.prog.stats = Object.assign({ dist: 0, targets: 0, cells: 0, boosts: 0, close: 0, gold: 0, time: 0 }, S.prog.stats);
       this.P = S.prog;
       // classement du niveau déjà enregistré dans une ancienne sauvegarde : record de distance → meilleur score au minimum
@@ -62,7 +62,7 @@
       const avail = Object.keys(TYPES).filter((k) => TYPES[k].min <= P.level - 1), pool = avail.filter((k) => !used.has(k)), list = pool.length ? pool : avail;
       const type = list[Math.floor(rng() * list.length)];
       const T = TYPES[type], target = T.gen(lv);
-      const xp = Math.round((30 + 6 * lv) * T.xp / 5) * 5;
+      const xp = Math.round((90 + 30 * lv) * T.xp / 10) * 10;
       return { type, target, xp, progress: 0, done: false, id: P.seed };
     }
     missionText(m) { return TYPES[m.type].text(m.target); }
@@ -131,7 +131,10 @@
       const before = { level: P.level, xp: P.xp, need: this.need(P.level) };
       const worldsBefore = this.unlockedWorlds();
       const missions = P.missions.map((m) => ({ text: this.missionText(m), progress: Math.min(m.progress, m.target), target: m.target, xp: m.xp, done: m.done, justDone: r.doneIds.includes(m.id) }));
+      const matRun = (r.cells || 0), lvBefore = P.level;
       this.addXp(gained);
+      const lvReward = Math.max(0, P.level - lvBefore) * cfg.levelMaterials;
+      P.materials = (P.materials || 0) + matRun + lvReward;
       P.runs++; P.stats.dist += dist; P.stats.time += Math.floor(info.time);
       P.stats.targets += r.targets || 0; P.stats.cells += r.cells || 0; P.stats.boosts += r.boosts || 0; P.stats.close += r.close || 0; P.stats.gold += r.gold || 0;
       if (score > P.best) P.best = score;
@@ -141,7 +144,7 @@
       P.missions = P.missions.filter((m) => !m.done);
       this.fill();
       this.run = null;
-      return { mission: missions[0], lines, gained, before, after, levelUps: after.level - before.level, newWorlds, missions, score, dist, bonus, newRecord, first, best: P.best,
+      return { materials: matRun, lvReward, totalMaterials: P.materials, mission: missions[0], lines, gained, before, after, levelUps: after.level - before.level, newWorlds, missions, score, dist, bonus, newRecord, first, best: P.best,
         stats: { cells: r.cells || 0, targets: r.targets || 0, boosts: r.boosts || 0, gold: r.gold || 0 } };
     }
     addXp(n) {
@@ -150,8 +153,9 @@
     }
     // prime de la publicité récompensée (XP ×2) : ajoute le même montant ; retourne l'état avant / après
     doubleXp(res) {
-      const before = { level: this.P.level, xp: this.P.xp, need: this.need(this.P.level) }, w0 = this.unlockedWorlds();
+      const before = { level: this.P.level, xp: this.P.xp, need: this.need(this.P.level) }, w0 = this.unlockedWorlds(), lv0 = this.P.level;
       this.addXp(res.gained);
+      this.P.materials = (this.P.materials || 0) + (this.P.level - lv0) * C().levelMaterials;
       const after = { level: this.P.level, xp: this.P.xp, need: this.need(this.P.level) };
       return { before, after, levelUps: after.level - before.level, newWorlds: this.unlockedWorlds().filter((w) => !w0.includes(w)) };
     }

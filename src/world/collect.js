@@ -25,18 +25,28 @@
     g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
     return new THREE.CanvasTexture(c);
   }
-  const DIAMOND = [
-    '................', '.......oo.......', '......oHHo......', '.....oHHcco.....', '....oHcccbbo....', '...oHcccbbbbo...', '..oHccccbbbbbo..', '.oHcccccbbbbbbo.',
-    '.oscccbbbbbbbdo.', '..osccbbbbbbdo..', '...osbbbbbbdo...', '....osbbbbdo....', '.....osbbdo.....', '......osdo......', '.......oo.......', '................'];
-  const PAL = { o: '#04202e', H: '#ffffff', c: '#9cf0ff', b: '#39d4ff', s: '#c8faff', d: '#1493c4' };
+  // MATERIAU : un gros écrou hexagonal doré (brillant, lisse) — une pièce de mécanique, cohérente avec une roquette
+  function nutTexture() {
+    const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+    const hex = (r, rot) => { g.beginPath(); for (let i = 0; i < 6; i++) { const a = rot + i * Math.PI / 3; g.lineTo(64 + Math.cos(a) * r, 64 + Math.sin(a) * r); } g.closePath(); };
+    hex(60, Math.PI / 6); g.fillStyle = '#7a4a00'; g.fill();
+    const gr = g.createLinearGradient(14, 10, 114, 118); gr.addColorStop(0, '#fff3a0'); gr.addColorStop(0.45, '#ffc820'); gr.addColorStop(1, '#c87800');
+    hex(54, Math.PI / 6); g.fillStyle = gr; g.fill();
+    hex(54, Math.PI / 6); g.strokeStyle = '#fff8c8'; g.lineWidth = 3; g.stroke();
+    g.fillStyle = 'rgba(255,255,255,0.55)'; g.beginPath(); g.moveTo(24, 40); g.lineTo(64, 14); g.lineTo(100, 36); g.lineTo(64, 44); g.closePath(); g.fill();
+    g.beginPath(); g.arc(64, 66, 22, 0, 6.283); g.fillStyle = '#5a3400'; g.fill();
+    const gh = g.createRadialGradient(64, 62, 4, 64, 66, 22); gh.addColorStop(0, '#2a1800'); gh.addColorStop(1, '#8a5a10'); g.beginPath(); g.arc(64, 66, 18, 0, 6.283); g.fillStyle = gh; g.fill();
+    const t = new THREE.CanvasTexture(c); t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter;
+    return t;
+  }
 
   let shared = null;
   function assets() {
     if (shared) return shared;
-    const map = pixelTexture(DIAMOND, PAL);
+    const map = nutTexture();
     shared = {
       glow: glowTexture(),
-      pts: new THREE.PointsMaterial({ map, size: CC.CONFIG.cells.size, sizeAttenuation: true, alphaTest: 0.4, transparent: false, depthWrite: true, color: '#ffffff' }),
+      pts: new THREE.PointsMaterial({ map, size: CC.CONFIG.cells.size, sizeAttenuation: true, alphaTest: 0.35, transparent: false, depthWrite: true, color: '#ffffff' }),
       goldMat: new THREE.MeshLambertMaterial({ color: '#ffd23a', emissive: '#c88a00', emissiveIntensity: 0.9, flatShading: true }),
       multMat: new THREE.MeshLambertMaterial({ color: '#ff5be0', emissive: '#a0209a', emissiveIntensity: 0.9, flatShading: true }),
       goldGeo: new THREE.OctahedronGeometry(0.85, 0), multGeo: new THREE.IcosahedronGeometry(0.7, 0),
@@ -84,7 +94,7 @@
     T.nextCell = d;
     if (pos.length) {
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.computeBoundingSphere();
-      const pts = new THREE.Points(g, A.pts); pts.frustumCulled = true; root.add(pts);
+      const pts = new THREE.Points(g, A.pts); pts.frustumCulled = false; root.add(pts);
       c.cells = { pts, arr: g.attributes.position.array, n: pos.length / 3, alive: new Uint8Array(pos.length / 3).fill(1) };
     }
     // étoile dorée et multiplicateur : loin l'un de l'autre, sur la trajectoire sûre
@@ -118,19 +128,25 @@
     const A = shared; if (A) A.pts.size = C.size * (1 + 0.1 * Math.sin(performance.now() * 0.008));
     for (const [k, ch] of run.chunks) {
       const col = ch.collect; if (!col) continue;
-      if (Math.abs((k + 0.5) * L - dist) > L * 0.5 + 40) { if (col.specials.length) this.spin(col, dt); continue; }   // hors de portée : on ne teste rien
+      if (Math.abs((k + 0.5) * L - dist) > L * 0.5 + 60) { if (col.specials.length) this.spin(col, dt); continue; }   // hors de portée : on ne teste rien
       const cs = col.cells;
       if (cs) {
-        const a = cs.arr;
+        const a = cs.arr, M2 = C.magnet * C.magnet; let moved = false;
         for (let i = 0; i < cs.n; i++) {
           if (!cs.alive[i]) continue;
-          const dx = a[i * 3] - p.x, dz = a[i * 3 + 2] - p.z;
-          if (dx * dx + dz * dz > R2) continue;
-          const dy = a[i * 3 + 1] - p.y;
-          if (dx * dx + dy * dy + dz * dz > R2) continue;
-          cs.alive[i] = 0; a[i * 3 + 1] = -9999; cs.pts.geometry.attributes.position.needsUpdate = true;
-          game.onCollect('cell', _v.set(dx + p.x, dy + p.y, dz + p.z));
+          let dx = a[i * 3] - p.x, dy = a[i * 3 + 1] - p.y, dz = a[i * 3 + 2] - p.z, d2 = dx * dx + dy * dy + dz * dz;
+          if (d2 > M2) continue;
+          // aimant : les matériaux proches filent vers la roquette (séries faciles à ramasser à 60 m/s)
+          if (d2 > R2) {
+            const d = Math.sqrt(d2), step = Math.min(d - 0.2, (28 + 70 * (1 - d / C.magnet)) * dt);
+            a[i * 3] -= dx / d * step; a[i * 3 + 1] -= dy / d * step; a[i * 3 + 2] -= dz / d * step; moved = true;
+            dx = a[i * 3] - p.x; dy = a[i * 3 + 1] - p.y; dz = a[i * 3 + 2] - p.z; d2 = dx * dx + dy * dy + dz * dz;
+          }
+          if (d2 > R2) continue;
+          cs.alive[i] = 0; const px = a[i * 3], py = a[i * 3 + 1], pz = a[i * 3 + 2]; a[i * 3 + 1] = -9999; moved = true;
+          game.onCollect('cell', _v.set(px, py, pz));
         }
+        if (moved) cs.pts.geometry.attributes.position.needsUpdate = true;
       }
       this.spin(col, dt);
       for (const s of col.specials) {
