@@ -218,6 +218,9 @@ CC.CONFIG = {
     gap: [85, 70, 58, 48],       // m : espacement moyen des obstacles par palier
     hole: [15, 12, 10, 8.5],     // m : côté du trou des murs percés par palier
     bend: [8, 13, 18, 22],       // m : amplitude des virages du couloir par palier
+    laneAmp: [10, 13, 16, 18],   // v034c : amplitude latérale (m) de la trajectoire qui serpente, par palier
+    gate: [70, 105],             // m entre deux portes (structures qui cadrent le passage)
+    density: { city: 0.8, night: 0.8, forest: 1.5, snow: 1.15, desert: 0.6, industry: 0.8, canyon: 0.65 },   // remplissage du volume par zone
     ceiling: 48,                 // m : altitude au-dessus de laquelle l'alarme ALTITUDE! se déclenche
     ceilingGrace: 1.5,           // s au-dessus du plafond avant l'explosion
     cruise: 14,                  // m : altitude de vol du pilote automatique (banc de test)
@@ -320,7 +323,7 @@ CC.CONFIG = {
     firstRunXp: 30,              // XP du tout premier vol
     levelBase: 300, levelStep: 200, levelMaterials: 200,   // XP pour passer du niveau n au suivant : base + step × (n − 1) ; matériaux offerts à chaque niveau   // XP pour passer du niveau n au suivant : base + step × (n − 1)
     missionSlots: 1,
-    worlds: { city: 1, desert: 2, snow: 3, industry: 5, canyon: 7, night: 9 },   // niveau qui débloque chaque décor
+    worlds: { city: 1, forest: 2, desert: 3, industry: 4, snow: 5, canyon: 7, night: 9 },   // niveau qui débloque chaque décor
     ranks: ['RECRUE', 'PILOTE', 'AS', 'CAPITAINE', 'MAJOR', 'COMMANDANT', 'LEGENDE'],
   },
 
@@ -328,7 +331,7 @@ CC.CONFIG = {
   shadow: { maxDist: 70, minSize: 0.85, growth: 0.085, maxSize: 4.2, opacity: 0.78, fadeDist: 55, stretch: 1.9 },
 
   // v034 : coup de pouce du bouton de boost (sensation d'accélération)
-  boost: { kickShake: 0.55, ringSize: 3.2, chromatic: 0.0085, speedLines: 26 },
+  boost: { kickShake: 0.5, ringSize: 3.0, chromatic: 0.004, speedLines: 22 },
 
   // v034 : revive (publicité récompensée) — la roquette repart au milieu du couloir, invulnérable un instant
   revive: { window: 5.5, minDist: 180, shield: 2.4, fuelFrac: 0.55, back: 24 },

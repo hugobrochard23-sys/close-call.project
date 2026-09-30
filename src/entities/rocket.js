@@ -362,7 +362,7 @@
           fx.exhaustSmoke(_b.copy(this.lastNozzle).addScaledVector(seg, U.clamp(f, 0, 1)).addScaledVector(this.fwd, -r.range(0.6, 1.2)), this.vel, k);
         }
         // lumière du moteur : vacille, se réchauffe (orange → jaune) avec l'intensité
-        this.light.intensity = (1.7 + 0.7 * this.flick + Math.sin(this.age * 53) * 0.15) * k;
+        this.light.intensity = (1.7 + 0.7 * this.flick + Math.sin(this.age * 53) * 0.15) * k * (this.game.endlessRun ? 0.5 : 1);   // v034c : lumière de la flamme adoucie dans le CLASSIQUE
         this.light.color.setRGB(1, 0.5 + 0.18 * this.flick, 0.18 + 0.1 * this.flick);
       } else {
         this.emitAcc = 0; this.smokeAcc = 0;

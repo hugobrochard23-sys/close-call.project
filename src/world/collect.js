@@ -50,8 +50,8 @@
       goldMat: new THREE.MeshLambertMaterial({ color: '#ffd23a', emissive: '#c88a00', emissiveIntensity: 0.9, flatShading: true }),
       multMat: new THREE.MeshLambertMaterial({ color: '#ff5be0', emissive: '#a0209a', emissiveIntensity: 0.9, flatShading: true }),
       goldGeo: new THREE.OctahedronGeometry(0.85, 0), multGeo: new THREE.IcosahedronGeometry(0.7, 0),
-      goldHalo: new THREE.SpriteMaterial({ map: null, color: '#ffc830', blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.85, fog: false }),
-      multHalo: new THREE.SpriteMaterial({ map: null, color: '#ff4bd8', blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.85, fog: false }),
+      goldHalo: new THREE.SpriteMaterial({ map: null, color: '#ffc830', blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.4, fog: false }),
+      multHalo: new THREE.SpriteMaterial({ map: null, color: '#ff4bd8', blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.35, fog: false }),
     };
     shared.goldHalo.map = shared.glow; shared.multHalo.map = shared.glow;
     return shared;
@@ -72,7 +72,7 @@
 
   /* Crée les bonus d'un tronçon [d0, d1[ — appelé par buildChunk APRÈS b.finish() (les murs existent déjà : on écarte tout ce qui
    * toucherait un mur). `nodes` : points de passage { d, lx, y } triés. Retourne l'objet du tronçon. */
-  Collect.build = function (game, T, b, nodes, d0, d1, r) {
+  Collect.build = function (game, T, b, nodes, d0, d1, r, spiral) {
     const A = assets(), C = CC.CONFIG.cells, world = game.world, near = {};
     const root = new THREE.Group(); root.name = 'collect'; game.scene.add(root);
     // groupe à part (pas dans b.root : le LevelBuilder libérerait aussi les géométries partagées des bonus)
@@ -80,6 +80,7 @@
     const okAt = (p, m) => { world.nearest(p, m + 1, near); return near.wall > m && near.ground > 1.2; };
     // traînées d'éclats
     const pos = [];
+    if (spiral) for (let i = 0; i < 34; i++) { const dd = spiral.d - 38 + i * 2.3, a = i * 0.75, q = T.at(dd, spiral.lx + Math.cos(a) * 4.2, spiral.y + Math.sin(a) * 4.2); pos.push(q[0], q[1], q[2]); }   // spirale dans le hangar-tunnel
     let d = Math.max(d0 + 12, T.nextCell === undefined ? d0 + 20 : T.nextCell);
     while (d < d1 - 8) {
       const n = r.int ? r.int(C.trailLen[0], C.trailLen[1]) : Math.floor(r.between(C.trailLen)), wob = r.between([0, 2.4]), ph = r.between([0, 6]);
@@ -107,7 +108,7 @@
           if (okAt(_v.set(p[0], p[1], p[2]), 1.6)) {
             const gold = kind === 'gold';
             const mesh = new THREE.Mesh(gold ? A.goldGeo : A.multGeo, gold ? A.goldMat : A.multMat); mesh.position.set(p[0], p[1], p[2]); mesh.scale.y = gold ? 1.25 : 1;
-            const halo = new THREE.Sprite(gold ? A.goldHalo : A.multHalo); halo.scale.setScalar(gold ? 4.2 : 3.6); halo.position.copy(mesh.position);
+            const halo = new THREE.Sprite(gold ? A.goldHalo : A.multHalo); halo.scale.setScalar(gold ? 2.6 : 2.4); halo.position.copy(mesh.position);
             root.add(mesh); root.add(halo);
             c.specials.push({ kind, mesh, halo, alive: true, phase: r() * 6 });
           }
@@ -163,7 +164,7 @@
     for (const s of col.specials) {
       if (!s.alive) continue;
       s.mesh.rotation.y += dt * 2.4; s.mesh.rotation.x = Math.sin(t * 1.7 + s.phase) * 0.25;
-      s.halo.scale.setScalar((s.kind === 'gold' ? 4.2 : 3.6) * (1 + 0.12 * Math.sin(t * 5 + s.phase)));
+      s.halo.scale.setScalar((s.kind === 'gold' ? 2.6 : 2.4) * (1 + 0.08 * Math.sin(t * 5 + s.phase)));
     }
   };
 

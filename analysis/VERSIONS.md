@@ -588,3 +588,16 @@ permanent, rappel de touches.
   de conifères, falaises — réutilise les objets du générateur de missions. On change de décor **sous un pont** (route en surplomb ou
   arche de roche) et le **relief monte ou descend** (0 / 10 / 18 / 26 m) ; plus aucun nom de zone ni de palier n'est annoncé.
 - **Accueil** : barre d'onglets en bas (MISSION, PROGRES, ACCUEIL surélevé, DEFIS, BOUTIQUE) avec icônes colorées ; mission juste au-dessus.
+
+## v034c — on vole DANS la ville : trajectoire, structures, forêt, lumières dosées
+
+- **Plus de couloir à murs** : une *trajectoire* (`Track.laneX/laneY`) serpente, monte et descend ; autour d'elle le volume est rempli de vraies
+  structures (`src/world/pieces.js`) posées au hasard, à condition qu'un tube de dégagement (9,6 → 6,3 m selon le palier) reste libre : le
+  parcours est toujours faisable, jamais identique. Limites du volume : quartiers, collines, falaises (`scenery.js`).
+- **Portes** (toutes les 70–105 m, tirées au sort par décor) : tunnel dans un immeuble, pont suspendu, arche, panneau géant, lignes à haute
+  tension, portique laser, petit mur à casser (matériaux), grue, tronc en travers, ruines. **Décor** : tours, gradins, maisons, châteaux
+  d'eau, antennes, silos, cheminées, halls, conteneurs, mesas, flèches de roche, éoliennes, derricks, pins, **troncs géants de forêt**,
+  rochers. **Surprise rare** : hangar-tunnel géant avec une spirale de matériaux.
+- **Nouvelle zone FORET** (sol sombre, troncs géants, feuillages, troncs tombés) ; ordre des décors tiré de la graine.
+- **Lumières dosées** : aberration chromatique réduite, nuit bleutée et douce, halos de bonus et lumière de la flamme réduits, sol de forêt sombre.
+- Plongées vers les cibles : couloir réservé libre de structures. Pilote automatique : 6 graines, 1 790 à 4 624 m, 3 atteignent la limite de 70 s.
