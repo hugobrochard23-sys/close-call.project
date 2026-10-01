@@ -152,6 +152,24 @@
       if (run.altT > 0 && s === 'FLIGHT' && Math.floor(run.altT * 6) % 2 === 0) F.draw(ctx, 'TROP HAUT !', W / 2, H * 0.3, px * 1.6, C.colors.red, { align: 'center', outline: '#0a0e16' });
     }
 
+    // v038j : jauge d'essence en habillage PIXEL — cadre métal à coins en escalier, fenêtre sombre, liquide en aplats, 3 séparateurs, flamme pixelisée
+    fuelPixel(game, rk, x, y, w, h, k, c1, c2, boosting, low, blink, fuel) {
+      const ctx = this.ctx, C = CC.CONFIG.hud.colors, Home = CC.Home, st = Home.stair, R = Math.round;
+      const u = Math.max(2, R(w * 0.11)), c = Math.max(2, R(w * 0.2));
+      st(ctx, x - u, y - u, w + 2 * u, h + 2 * u, c); ctx.fillStyle = '#04060c'; ctx.fill();
+      st(ctx, x, y, w, h, c); ctx.fillStyle = low && blink ? '#8a2018' : '#5a6270'; ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fillRect(R(x + u * 0.5), R(y + c * 2), u, R(h - c * 4));
+      const ix = R(x + u * 1.7), iw = R(w - u * 3.4), iy = R(y + u * 1.7), ih = R(h - u * 1.7 - w * 0.95);
+      ctx.fillStyle = '#0a0f1a'; ctx.fillRect(ix, iy, iw, ih);
+      const fh = R(ih * k);
+      if (fh > 0) { ctx.fillStyle = c2; ctx.fillRect(ix, iy + ih - fh, iw, fh); ctx.fillStyle = c1; ctx.fillRect(ix, iy + ih - fh, R(iw * 0.55), fh); ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(ix, iy + ih - fh, iw, u); }
+      ctx.fillStyle = '#04060c'; for (let i = 1; i < 4; i++) ctx.fillRect(ix, R(iy + ih * i / 4 - u / 2), iw, u);
+      Home.icon.flame(ctx, x + w / 2, y + h - w * 0.5, w * 0.36, blink ? '#ffffff' : (low ? '#ff5a3a' : boosting ? '#ffe45a' : '#7fe0ff'));
+      if (rk.active && fuel <= 0) CC.Font.draw(ctx, 'PANNE', x + w / 2, y - w * 1.0, w * 0.075, '#ffffff', { align: 'center', outline: '#ff3b2e' });
+      const T = game.input.touch, left = T && T.reboostUntil ? (T.reboostUntil - performance.now()) / CC.CONFIG.input.touch.reboostMs : 0;
+      if (rk.active && left > 0 && left <= 1) { ctx.fillStyle = C.yellow; ctx.fillRect(R(x - w * 0.35), R(y + h * (1 - left)), Math.max(3, R(w * 0.12)), R(h * left)); }
+    }
+
     // jauge d'essence VERTICALE v038f — une batterie : capsule métallique, fenêtre sombre à 4 compartiments, liquide cyan qui monte (reflet sur le dessus),
     // halo de la couleur de l'état ; or pendant le boost, rouge qui clignote quand le réservoir est presque vide ; petite flamme dans le culot
     drawFuelBar(game, rk, x, y, w, h) {
@@ -161,6 +179,7 @@
       const blink = low && Math.floor(performance.now() / 220) % 2 === 0;
       let c1 = '#b4f4ff', c2 = '#18b4f0', glow = 'rgba(90,220,255,0.55)';
       if (free) { c1 = '#c8ecff'; c2 = '#2a90ff'; glow = 'rgba(100,170,255,0.6)'; } else if (boosting) { c1 = '#fff6a0'; c2 = '#ffb020'; glow = 'rgba(255,210,70,0.75)'; } else if (low) { c1 = blink ? '#ffffff' : '#ff9a8a'; c2 = '#ff2a1a'; glow = 'rgba(255,60,40,0.7)'; }
+      if (Home.skin === 'pixel') { this.fuelPixel(game, rk, x, y, w, h, k, c1, c2, boosting, low, blink, fuel); return; }
       const r = w * 0.34, pulse = boosting ? 0.75 + 0.25 * Math.sin(performance.now() * 0.02) : 1;
       ctx.save();
       // halo extérieur (trois liserés translucides : pas de flou, redessiné à chaque image) puis contour sombre

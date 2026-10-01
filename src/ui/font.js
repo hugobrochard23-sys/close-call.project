@@ -145,13 +145,18 @@
     if (w === undefined) { if (!mctx) mctx = document.createElement('canvas').getContext('2d'); mctx.font = '900 italic 100px ' + STACK; w = mctx.measureText(t).width; if (mcache.size > 3000) mcache.clear(); mcache.set(t, w); }
     return w;
   };
+  // v038j : habillage PIXEL — la police 5×7 en pixels CARRES (cw = 1) à taille entière devient la police de toute l'interface du CLASSIQUE
+  Font.skinPixel = false;
+  const snap = (px) => (px >= 3 ? Math.floor(px) : Math.max(1, Math.floor(px * 2) / 2));   // jamais plus large que la taille demandée (les mises en page s'appuient sur measure(texte, 1) × px)
   Font.measure = function (text, px, pixel) {
     if (pixel) return Font.measurePixel(text, px);
+    if (Font.skinPixel) { const p = snap(px); return String(text).length * Font.advance * p - 2 * p; }
     return wAt100(String(text).toUpperCase()) * (px * FS / 100);
   };
   Font.draw = function (ctx, segments, x, y, px, color, opts) {
     opts = opts || {};
     if (opts.pixel) return Font.drawPixel(ctx, segments, x, y, px, color, opts);
+    if (Font.skinPixel) return Font.drawPixel(ctx, segments, x, y, snap(px), color, Object.assign({}, opts, { cw: 1, skew: 0 }));
     if (typeof segments === 'string') segments = [{ t: segments, c: color }];
     const size = px * FS, widths = segments.map((s) => wAt100(s.t.toUpperCase()) * size / 100);
     let width = 0; for (const w of widths) width += w;

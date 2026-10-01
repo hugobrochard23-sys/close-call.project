@@ -157,3 +157,7 @@ Retenu : un hybride.
 - **Contours** : oui pour les petits éléments (pastilles, icônes, repères de cible, jauge) car ils détachent l'élément d'un décor éblouissant ou très clair ; non sur les grands panneaux (inutile, alourdit).
 - **Pictogrammes** : formes pleines en dégradé, contour sombre, petit reflet ; repères de cible en crochets d'angle arrondis, flèche pour les cibles hors champ.
 - **Performance** : aucun flou d'ombre dans le canvas du HUD (redessiné à chaque image).
+
+## v038j — Habillage PIXEL par défaut (le « verre » reste disponible : ?skin=glass)
+
+Retour joueur : le verre arrondi « n'est toujours pas beau ». Le pixel existe bien sur mobile (Crossy Road, Minecraft, Pixel Gun 3D, Stardew Valley, Vampire Survivors) et va avec un décor voxel + tramage. Pour qu'il reste lisible sur téléphone : police 5×7 en pixels carrés de taille entière (jamais plus large que demandé), contour noir épais, aplats, coins en escalier, ombre dure, icônes vectorielles redessinées sur une petite grille puis agrandies sans lissage (alpha durci). Le titre COLD IMPACT n'est plus affiché dans les menus.

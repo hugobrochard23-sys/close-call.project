@@ -25,7 +25,21 @@
   const tw = (s, px) => F.measure(s, px);
 
   // ---------- formes arrondies « jeu mobile » : pastilles, boutons 3D, jauges ----------
-  function rr(ctx, x, y, w, h, r) {
+  // v038j : deux habillages — 'pixel' (par défaut : coins en escalier, aplats, police 5×7, icônes pixelisées) et 'glass' (?skin=glass : verre arrondi)
+  const SKIN = (new URLSearchParams(location.search).get('skin') || CC.CONFIG.hud.skin || 'pixel');
+  const PIX = SKIN === 'pixel';
+  if (PIX) { CC.Font.skinPixel = true; const mark = () => document.body && document.body.classList.add('cc-skin-pixel'); if (document.body) mark(); else document.addEventListener('DOMContentLoaded', mark); }
+  // forme à coins en escalier (deux marches) : c = taille d'une marche
+  function stair(ctx, x, y, w, h, c) {
+    x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h);
+    c = Math.max(1, Math.min(Math.round(c), Math.floor(Math.min(w, h) / 4)));
+    ctx.beginPath(); ctx.moveTo(x + 2 * c, y); ctx.lineTo(x + w - 2 * c, y); ctx.lineTo(x + w - 2 * c, y + c); ctx.lineTo(x + w - c, y + c); ctx.lineTo(x + w - c, y + 2 * c); ctx.lineTo(x + w, y + 2 * c);
+    ctx.lineTo(x + w, y + h - 2 * c); ctx.lineTo(x + w - c, y + h - 2 * c); ctx.lineTo(x + w - c, y + h - c); ctx.lineTo(x + w - 2 * c, y + h - c); ctx.lineTo(x + w - 2 * c, y + h);
+    ctx.lineTo(x + 2 * c, y + h); ctx.lineTo(x + 2 * c, y + h - c); ctx.lineTo(x + c, y + h - c); ctx.lineTo(x + c, y + h - 2 * c); ctx.lineTo(x, y + h - 2 * c);
+    ctx.lineTo(x, y + 2 * c); ctx.lineTo(x + c, y + 2 * c); ctx.lineTo(x + c, y + c); ctx.lineTo(x + 2 * c, y + c); ctx.closePath();
+  }
+  function rr(ctx, x, y, w, h, r) { if (PIX) stair(ctx, x, y, w, h, Math.min(r, h / 2, w / 2) / 3.2); else roundRR(ctx, x, y, w, h, r); }
+  function roundRR(ctx, x, y, w, h, r) {
     r = Math.min(r, h / 2, w / 2);
     ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
@@ -40,7 +54,7 @@
   const lighter = (c, t) => hexMix(c, '#ffffff', t === undefined ? 0.45 : t), darker = (c, t) => hexMix(c, '#000000', t === undefined ? 0.4 : t);
   function drop(ctx, x, y, w, h, r, d, a) { rr(ctx, x, y + d, w, h, r); ctx.fillStyle = 'rgba(0,0,0,' + a + ')'; ctx.fill(); }
   // pastille : verre sombre, contour extérieur, liseré intérieur (couleur d'accent), reflet haut
-  function pill(ctx, x, y, w, h, fill, stroke, r) {
+  function glassPill(ctx, x, y, w, h, fill, stroke, r) {
     r = r === undefined ? h / 2 : r;
     const lw = Math.max(1.5, h * 0.045);
     drop(ctx, x, y, w, h, r, h * 0.07, 0.3);
@@ -53,7 +67,7 @@
   // ancien nom conservé : rectangle arrondi (le paramètre `n` ne sert plus)
   function pxRect(ctx, x, y, w, h, fill, stroke, n, lw) { pill(ctx, x, y, w, h, fill || 'rgba(0,0,0,0)', stroke, Math.min(h * 0.26, 22)); }
   // bouton principal 3D : contour sombre, lèvre dessous, dégradé, grand reflet, liseré clair
-  function button3d(ctx, x, y, w, h, c1, c2, lip, pulse) {
+  function glassButton3d(ctx, x, y, w, h, c1, c2, lip, pulse) {
     const r = h * 0.3, d = h * 0.1, hh = h - d, lw = Math.max(2, h * 0.04);
     ctx.save(); if (pulse && pulse !== 1) { ctx.translate(x + w / 2, y + h / 2); ctx.scale(pulse, pulse); ctx.translate(-(x + w / 2), -(y + h / 2)); }
     drop(ctx, x, y + d * 0.6, w, hh, r, d * 0.9, 0.3);
@@ -67,7 +81,7 @@
     ctx.restore();
   }
   // jauge arrondie : rail sombre contouré, remplissage en dégradé avec reflet
-  function meter(ctx, x, y, w, h, k, c1, c2) {
+  function glassMeter(ctx, x, y, w, h, k, c1, c2) {
     const lw = Math.max(1.5, h * 0.12);
     rr(ctx, x - lw, y - lw, w + 2 * lw, h + 2 * lw, h); ctx.fillStyle = EDGE; ctx.fill();
     rr(ctx, x, y, w, h, h / 2); ctx.fillStyle = 'rgba(14,22,38,0.95)'; ctx.fill();
@@ -79,7 +93,7 @@
     }
   }
   // badge de niveau : carré arrondi doré contouré avec le numéro
-  function badge(ctx, x, y, size, level, ui) {
+  function glassBadge(ctx, x, y, size, level, ui) {
     const lw = Math.max(2, size * 0.04);
     drop(ctx, x, y, size, size, size * 0.26, size * 0.06, 0.32);
     rr(ctx, x - lw, y - lw, size + 2 * lw, size + 2 * lw, size * 0.26 + lw); ctx.fillStyle = EDGE; ctx.fill();
@@ -91,7 +105,69 @@
     const s = String(level), px = Math.min(size * 0.075, size * 0.66 / Math.max(1, F.measure(s, 1)));
     text(ui, ctx, s, x + size / 2, y + size * 0.36, px, '#ffffff', { align: 'center', outline: '#6a3c00' });
   }
-  Home.rr = rr; Home.pill = pill; Home.button3d = button3d; Home.meter = meter; Home.badge = badge; Home.EDGE = EDGE; Home.lighter = lighter; Home.darker = darker;
+  // ---------- habillage PIXEL : aplats, contour noir, bords en escalier, ombre dure ----------
+  // fond opaque : un fond translucide est fondu sur le bleu nuit de l'interface (les voiles blancs très transparents ne deviennent pas des blocs blancs)
+  const solid2 = (c) => {
+    const m = typeof c === 'string' && c.match(/^rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)$/);
+    if (!m) return c;
+    const a = Math.min(1, +m[4] * 1.15), base = [22, 34, 58];
+    return 'rgb(' + [1, 2, 3].map((i) => Math.round(+m[i] * a + base[i - 1] * (1 - a))).join(',') + ')';
+  };
+  function pixPill(ctx, x, y, w, h, fill, stroke, r) {
+    const u = Math.max(2, Math.round(h * 0.055)), c = Math.max(1, Math.round(Math.min(r === undefined ? h / 2 : r, h / 2) / 3.2));
+    stair(ctx, x, y + u * 1.5, w, h, c); ctx.fillStyle = 'rgba(0,0,0,0.38)'; ctx.fill();
+    stair(ctx, x - u, y - u, w + 2 * u, h + 2 * u, c + (u > c ? 0 : 0)); ctx.fillStyle = '#04060c'; ctx.fill();
+    stair(ctx, x, y, w, h, c); ctx.fillStyle = solid2(fill); ctx.fill();
+    ctx.save(); stair(ctx, x, y, w, h, c); ctx.clip();
+    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), u);
+    ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(Math.round(x), Math.round(y + h - u * 1.5), Math.round(w), Math.round(u * 1.5));
+    ctx.restore();
+    if (stroke) { stair(ctx, x + u, y + u, w - 2 * u, h - 2 * u, Math.max(1, c - 1)); ctx.strokeStyle = stroke; ctx.lineWidth = Math.max(1, u * 0.7); ctx.stroke(); }
+  }
+  function pixButton3d(ctx, x, y, w, h, c1, c2, lip, pulse) {
+    const u = Math.max(2, Math.round(h * 0.055)), c = Math.max(2, Math.round(h * 0.09)), hh = h - 2 * u;
+    ctx.save(); if (pulse && pulse !== 1) { ctx.translate(x + w / 2, y + h / 2); ctx.scale(pulse, pulse); ctx.translate(-(x + w / 2), -(y + h / 2)); }
+    stair(ctx, x - u, y - u, w + 2 * u, h + 2 * u, c); ctx.fillStyle = '#04060c'; ctx.fill();
+    stair(ctx, x, y + 2 * u, w, hh, c); ctx.fillStyle = lip; ctx.fill();
+    stair(ctx, x, y, w, hh, c); ctx.fillStyle = c2; ctx.fill();
+    ctx.save(); stair(ctx, x, y, w, hh, c); ctx.clip();
+    ctx.fillStyle = c1; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(hh * 0.55));
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), u);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(Math.round(x + 3 * c), Math.round(y + u + 1), Math.round(Math.min(w * 0.22, 6 * c)), u);
+    ctx.restore(); ctx.restore();
+  }
+  function pixMeter(ctx, x, y, w, h, k, c1, c2) {
+    const u = Math.max(2, Math.round(h * 0.18)), c = Math.max(1, Math.round(h * 0.25));
+    stair(ctx, x - u, y - u, w + 2 * u, h + 2 * u, c); ctx.fillStyle = '#04060c'; ctx.fill();
+    stair(ctx, x, y, w, h, c); ctx.fillStyle = '#16233b'; ctx.fill();
+    const f = Math.max(0, Math.min(1, k)) * w;
+    if (f > 1) {
+      ctx.save(); stair(ctx, x, y, w, h, c); ctx.clip();
+      const fw = Math.round(Math.max(f, h * 0.7));
+      ctx.fillStyle = c2; ctx.fillRect(Math.round(x), Math.round(y), fw, Math.round(h));
+      ctx.fillStyle = c1; ctx.fillRect(Math.round(x), Math.round(y), fw, Math.round(h * 0.55));
+      ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillRect(Math.round(x), Math.round(y), fw, Math.max(1, Math.round(h * 0.14)));
+      ctx.fillStyle = 'rgba(0,0,0,0.22)'; for (let t = h * 1.1; t < fw; t += h * 1.1) ctx.fillRect(Math.round(x + t), Math.round(y), Math.max(1, Math.round(h * 0.1)), Math.round(h));
+      ctx.restore();
+    }
+  }
+  function pixBadge(ctx, x, y, size, level, ui) {
+    const u = Math.max(2, Math.round(size * 0.05)), c = Math.max(2, Math.round(size * 0.1));
+    stair(ctx, x, y + u * 1.5, size, size, c); ctx.fillStyle = 'rgba(0,0,0,0.38)'; ctx.fill();
+    stair(ctx, x - u, y - u, size + 2 * u, size + 2 * u, c); ctx.fillStyle = '#04060c'; ctx.fill();
+    stair(ctx, x, y, size, size, c); ctx.fillStyle = '#e08a00'; ctx.fill();
+    ctx.save(); stair(ctx, x, y, size, size, c); ctx.clip();
+    ctx.fillStyle = '#ffc820'; ctx.fillRect(Math.round(x), Math.round(y), Math.round(size), Math.round(size * 0.58));
+    ctx.fillStyle = '#fff09a'; ctx.fillRect(Math.round(x), Math.round(y), Math.round(size), u);
+    ctx.restore();
+    text(ui, ctx, 'NIV', x + size / 2, y + size * 0.1, size * 0.026, '#7a4a00', { align: 'center', outline: null });
+    const s = String(level), px = Math.min(size * 0.075, size * 0.66 / Math.max(1, F.measure(s, 1)));
+    text(ui, ctx, s, x + size / 2, y + size * 0.34, px, '#ffffff', { align: 'center', outline: '#6a3c00' });
+  }
+  let pill = glassPill, button3d = glassButton3d, meter = glassMeter, badge = glassBadge;
+  if (PIX) { pill = pixPill; button3d = pixButton3d; meter = pixMeter; badge = pixBadge; }
+  Home.skin = SKIN; Home.stair = stair;
+  Home.rr = rr; Home.pill = (...a) => pill(...a); Home.button3d = (...a) => button3d(...a); Home.meter = (...a) => meter(...a); Home.badge = (...a) => badge(...a); Home.EDGE = EDGE; Home.lighter = lighter; Home.darker = darker;
   const F2 = F;
 
   const hit = (ui, x, y, w, h, action) => ui.buttons.push({ x, y, w, h, action });
@@ -161,6 +237,31 @@
     },
     home(ctx, cx, cy, r, col) { ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r, cy); ctx.lineTo(cx + r * 0.65, cy); ctx.lineTo(cx + r * 0.65, cy + r * 0.85); ctx.lineTo(cx - r * 0.65, cy + r * 0.85); ctx.lineTo(cx - r * 0.65, cy); ctx.lineTo(cx - r, cy); ctx.closePath(); solid(ctx, cy, r, col); },
   };
+  // v038j : en habillage pixel, chaque pictogramme vectoriel est dessiné sur une toute petite grille puis agrandi sans lissage, alpha durci : vrai rendu « pixel art »
+  let inPix = false; const pixCache = new Map();
+  function pixDraw(ctx, fn, key, cx, cy, r, col, big) {
+    const cell = Math.max(2, Math.round(r * (big ? 0.1 : 0.13))), n = Math.max(8, Math.round(r * 2.7 / cell)), k = key + '|' + col + '|' + cell + '|' + n;
+    let c = pixCache.get(k);
+    if (!c) {
+      c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d');
+      inPix = true; try { fn(g, n / 2, n / 2, r / cell, col); } finally { inPix = false; }
+      const id = g.getImageData(0, 0, n, n), d = id.data; for (let i = 3; i < d.length; i += 4) d[i] = d[i] >= 120 ? 255 : 0; g.putImageData(id, 0, 0);
+      if (pixCache.size > 400) pixCache.clear(); pixCache.set(k, c);
+    }
+    ctx.imageSmoothingEnabled = false; ctx.drawImage(c, Math.round(cx - n * cell / 2), Math.round(cy - n * cell / 2), n * cell, n * cell);
+  }
+  const GLASS_ICON = Object.assign({}, ICON);
+  if (PIX) for (const k of Object.keys(GLASS_ICON)) ICON[k] = (ctx, cx, cy, r, col) => (inPix ? GLASS_ICON[k](ctx, cx, cy, r, col) : pixDraw(ctx, GLASS_ICON[k], k, cx, cy, r, col));
+  if (PIX) ICON.lock = function (ctx, cx, cy, r, col) {   // cadenas dessiné directement en gros pixels (trop petit pour être pixelisé)
+    const u = Math.max(2, Math.round(r * 0.22)), R = Math.round, x0 = R(cx - 2.5 * u), y0 = R(cy - 3 * u);
+    for (const [pad, c] of [[u, EDGE], [0, col]]) {
+      ctx.fillStyle = c;
+      ctx.fillRect(x0 + R(u * 0.5) - pad, y0 - pad, R(u * 4) + 2 * pad, u + 2 * pad); ctx.fillRect(x0 + R(u * 0.5) - pad, y0 - pad, u + 2 * pad, R(u * 3) + 2 * pad); ctx.fillRect(x0 + R(u * 3.5) - pad, y0 - pad, u + 2 * pad, R(u * 3) + 2 * pad);
+      ctx.fillRect(x0 - pad, y0 + R(u * 2.5) - pad, R(u * 5) + 2 * pad, R(u * 3.5) + 2 * pad);
+    }
+    ctx.fillStyle = '#0c1220'; ctx.fillRect(R(cx - u * 0.5), R(y0 + u * 3.7), u, R(u * 1.4));
+  };
+  Home.pixDraw = pixDraw;
   Home.icon = ICON;
 
   // ---------- icônes colorées de la barre d'onglets (dégradés, reflets) ----------
@@ -197,6 +298,7 @@
       ICON.nut(ctx, cx, cy + r * 0.45, r * 0.26, '#ffc820');
     },
   };
+  if (PIX) { const G2 = Object.assign({}, TABICON); for (const k of Object.keys(G2)) TABICON[k] = (ctx, cx, cy, r) => pixDraw(ctx, G2[k], 'tab' + k, cx, cy, r * 1.15, '', true); }
   // barre d'onglets du bas : MISSION · PROGRES · [ACCUEIL surélevé, jaune] · DEFIS · BOUTIQUE (comme les jeux mobiles)
   function tabBar(ui, ctx, L, tabs) {
     const { W, HH, T, u } = L, bh = Math.min(u * 0.2, HH * 0.11), y0 = T + HH - bh, tw = W / tabs.length;
@@ -268,13 +370,9 @@
     pxRect(ctx, gx - gr, gy - gr, 2 * gr, 2 * gr, inRect(ui, gx - gr, gy - gr, 2 * gr, 2 * gr) ? 'rgba(255,255,255,0.2)' : 'rgba(8,12,20,0.7)', '#9fb0c8', Math.round(gr * 0.28), 2);
     ICON.gear(ctx, gx, gy, gr * 0.58, '#c8d4e6');
     hit(ui, gx - gr * 1.1, gy - gr * 1.1, gr * 2.2, gr * 2.2, () => { ui.overlay = 'msettings'; });
-    // logo
-    const logo = 'COLD IMPACT', lpx = ui.fitPx([logo], W * (P ? 0.78 : 0.42), u * 0.0155);
-    const ly = Y(P ? 0.135 : 0.03);
-    text(ui, ctx, 'COLD', W / 2 - tw(logo, lpx) / 2, ly, lpx, '#8fe4ff', { skew: -0.22 });
-    text(ui, ctx, 'IMPACT', W / 2 - tw(logo, lpx) / 2 + tw('COLD ', lpx), ly, lpx, '#ffffff', { skew: -0.22 });
-    const best = prog.P.best;
-    if (best > 0) text(ui, ctx, 'RECORD ' + U.formatInt(best), W / 2, ly + lpx * 9.5, ui.fitPx(['RECORD 000.000'], W * 0.5, u * 0.0058), '#ffd23a', { align: 'center' });
+    // v038j : plus de titre sur l'accueil (le jeu s'ouvre sur la roquette) ; on garde seulement le record
+    const ly = Y(P ? 0.135 : 0.03), best = prog.P.best;
+    if (best > 0) text(ui, ctx, 'RECORD ' + U.formatInt(best), W / 2, ly, ui.fitPx(['RECORD 000.000'], W * 0.5, u * 0.0058), '#ffd23a', { align: 'center' });
     // 1. la roquette : anneau pulsant + doigt qui touche (les 3 premiers vols : consigne écrite en plus)
     // 4. barre d'onglets en bas (style jeu mobile) et 3. mission la plus avancée juste au-dessus
     const barH = tabBar(ui, ctx, L, [
@@ -337,7 +435,7 @@
     const { W, u, Y } = L, bw = W * 0.6, bh = Math.max(u * 0.12, 48 * ui.pixelRatio()), bx = W / 2 - bw / 2, by = Y(0.935) - bh / 2;
     const on = inRect(ui, bx, by, bw, bh);
     pxRect(ctx, bx, by, bw, bh, on ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.08)', '#dfe6f0');
-    const px = ui.fitPx([label], bw * 0.7, bh * 0.026);
+    const px = ui.fitPx([label], bw * 0.7, bh * (PIX ? 0.04 : 0.026));
     text(ui, ctx, label, W / 2, by + bh / 2 - px * 3.5, px, '#ffffff', { align: 'center' });
     hit(ui, bx, by, bw, bh, action);
   }

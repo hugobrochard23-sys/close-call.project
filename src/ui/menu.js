@@ -83,7 +83,6 @@
       this.dim(ctx, W, H, 0.5);
       const col = CC.CONFIG.hud.colors, T = -(this.offsetY || 0), HH = this.fullH || H, P = this.portrait, touch = this.isTouch();
       const Y = (f) => T + HH * f, banner = touch && P && game.ads && game.ads.enabled() ? HH * 0.075 : 0;
-      this.text(ctx, 'COLD IMPACT', W / 2, Y(P ? 0.07 : 0.07), this.fitPx(['COLD IMPACT'], W * (P ? 0.86 : 0.6), HH * (P ? 0.009 : 0.0125)), col.white, { align: 'center', skew: -0.22 });
       const tag = 'PILOTE. FROLE. PULVERISE.';
       this.text(ctx, tag, W / 2, Y(P ? 0.135 : 0.2), this.fitPx([tag], W * 0.8, HH * 0.003), col.yellow, { align: 'center' });
       const rec = game.save.endless && game.save.endless.best, maxStars = CC.Gen.difficultyIds().length * CC.CONFIG.challenge.maps * 3;
@@ -227,7 +226,6 @@
       const touch = this.isTouch(), P = this.portrait;
       const fit = (t, w, m) => this.fitPx([t], W * w, m);
       const Y = (f) => T + HH * f;
-      this.text(ctx, 'COLD IMPACT', W / 2, Y(0.04), fit('COLD IMPACT', 0.5, HH * 0.004), '#bdbdbd', { align: 'center', skew: -0.22 });
       this.text(ctx, 'GÉNÉRATEUR DE MISSIONS', W / 2, Y(0.085), fit('GÉNÉRATEUR DE MISSIONS', 0.9, HH * (P ? 0.006 : 0.0085)), col.white, { align: 'center', skew: -0.2 });
       const seedTxt = this.seedChoice !== undefined && this.seedChoice !== null ? 'GRAINE ' + this.seedChoice : 'GRAINE ALEATOIRE - CHAQUE MISSION EST UNIQUE';
       this.text(ctx, seedTxt, W / 2, Y(0.16), fit(seedTxt, 0.9, HH * 0.0026), this.seedChoice != null ? col.yellow : '#c8c8c8', { align: 'center' });
