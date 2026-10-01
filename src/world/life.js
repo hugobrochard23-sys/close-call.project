@@ -128,7 +128,7 @@
   /* ajoute une flotte à une scène, limitée au tronçon en cours de construction ; retourne la flotte ou null */
   L.fleet = function (S, o) {
     const c0 = Math.max(S.d0, S.c0), c1 = Math.min(S.d1, S.c1);
-    if (c1 - c0 < 30 || o.n < 1) return null;
+    if (c1 - c0 < 30 || o.n < 1 || o.model === 'bird' || o.model === 'gull') return null;   // v036b : plus d'oiseaux
     // part de la flotte proportionnelle à la longueur du tronçon couvert
     const f = new Fleet(S, Object.assign({}, o, { c0, c1, n: Math.max(1, Math.round(o.n * (c1 - c0) / Math.max(120, S.len))) }));
     S.b.entity(f); return f;

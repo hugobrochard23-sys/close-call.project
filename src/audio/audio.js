@@ -18,12 +18,12 @@
   };
   // événements lointains : intervalle (s) entre deux sons, liste (jour) et liste de nuit
   const AMBIENT_EVENTS = {
-    city:   { gap: [6, 13], list: ['horn', 'siren', 'birds', 'trainFar'], night: ['horn', 'siren', 'trainFar'] },
+    city:   { gap: [6, 13], list: ['horn', 'siren', 'trainFar'], night: ['horn', 'siren', 'trainFar'] },
     metro:  { gap: [5, 11], list: ['trainFar', 'drip', 'drip', 'clank'] },
-    port:   { gap: [5, 10], list: ['gull', 'shipHorn', 'gull', 'clank', 'trainFar'], night: ['shipHorn', 'clank'] },
+    port:   { gap: [5, 10], list: ['shipHorn', 'clank', 'trainFar'], night: ['shipHorn', 'clank'] },
     sky:    { gap: [7, 14], list: ['jetPass', 'jetPass', 'alarm'] },
     mini:   { gap: [4, 8], list: ['tick', 'tick', 'musicBox', 'whoosh'] },
-    forest: { gap: [4, 9], list: ['birds', 'birds', 'owl'], night: ['owl', 'owl'] },
+    forest: { gap: [4, 9], list: ['owl', 'owl'], night: ['owl', 'owl'] },
     chute:  { gap: [9, 16], list: ['jetPass', 'alarm'] },
     tour:   { gap: [8, 15], list: ['jetPass', 'clank'] },
     eau:    { gap: [5, 10], list: ['whale', 'bubble', 'bubble', 'clank'] },

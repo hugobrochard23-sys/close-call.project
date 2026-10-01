@@ -73,6 +73,9 @@
       this.shoulder = CC.Models.shoulderLauncher(); this.shoulder.visible = false; this.camera.add(this.shoulder);
       this.tripod = null;
       window.addEventListener('resize', () => this.resize());
+      // v036b : perte du contexte WebGL (mémoire du téléphone) : on laisse three.js le recréer et on redimensionne au retour
+      this.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.glLost = true; });
+      this.canvas.addEventListener('webglcontextrestored', () => { this.glLost = false; this.resize(); });
       this.resize();
     }
 
@@ -864,16 +867,30 @@
       this.sun.target.position.copy(focus);
       this.sky.position.copy(this.camera.position);
       if (this.horizon) this.horizon.update(this);
+      this.guardRender();
       if (this.settings.postfx && this.postParams) {
         this.postParams.flash = this.flash * 0.85; this.postParams.flashColor = this.flashColor || '#ffffff';
         if (this.postChroma === undefined || this.postParamsRef !== this.postParams) { this.postParamsRef = this.postParams; this.postChroma = this.postParams.chromatic; }
-        this.postParams.chromatic = this.postChroma + this.boostK * CC.CONFIG.boost.chromatic;   // v034 : le boost écarte les couleurs sur les bords
+        this.postParams.chromatic = (Number.isFinite(this.postChroma) ? this.postChroma : 0) + this.boostK * CC.CONFIG.boost.chromatic;   // v034 : le boost écarte les couleurs sur les bords
         this.postfx.render(this.scene, this.camera, this.postParams, time);
       } else {
         this.renderer.setRenderTarget(null);
         this.renderer.render(this.scene, this.camera);
       }
     }
+
+    // v036b : garde-fou contre l'écran noir — une valeur non finie (NaN) dans le post-traitement, le brouillard ou le boost noircit
+    // tout le rendu jusqu'à la partie suivante : on la remet à sa valeur de départ avant chaque image
+    guardRender() {
+      const P = this.postParams, D = CC.CONFIG.postfx, f = this.scene.fog;
+      if (P) for (const k in P) if (typeof P[k] === 'number' && !Number.isFinite(P[k])) { P[k] = typeof D[k] === 'number' ? D[k] : 0; this.postChroma = undefined; }
+      if (!Number.isFinite(this.boostK)) this.boostK = 0;
+      if (!Number.isFinite(this.flash)) this.flash = 0;
+      if (f && !(Number.isFinite(f.near) && Number.isFinite(f.far) && f.far > f.near)) { f.near = 60; f.far = 600; }
+    }
+
+    // v036b : une erreur dans une image ne doit jamais figer ou noircir le jeu : on la note et on continue
+    safe(fn) { try { fn(); } catch (e) { (window.__errs || (window.__errs = [])).push(String(e && e.stack || e).slice(0, 300)); if (this.testMode) throw e; } }
 
     tick(dt) {
       if (this.ads) this.ads.update(dt);
@@ -886,10 +903,10 @@
         const k = keys.shift(); if (k) { try { this.builderMat = this.builderMat || new CC.LevelBuilder(this.scene, this.world, { seed: 1, env: { sky: {} }, routes: [] }); this.builderMat.mat(k); } catch (e) { /* texture inconnue */ } } else { this.warmDone = true; if (this.builderMat) { this.scene.remove(this.builderMat.root); this.builderMat = null; } }
       }
       if (this.fadeIn > 0) this.fadeIn = Math.max(0, this.fadeIn - dt);
-      if (!this.paused && this.state !== 'BOOT') this.update(dt);
+      if (!this.paused && this.state !== 'BOOT') this.safe(() => this.update(dt));
       else { this.input.poll(0); this.rig.update(0); }
-      this.render(performance.now() / 1000);
-      this.hud.draw(this, dt);
+      this.safe(() => this.render(performance.now() / 1000));
+      this.safe(() => this.hud.draw(this, dt));
       if (this.telemetry.enabled) this.recordFrame();
     }
 
