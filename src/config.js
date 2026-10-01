@@ -224,16 +224,17 @@ CC.CONFIG = {
     hole: [15, 12, 10, 8.5],     // m : côté du trou des murs percés par palier
     bend: [8, 13, 18, 22],       // m : amplitude des virages du couloir par palier
     laneAmp: [13, 16, 19, 21],   // v034c : amplitude latérale (m) de la trajectoire qui serpente, par palier
-    tight: { first: 230, gap: [112, 94, 80, 68], hole: [17, 14.5, 12.5, 11] },   // v038 : PORTES SERREES — un panneau plein à travers le couloir, percé d'un trou sur la trajectoire (m entre deux portes, côté du trou, par palier)
+    tight: { first: 200, gap: [82, 70, 60, 52], hole: [12, 10.5, 9.5, 8.5] },   // v039 : passages beaucoup plus serrés et plus fréquents   // v038 : PORTES SERREES — un panneau plein à travers le couloir, percé d'un trou sur la trajectoire (m entre deux portes, côté du trou, par palier)
     gate: [70, 105],             // m entre deux portes (structures qui cadrent le passage)
     density: { city: 0.8, night: 0.8, forest: 1.5, snow: 1.15, desert: 0.6, industry: 0.8, canyon: 0.65 },   // remplissage du volume par zone
     ceiling: 99999,              // v035 : plus de plafond (les zones ont leur propre hauteur : métro, base aérienne, pièce…)                 // m : altitude au-dessus de laquelle l'alarme ALTITUDE! se déclenche
     ceilingGrace: 1.5,           // s au-dessus du plafond avant l'explosion
     cruise: 14,                  // m : altitude de vol du pilote automatique (banc de test)
-    fuelStart: 30,               // s d'essence au départ (v034b : 14 → 30)
-    fuelMax: 42,                 // s : taille du réservoir
+    fuelDrain: 1.5,              // v039 : l'essence descend 1,5× plus vite en boost
+    fuelStart: 38,               // s d'essence au départ (v034b : 14 → 30)
+    fuelMax: 46,                 // s : taille du réservoir
     fuelPerStyle: 0.0035,        // s d'essence gagnées par point de STYLE (COLD IMPACT X2 = 200 pts → +0,7 s)
-    fuelTarget: 6,               // s d'essence par cible détruite en route
+    fuelTarget: 10,              // s d'essence par cible détruite en route
     targetGap: [200, 300],       // m entre deux cibles à détruire
     threat: [0.08, 0.2, 0.36, 0.55],     // menace des tirs ennemis par palier (v034b : adoucie, on ne progressait plus vers 3 000 m)
     tanks: [0, 1, 1, 2],         // chars ennemis par tronçon et par palier
@@ -309,6 +310,7 @@ CC.CONFIG = {
     multTime: 12,                // s de multiplicateur ×2 (bonus rare)
   },
   cells: {
+    enabled: false,              // v039 : plus de pièces ni d'étoiles à ramasser (le jeu se lit plus simplement)
     spacing: 7,                  // m entre deux matériaux d'une traînée
     trailLen: [5, 10],           // matériaux par traînée
     trailGap: [40, 85],          // m entre deux traînées

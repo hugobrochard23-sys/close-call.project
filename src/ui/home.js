@@ -11,7 +11,9 @@
 (function () {
   const U = CC.U, F = CC.Font;
   const C = () => CC.CONFIG.hud.colors;
-  const CY = '#39d4ff', GOLD = '#ffd23a', GREEN = '#56ff5a', RED = '#ff3b2e', ORANGE = '#ff7c1f', MAG = '#ff5be0', INK = '#0b0e14';
+  // v039 : palette réduite en habillage pixel — blanc, jaune (seul accent), orange (essence), rouge (danger), bleu nuit (fonds)
+  const PXL = (new URLSearchParams(location.search).get('skin') || CC.CONFIG.hud.skin || 'pixel') === 'pixel';
+  const CY = PXL ? '#fff1e8' : '#39d4ff', GOLD = PXL ? '#fdfd02' : '#ffd23a', GREEN = PXL ? '#fdfd02' : '#56ff5a', RED = PXL ? '#ff004d' : '#ff3b2e', ORANGE = PXL ? '#ffa300' : '#ff7c1f', MAG = PXL ? '#fff1e8' : '#ff5be0', INK = '#0b0e14';
 
   const Home = {};
 
@@ -237,13 +239,18 @@
   };
   // v038j : en habillage pixel, chaque pictogramme vectoriel est dessiné sur une toute petite grille puis agrandi sans lissage, alpha durci : vrai rendu « pixel art »
   let inPix = false; const pixCache = new Map();
-  function pixDraw(ctx, fn, key, cx, cy, r, col, big) {
+  function pixDraw(ctx, fn, key, cx, cy, r, col, big, mono) {
     const cell = Math.max(2, Math.round(r * (big ? 0.1 : 0.13))), n = Math.max(8, Math.round(r * 2.7 / cell)), k = key + '|' + col + '|' + cell + '|' + n;
     let c = pixCache.get(k);
     if (!c) {
       c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d');
       inPix = true; try { fn(g, n / 2, n / 2, r / cell, col); } finally { inPix = false; }
-      const id = g.getImageData(0, 0, n, n), d = id.data; for (let i = 3; i < d.length; i += 4) d[i] = d[i] >= 120 ? 255 : 0; g.putImageData(id, 0, 0);
+      const id = g.getImageData(0, 0, n, n), d = id.data;
+      for (let i = 3; i < d.length; i += 4) {
+        d[i] = d[i] >= 120 ? 255 : 0;
+        if (mono && d[i]) { const l = d[i - 3] * 0.3 + d[i - 2] * 0.59 + d[i - 1] * 0.11, c = l > 150 ? [255, 241, 232] : l > 80 ? [131, 118, 156] : [29, 43, 83]; d[i - 3] = c[0]; d[i - 2] = c[1]; d[i - 1] = c[2]; }   // v039 : icônes d'onglets en trois teintes (blanc, gris-violet, bleu nuit)
+      }
+      g.putImageData(id, 0, 0);
       if (pixCache.size > 400) pixCache.clear(); pixCache.set(k, c);
     }
     ctx.imageSmoothingEnabled = false; ctx.drawImage(c, Math.round(cx - n * cell / 2), Math.round(cy - n * cell / 2), n * cell, n * cell);
@@ -296,7 +303,7 @@
       ICON.nut(ctx, cx, cy + r * 0.45, r * 0.26, '#ffc820');
     },
   };
-  if (PIX) { const G2 = Object.assign({}, TABICON); for (const k of Object.keys(G2)) TABICON[k] = (ctx, cx, cy, r) => pixDraw(ctx, G2[k], 'tab' + k, cx, cy, r * 1.15, '', true); }
+  if (PIX) { const G2 = Object.assign({}, TABICON); for (const k of Object.keys(G2)) TABICON[k] = (ctx, cx, cy, r) => pixDraw(ctx, G2[k], 'tab' + k, cx, cy, r * 1.15, '', true, true); }
   // barre d'onglets du bas : MISSION · PROGRES · [ACCUEIL surélevé, jaune] · DEFIS · BOUTIQUE (comme les jeux mobiles)
   function tabBar(ui, ctx, L, tabs) {
     const { W, HH, T, u } = L, bh = Math.min(u * 0.2, HH * 0.11), y0 = T + HH - bh, tw = W / tabs.length;
@@ -358,11 +365,6 @@
     bar(ctx, xx, by + bs * 0.52, xw, bs * 0.2, xk, CY);
     text(ui, ctx, prog.rank(prog.level), xx, by + bs * 0.06, ui.fitPx(['COMMANDANT'], xw, bs * 0.04), '#e8eef8', {});
     text(ui, ctx, prog.xp + ' / ' + prog.need(prog.level) + ' XP', xx, by + bs * 0.8, ui.fitPx(['0000 / 0000 XP'], xw, bs * 0.03), '#9fb0c8', {});
-    // matériaux possédés (à gauche de l'engrenage)
-    { const mat = U.formatInt(prog.P.materials || 0), mh = u * 0.085, mpx = mh * 0.062, mw = F.measure(mat, mpx) + mh * 1.4, mx = W - margin - u * 0.11 - u * 0.03 - mw;
-      pill(ctx, mx, by + bs * 0.5 - mh / 2 + 2, mw, mh, 'rgba(10,16,28,0.7)', 'rgba(255,255,255,0.35)');
-      ICON.nut(ctx, mx + mh * 0.55, by + bs * 0.5 + 2, mh * 0.3, '#ffc820');
-      text(ui, ctx, mat, mx + mw - mh * 0.35, by + bs * 0.5 + 2 - mpx * 3.6, mpx, '#ffffff', { align: 'right', outline: '#0a0e16' }); }
     // réglages (haut droite)
     const gr = u * 0.055, gx = W - margin - gr, gy = by + gr;
     // v038k : l'engrenage est seul (pas de rectangle derrière), un peu plus grand ; il s'éclaire au survol
@@ -374,12 +376,14 @@
     if (best > 0) text(ui, ctx, 'RECORD ' + U.formatInt(best), W / 2, ly, ui.fitPx(['RECORD 000.000'], W * 0.5, u * 0.0058), '#ffd23a', { align: 'center' });
     // 1. la roquette : anneau pulsant + doigt qui touche (les 3 premiers vols : consigne écrite en plus)
     // 4. barre d'onglets en bas (style jeu mobile) et 3. mission la plus avancée juste au-dessus
-    const barH = tabBar(ui, ctx, L, [
-      { icon: 'mission', label: 'MISSION', action: () => { ui.overlay = 'quests'; } },
-      { icon: 'trophy', label: 'PROGRES', action: () => { ui.overlay = 'progress'; } },
-      { icon: 'home', label: 'ACCUEIL', active: true },
-      { icon: 'star', label: 'DEFIS', action: () => { ui.overlay = 'defi'; } },
-      { icon: 'shop', label: 'BOUTIQUE', action: () => { ui.overlay = 'shop'; } }]);
+    // v039 : la barre d'onglets se remplit au fil des niveaux (niveau 1 : rien que la roquette)
+    const lvl = prog.level, tabsList = [];
+    if (lvl >= 2) tabsList.push({ icon: 'mission', label: 'MISSION', action: () => { ui.overlay = 'quests'; } });
+    if (lvl >= 3) tabsList.push({ icon: 'trophy', label: 'PROGRES', action: () => { ui.overlay = 'progress'; } });
+    if (lvl >= 2) tabsList.push({ icon: 'home', label: 'ACCUEIL', active: true });
+    if (lvl >= 4) tabsList.push({ icon: 'star', label: 'DEFIS', action: () => { ui.overlay = 'defi'; } });
+    if (lvl >= 5) tabsList.push({ icon: 'shop', label: 'BOUTIQUE', action: () => { ui.overlay = 'shop'; } });
+    const barH = tabsList.length ? tabBar(ui, ctx, L, tabsList) : 0;
     const m = prog.tracked();
     if (m) {
       const mw = W - margin * 2, mh = u * 0.115, mx = margin, my = T + HH - barH - mh - u * 0.06;
@@ -474,7 +478,7 @@
     // décors
     const wy = Y(0.12) + bs + HH * 0.03;
     text(ui, ctx, 'DECORS', W * 0.07, wy, u * 0.0062, '#9fb0c8', {});
-    const ids = Object.keys(cfg.worlds), n = ids.length, rw = W * 0.86, rh = Math.min(u * 0.075, HH * 0.044);
+    const allIds = Object.keys(cfg.worlds), nextLocked = allIds.find((k) => S.level < cfg.worlds[k]), ids = allIds.filter((k) => S.level >= cfg.worlds[k] || k === nextLocked), n = ids.length, rw = W * 0.86, rh = Math.min(u * 0.075, HH * 0.044);
     ids.forEach((id, i) => {
       const y = wy + HH * 0.03 + i * (rh + HH * 0.008), open = S.level >= cfg.worlds[id];
       pxRect(ctx, W * 0.07, y, rw, rh, 'rgba(12,18,30,0.8)', open ? 'rgba(86,255,90,0.6)' : 'rgba(159,176,200,0.25)', Math.round(rh * 0.14));
@@ -614,7 +618,7 @@
       const s1 = 'NIVEAU ' + r.lvNew + ' !';
       text(ui, ctx, s1, W / 2, by2 + bh2 * 0.12, fitq(s1, W * 0.85, 9 * sc), GOLD, { align: 'center', skew: -0.2, outline: '#0b0e14' });
       const nw = r.newWorlds && r.newWorlds.length && r.lvNew === r.after.level ? r.newWorlds : [];
-      const s2 = (nw.length ? 'NOUVEAU DECOR : ' + nw.map((w) => prog.worldName(w)).join(', ') + '   ' : '') + '+' + CC.CONFIG.progress.levelMaterials + ' MATERIAUX';
+      const s2 = (nw.length ? 'NOUVEAU DECOR : ' + nw.map((w) => prog.worldName(w)).join(', ') + '   ' : '') + '';
       text(ui, ctx, s2, W / 2, by2 + bh2 * 0.68, fitq(s2, W * 0.92, 3), '#ffffff', { align: 'center' });
       ctx.restore();
     }
@@ -626,18 +630,18 @@
     const yRe = Y(0.975) - bh1 - (P ? S(8) : 0), yAd = yRe - S(12) - bh0;
     if (adOk && xpDone) {
       const on = inRect(ui, bxb, yAd, bw2, bh0), pl = 0.92 + 0.08 * Math.sin(t * 5);
-      Home.button3d(ctx, bxb, yAd, bw2, bh0, on ? '#fff27a' : '#ffec27', '#ffa300', '#ab5236', pl);
-      Home.icon.play(ctx, bxb + bh0 * 0.55, yAd + bh0 / 2 - bh0 * 0.03, bh0 * 0.2, '#ffffff');
+      if (PXL) pill(ctx, bxb, yAd, bw2, bh0, on ? 'rgba(60,84,140,0.95)' : 'rgba(29,43,83,0.95)', '#fff1e8', bh0 * 0.3); else Home.button3d(ctx, bxb, yAd, bw2, bh0, on ? '#fff27a' : '#ffec27', '#ffa300', '#ab5236', pl);
+      Home.icon.play(ctx, bxb + bh0 * 0.55, yAd + bh0 / 2 - bh0 * 0.03, bh0 * 0.2, PXL ? '#fdfd02' : '#ffffff');
       const lbl = 'XP X2', lpx = fitq(lbl, bw2 - bh0 * 1.2, 3.6);
       text(ui, ctx, lbl, bxb + bh0 * 1.0, yAd + bh0 / 2 - lpx * 3.6 - bh0 * 0.03, lpx, '#ffffff', { outline: '#0e4a80' });
-      text(ui, ctx, 'PUB', bxb + bw2 - bh0 * 0.4, yAd + bh0 / 2 - S(2.6) * 3.6 - bh0 * 0.03, S(2.6), '#d6f4ff', { align: 'right', outline: '#0e4a80' });
+      text(ui, ctx, 'PUB', bxb + bw2 - bh0 * 0.4, yAd + bh0 / 2 - S(2.6) * 3.6 - bh0 * 0.03, S(2.6), PXL ? '#fdfd02' : '#d6f4ff', { align: 'right', outline: PXL ? null : '#0e4a80' });
       hit(ui, bxb, yAd, bw2, bh0, () => game.ads.rewarded(() => Home.doubleXp(game), null, 'xp'));
     }
     if (ready) {
       const on = inRect(ui, bxb, yRe, bw2, bh1, 0), pl = 1 + 0.02 * Math.sin(t * 5), w = bw2 * pl, x = bxb - (w - bw2) / 2;
-      Home.button3d(ctx, x, yRe, w, bh1, on ? '#4dff7a' : '#00e436', '#009e3a', '#00632a', 1);
+      if (PXL) Home.button3d(ctx, x, yRe, w, bh1, on ? '#ffff7a' : '#fdfd02', '#e6d800', '#a89a00', 1); else Home.button3d(ctx, x, yRe, w, bh1, on ? '#4dff7a' : '#00e436', '#009e3a', '#00632a', 1);
       const lpx = fitq('REJOUER', bw2 * 0.7, 5.2);
-      text(ui, ctx, 'REJOUER', bxb + bw2 / 2, yRe + bh1 / 2 - lpx * 3.6 - bh1 * 0.03, lpx, '#ffffff', { align: 'center', outline: '#8a5200' });
+      text(ui, ctx, 'REJOUER', bxb + bw2 / 2, yRe + bh1 / 2 - lpx * 3.6 - bh1 * 0.03, lpx, PXL ? '#1d2b53' : '#ffffff', { align: 'center', outline: PXL ? null : '#8a5200' });
       hit(ui, x, yRe, w, bh1, () => { const go = () => game.goHome({ autoLaunch: false }); game.ads ? game.ads.beforeContinue(go) : go(); });
     }
     // taper ailleurs : termine les animations d'un coup

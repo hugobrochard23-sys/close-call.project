@@ -104,27 +104,9 @@
         F.draw(ctx, 'X2', mx + mw / 2, my + mh / 2 - px * 3.3, px * 0.9, '#ffffff', { align: 'center', outline: '#500848' });
         ctx.fillStyle = '#ffd0f4'; ctx.fillRect(mx + mh * 0.3, my + mh - mh * 0.14, (mw - mh * 0.6) * (run.multT / CC.CONFIG.score.multTime), Math.max(2, mh * 0.08));
       }
-      // ---- pastille des éclats (haut droite)
-      const gw = pillH * 2.3, gx = W - gw - Math.max(10, W * 0.03), gr = pillH * 0.3 * (1 + 0.25 * Math.min(1.6, game.cellBump));
-      Home.pill(ctx, gx, top, gw, pillH, 'rgba(10,16,28,0.66)', 'rgba(255,255,255,0.35)');
-      Home.icon.nut(ctx, gx + pillH * 0.55, top + pillH / 2, gr * 1.15, '#ffc820');
-      this.cx = gx + pillH * 0.55; this.cy = top + pillH / 2;
-      F.draw(ctx, String(Math.round(run.shown)), gx + gw - pillH * 0.4, top + pillH / 2 - px * 3.6, px * 0.95, '#ffffff', { align: 'right', outline: '#0a0e16' });
-      // ---- écrous volants (mur cassé) : jaillissent, puis rejoignent le compteur
-      if (game.flyers.length) {
-        const dt2 = this.dt || 0.016, tx = this.cx, ty = this.cy, keep = [];
-        for (const f of game.flyers) {
-          f.t += dt2; if (f.t < 0) { keep.push(f); continue; }
-          const burst = 0.28, k = (f.t - burst) / 0.55;
-          if (f.t < burst) { f.x += f.vx * dt2; f.y += f.vy * dt2; f.vx *= 0.93; f.vy *= 0.93; f.sx = f.x; f.sy = f.y; }
-          else { const e = Math.min(1, Math.max(0, k)), ee = e * e * (3 - 2 * e); f.x = f.sx + (tx - f.sx) * ee; f.y = f.sy + (ty - f.sy) * ee; }
-          if (f.t >= burst + 0.55) { game.onFlyerArrive(f.val); continue; }
-          Home.icon.nut(ctx, f.x, f.y, pillH * 0.3 * (1 - 0.35 * Math.max(0, k)), '#ffc820'); keep.push(f);
-        }
-        game.flyers = keep;
-      }
+      game.flyers.length = 0;   // v039 : plus de compteur d'écrous
       // ---- jauge d'essence verticale (bord droit, sous la pastille des éclats)
-      const gh = Math.min(H * 0.34, 300), gwid = Math.max(20, pillH * 0.56), gxx = W - gwid - Math.max(14, W * 0.045), gy = top + pillH + H * 0.03;
+      const gh = Math.min(H * 0.34, 300), gwid = Math.max(16, pillH * 0.42), gxx = W - gwid - Math.max(14, W * 0.045), gy = top + pillH + H * 0.03;
       this.drawFuelBar(game, rk, gxx, gy, gwid, gh);
       // ---- une ligne de journal, sous le score
       const fpx = pillH * 0.05, f = game.hudFeed[0], fy = top + pillH + H * 0.012;
@@ -170,49 +152,18 @@
       if (rk.active && left > 0 && left <= 1) { ctx.fillStyle = C.yellow; ctx.fillRect(R(x - w * 0.35), R(y + h * (1 - left)), Math.max(3, R(w * 0.12)), R(h * left)); }
     }
 
-    // jauge d'essence VERTICALE v038f — une batterie : capsule métallique, fenêtre sombre à 4 compartiments, liquide cyan qui monte (reflet sur le dessus),
-    // halo de la couleur de l'état ; or pendant le boost, rouge qui clignote quand le réservoir est presque vide ; petite flamme dans le culot
+    // jauge d'essence v039 : UNE barre verticale qui se vide (cadre clair, fond sombre, remplissage orange ; rouge qui clignote presque à sec)
     drawFuelBar(game, rk, x, y, w, h) {
-      const ctx = this.ctx, C = CC.CONFIG.hud.colors, Home = CC.Home;
+      const ctx = this.ctx, C = CC.CONFIG.hud.colors, R = Math.round;
       const max = rk.fuelMax || 20, fuel = rk.active ? rk.fuel : max, k = U.clamp(fuel / max, 0, 1);
-      const free = rk.active && rk.freeBoost, boosting = rk.active && rk.thrusting && !free, low = k < 0.25 && !free;
-      const blink = low && Math.floor(performance.now() / 220) % 2 === 0;
-      let c1 = '#b4f4ff', c2 = '#18b4f0', glow = 'rgba(90,220,255,0.55)';
-      if (free) { c1 = '#c8ecff'; c2 = '#2a90ff'; glow = 'rgba(100,170,255,0.6)'; } else if (boosting) { c1 = '#fff6a0'; c2 = '#ffb020'; glow = 'rgba(255,210,70,0.75)'; } else if (low) { c1 = blink ? '#ffffff' : '#ff9a8a'; c2 = '#ff2a1a'; glow = 'rgba(255,60,40,0.7)'; }
-      if (Home.skin === 'pixel') { this.fuelPixel(game, rk, x, y, w, h, k, c1, c2, boosting, low, blink, fuel); return; }
-      const r = w * 0.34, pulse = boosting ? 0.75 + 0.25 * Math.sin(performance.now() * 0.02) : 1;
-      ctx.save();
-      // halo extérieur (trois liserés translucides : pas de flou, redessiné à chaque image) puis contour sombre
-      for (let i = 3; i >= 1; i--) { ctx.strokeStyle = glow.replace(/[\d.]+\)$/, (0.16 * pulse) + ')'); ctx.lineWidth = w * 0.16 * i; Home.rr(ctx, x, y, w, h, r); ctx.stroke(); }
-      Home.rr(ctx, x - w * 0.05, y - w * 0.05, w * 1.1, h + w * 0.1, r + w * 0.05); ctx.fillStyle = Home.EDGE; ctx.fill();
-      ctx.fillStyle = '#2a303a'; Home.rr(ctx, x, y, w, h, r); ctx.fill();
-      // corps métallique (dégradé horizontal) et liseré
-      const mg = ctx.createLinearGradient(x, 0, x + w, 0); mg.addColorStop(0, '#4a525e'); mg.addColorStop(0.28, '#c4ccd8'); mg.addColorStop(0.55, '#7c8592'); mg.addColorStop(1, '#3c424c');
-      ctx.fillStyle = mg; Home.rr(ctx, x, y, w, h, r); ctx.fill();
-      ctx.strokeStyle = low && blink ? '#ff5a4a' : 'rgba(150,230,255,0.9)'; ctx.lineWidth = Math.max(1.5, w * 0.07); Home.rr(ctx, x + ctx.lineWidth / 2, y + ctx.lineWidth / 2, w - ctx.lineWidth, h - ctx.lineWidth, r); ctx.stroke();
-      // fenêtre
-      const ix = x + w * 0.2, iw = w * 0.6, iy = y + w * 0.2, ih = h - w * 0.2 - w * 1.05, ir = iw * 0.28;
-      ctx.fillStyle = '#0a0f16'; Home.rr(ctx, ix, iy, iw, ih, ir); ctx.fill();
-      ctx.save(); Home.rr(ctx, ix, iy, iw, ih, ir); ctx.clip();
-      const fh = ih * k;
-      if (fh > 0.5) {
-        const g = ctx.createLinearGradient(0, iy + ih - fh, 0, iy + ih); g.addColorStop(0, c1); g.addColorStop(0.18, c2); g.addColorStop(1, c2);
-        ctx.fillStyle = g; ctx.fillRect(ix, iy + ih - fh, iw, fh);
-        ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(ix, iy + ih - fh, iw, Math.max(1.5, ih * 0.012));      // surface du liquide
-        ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(ix + iw * 0.14, iy + ih - fh, iw * 0.14, fh);          // reflet vertical
-      }
-      // compartiments : 3 séparateurs sombres (4 quarts de réservoir)
-      ctx.fillStyle = '#0a0f16'; const sw = Math.max(2, ih * 0.034);
-      for (let i = 1; i < 4; i++) ctx.fillRect(ix, iy + ih * i / 4 - sw / 2, iw, sw);
-      ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(ix, iy, iw * 0.2, ih);                                      // vitre
-      ctx.restore();
-      // culot : petite flamme
-      Home.icon.flame(ctx, x + w / 2, y + h - w * 0.55, w * 0.34, blink ? '#ffffff' : (low ? '#ff5a3a' : boosting ? '#ffe45a' : '#7fe0ff'));
-      ctx.restore();
-      if (rk.active && fuel <= 0) CC.Font.draw(ctx, 'PANNE', x + w / 2, y - w * 1.0, w * 0.075, '#ffffff', { align: 'center', outline: '#ff3b2e' });
-      // fine barre jaune : reposer le doigt relance le boost aussitôt (tactile)
-      const T = game.input.touch, left = T && T.reboostUntil ? (T.reboostUntil - performance.now()) / CC.CONFIG.input.touch.reboostMs : 0;
-      if (rk.active && left > 0 && left <= 1) { ctx.fillStyle = C.yellow; ctx.fillRect(x - w * 0.35, y + h * (1 - left), Math.max(3, w * 0.12), h * left); }
+      const free = rk.active && rk.freeBoost, low = k < 0.25 && !free, blink = low && Math.floor(performance.now() / 220) % 2 === 0;
+      const b = Math.max(2, R(w * 0.16));
+      x = R(x); y = R(y); w = R(w); h = R(h);
+      ctx.fillStyle = blink ? '#ff004d' : '#fff1e8'; ctx.fillRect(x, y, w, h);                        // cadre
+      ctx.fillStyle = '#1d2b53'; ctx.fillRect(x + b, y + b, w - 2 * b, h - 2 * b);                       // fond
+      const ih = h - 2 * b, fh = R(ih * k);
+      if (fh > 0) { ctx.fillStyle = free ? '#29adff' : (low ? '#ff004d' : '#ffa300'); ctx.fillRect(x + b, y + b + ih - fh, w - 2 * b, fh); }
+      if (rk.active && fuel <= 0) CC.Font.draw(ctx, 'PANNE', x + w / 2, y - w * 1.0, w * 0.075, '#ff004d', { align: 'center' });
     }
 
     // rayons qui filent du centre : lignes fines déterministes qui avancent vers les bords
@@ -272,7 +223,7 @@
       const [label, kind] = steps[i], k = (t % 3.2) / 3.2, a = Math.min(1, k * 6, (1 - k) * 6);
       const ctx = this.ctx, px = this.refH * 0.0042, w = CC.Font.measure(label, px, !this.modern) + px * 14, h = px * 16, x = W / 2 - w / 2, y = H * 0.23;
       ctx.globalAlpha = a;
-      CC.Home.pill(ctx, x, y, w, h, 'rgba(10,16,28,0.78)', 'rgba(111,226,255,0.8)');   // v038i : cartouche de verre arrondi
+      CC.Home.pill(ctx, x, y, w, h, 'rgba(29,43,83,0.95)', '#fff1e8');   // v038i : cartouche de verre arrondi
       // pictogramme : doigt (rond) qui glisse, reste posé (anneau qui grossit), ou se place au bord
       const cx = x + px * 6, cy = y + h / 2, r = px * 2.2;
       ctx.fillStyle = '#f4f4f4';

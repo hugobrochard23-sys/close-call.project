@@ -129,7 +129,7 @@
   const FLEET_MAX = 14, MOTES_MAX = 60;   // v038 : plafonds (perfs téléphone : trop de poissons = écran noir)
   L.fleet = function (S, o) {
     const c0 = Math.max(S.d0, S.c0), c1 = Math.min(S.d1, S.c1);
-    if (c1 - c0 < 30 || o.n < 1 || o.model === 'bird' || o.model === 'gull') return null;   // v036b : plus d'oiseaux
+    if (c1 - c0 < 30 || o.n < 1 || o.model === 'bird' || o.model === 'gull' || o.model === 'balloon' || o.model === 'heli' || o.model === 'airliner') return null;   // v036b/v039 : plus d'oiseaux, de ballons, d'hélicoptères ni d'avions de ligne (rien dans les airs qui gêne la lecture)
     // part de la flotte proportionnelle à la longueur du tronçon couvert
     const f = new Fleet(S, Object.assign({}, o, { c0, c1, n: Math.min(FLEET_MAX, Math.max(1, Math.round(o.n * (c1 - c0) / Math.max(120, S.len)))) }));
     S.b.entity(f); return f;

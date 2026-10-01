@@ -24,7 +24,7 @@ body.cc-touch { touch-action: none; align-items: flex-start; justify-content: fl
 .cc-pause::before, .cc-pause::after { content: ''; position: absolute; top: 13px; width: 8px; height: 20px; border-radius: 2px; background: #fff; box-shadow: 0 1px 0 rgba(0,0,0,0.25); }
 .cc-pause::before { left: 12px; }
 /* v038j : habillage pixel — bouton carré à coins taillés, aplats, ombre dure */
-.cc-skin-pixel .cc-pause { border-radius: 0; border: 3px solid #29adff; background: #1d2b53; clip-path: polygon(6px 0, calc(100% - 6px) 0, calc(100% - 6px) 3px, calc(100% - 3px) 3px, calc(100% - 3px) 6px, 100% 6px, 100% calc(100% - 6px), calc(100% - 3px) calc(100% - 6px), calc(100% - 3px) calc(100% - 3px), calc(100% - 6px) calc(100% - 3px), calc(100% - 6px) 100%, 6px 100%, 6px calc(100% - 3px), 3px calc(100% - 3px), 3px calc(100% - 6px), 0 calc(100% - 6px), 0 6px, 3px 6px, 3px 3px, 6px 3px); box-shadow: none; }
+.cc-skin-pixel .cc-pause { border-radius: 0; border: 3px solid #fff1e8; background: #1d2b53; clip-path: polygon(6px 0, calc(100% - 6px) 0, calc(100% - 6px) 3px, calc(100% - 3px) 3px, calc(100% - 3px) 6px, 100% 6px, 100% calc(100% - 6px), calc(100% - 3px) calc(100% - 6px), calc(100% - 3px) calc(100% - 3px), calc(100% - 6px) calc(100% - 3px), calc(100% - 6px) 100%, 6px 100%, 6px calc(100% - 3px), 3px calc(100% - 3px), 3px calc(100% - 6px), 0 calc(100% - 6px), 0 6px, 3px 6px, 3px 3px, 6px 3px); box-shadow: none; }
 .cc-skin-pixel .cc-pause::before, .cc-skin-pixel .cc-pause::after { border-radius: 0; box-shadow: none; background: #fff; }
 .cc-pause::after { right: 12px; }
 

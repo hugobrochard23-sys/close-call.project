@@ -92,9 +92,9 @@
     const okAt = (p, m) => { world.nearest(p, m + 1, near); return near.wall > m && near.ground > 1.2; };
     // traînées d'éclats
     const pos = [];
-    if (spiral) for (let i = 0; i < 34; i++) { const dd = spiral.d - 38 + i * 2.3, a = i * 0.75, q = T.at(dd, spiral.lx + Math.cos(a) * 4.2, spiral.y + Math.sin(a) * 4.2); pos.push(q[0], q[1], q[2]); }   // spirale dans le hangar-tunnel
+    if (spiral && C.enabled !== false) for (let i = 0; i < 34; i++) { const dd = spiral.d - 38 + i * 2.3, a = i * 0.75, q = T.at(dd, spiral.lx + Math.cos(a) * 4.2, spiral.y + Math.sin(a) * 4.2); pos.push(q[0], q[1], q[2]); }   // spirale dans le hangar-tunnel
     let d = Math.max(d0 + 12, T.nextCell === undefined ? d0 + 20 : T.nextCell);
-    while (d < d1 - 8) {
+    while (C.enabled !== false && d < d1 - 8) {
       const n = r.int ? r.int(C.trailLen[0], C.trailLen[1]) : Math.floor(r.between(C.trailLen)), wob = r.between([0, 2.4]), ph = r.between([0, 6]);
       for (let i = 0; i < n; i++) {
         const dd = d + i * C.spacing; if (dd >= d1 - 4) break;
@@ -130,8 +130,7 @@
         T[cursor] = dd + r.between(every);
       }
     };
-    special('gold', 'nextGold', C.goldEvery);
-    special('mult', 'nextMult', C.multEvery);
+    if (C.enabled !== false) { special('gold', 'nextGold', C.goldEvery); special('mult', 'nextMult', C.multEvery); }
     return c;
   };
   const _v = new V();

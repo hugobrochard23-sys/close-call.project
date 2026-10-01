@@ -20,9 +20,9 @@
     targets: { scope: 'total', min: 0, text: (n) => 'DETRUIS ' + n + ' CIBLES',                          unit: '',   gen: (lv) => nice(6 + lv, 1),            xp: 1.0 },
     series:  { scope: 'run',   min: 1, text: (n) => 'DETRUIS ' + n + ' CIBLES EN 1 VOL',                unit: '',   gen: (lv) => Math.min(6, 2 + Math.floor(lv / 3)), xp: 1.2 },
     boosts:  { scope: 'total', min: 0, text: (n) => 'FAIS ' + n + ' BOOSTS',                          unit: '',   gen: (lv) => nice(12 + 3 * lv, 2),        xp: 0.8 },
-    cells:   { scope: 'total', min: 0, text: (n) => 'RAMASSE ' + n + ' MATERIAUX',                          unit: '',   gen: (lv) => nice(150 + 40 * lv, 10),     xp: 0.9 },
+    cellsOff: { scope: 'total', min: 99, text: (n) => 'RAMASSE ' + n + ' MATERIAUX',                          unit: '',   gen: (lv) => nice(150 + 40 * lv, 10),     xp: 0.9 },
     close:   { scope: 'total', min: 1, text: (n) => 'FROLE LES MURS ' + n + ' FOIS',                     unit: '',   gen: (lv) => nice(6 + lv, 1),            xp: 1.0 },
-    gold:    { scope: 'total', min: 2, text: (n) => 'PRENDS ' + n + ' ETOILES',                   unit: '',   gen: (lv) => Math.min(8, 2 + Math.floor(lv / 2)), xp: 1.3 },
+    goldOff: { scope: 'total', min: 99, text: (n) => 'PRENDS ' + n + ' ETOILES',                   unit: '',   gen: (lv) => Math.min(8, 2 + Math.floor(lv / 2)), xp: 1.3 },
   };
   function nice(v, step) { return Math.max(step, Math.round(v / step) * step); }
 

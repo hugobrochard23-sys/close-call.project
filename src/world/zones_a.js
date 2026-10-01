@@ -185,7 +185,7 @@
         for (let k = 0; k < 4; k++) S.bx(dc + (k - 1.5) * 0.7, lx, 1.35, 0.5, 0.4, 0.5, 'col:' + r.pick(['#d83a2a', '#e8a020', '#58a83a', '#d8c02a']), undefined, false); }); });
     }
     // guirlandes de fanions en travers de l'avenue (décor, sans collision)
-    S.rows(S.d0 + 20, S.d1, 34, 0.15, (dc) => S.item(dc, (r) => { const y = 14 + r.between([0, 4]); S.bx(dc, 0, y, 2 * S.vol(dc), 0.06, 0.06, 'col:#2a2a2a', undefined, false); for (let k = -8; k <= 8; k++) S.bx(dc, k * S.vol(dc) / 8.5, y - 0.6, 0.7, 1.0, 0.05, 'col:' + r.pick(['#e02a3c', '#2a6ac8', '#e8a020', '#2aa060']), undefined, false); }));
+    if (S.sr() < 0.25) S.rows(S.d0 + 20, S.d1, 34, 0.15, (dc) => S.item(dc, (r) => { const y = 14 + r.between([0, 4]); S.bx(dc, 0, y, 2 * S.vol(dc), 0.06, 0.06, 'col:#2a2a2a', undefined, false); for (let k = -8; k <= 8; k++) S.bx(dc, k * S.vol(dc) / 8.5, y - 0.6, 0.7, 1.0, 0.05, 'col:' + r.pick(['#e02a3c', '#2a6ac8', '#e8a020', '#2aa060']), undefined, false); }));   // v039 : fanions rares (décor optionnel)
     farTowers(S, 50, 120, 6);
   } };
   city.scenes.passage = { len: [200, 270], pin(T, sc) { const mid = (sc.d0 + sc.d1) / 2; return { lx: U.clamp(T.laneX0(mid), -6, 6), y: U.clamp(T.laneY0(mid), 13, 22), from: (sc.d1 - sc.d0) / 2 - 50, to: (sc.d1 - sc.d0) / 2 + 50 }; },
