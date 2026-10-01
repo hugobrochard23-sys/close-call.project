@@ -61,6 +61,7 @@
       this.progress = new CC.Progress(this);   // v034 : XP, niveaux, missions
       this.pad = new CC.Pad(this);             // v034 : lanceur (accueil du mode CLASSIQUE)
       this.shadow = new CC.RocketShadow(this); // v034 : ombre de la roquette
+      this.horizon = new CC.Horizon(this);     // v036 : silhouettes lointaines
       this.hudFeed = []; this.flyers = []; this.boostK = 0; this.padMode = false; this.fadeIn = 0; this.reviveUsed = false; this.progTick = 0; this.cellBump = 0; this.cellHap = 0; this.cellSnd = 0;
       // v023 : volumes enregistrés (SOUND / MUSIC sur OFF) appliqués dès le démarrage, avant même que le son soit créé
       this.audio.setVolumes(CC.CONFIG.audio.master, this.settings.music, this.settings.sfx);
@@ -116,6 +117,7 @@
       this.sunDir = new V().fromArray(env.sun.dir).normalize();
       this.sun.castShadow = CC.CONFIG.render.shadows && env.sun.shadow !== false && this.shadowsAllowed !== false;
       this.postParams = Object.assign({}, CC.CONFIG.postfx, env.postfx || {});
+      if (this.horizon) this.horizon.setEnv(env);
     }
 
     // ---------- sauvegarde / réglages ----------
@@ -297,7 +299,7 @@
       opts = opts || {};
       if (seed === undefined || seed === null) seed = CC.Gen.randomSeed();
       this.generated = false; this.mission = null;
-      const ordP = this.params.get('order'), L = CC.Endless.level(seed, { zones: this.testMode ? null : this.progress.unlockedWorlds(), order: ordP ? ordP.split(',') : null });
+      const ordP = this.params.get('order'), L = CC.Endless.level(seed, { zones: this.testMode ? null : this.progress.unlockedWorlds(), order: ordP ? ordP.split(',') : null, env: this.params.get('env') || null });
       this.loadLevelFrom(L, -1);
       this.endlessRun = new CC.Endless.Run(this, L);
       this.progress.beginRun(); this.reviveUsed = false; this.hudFeed.length = 0; this.cellHap = 0; this.cellSnd = 0;
@@ -397,7 +399,7 @@
       S.endless = S.endless || { best: 0, runs: 0 };
       S.endless.runs = (S.endless.runs || 0) + 1;
       if (dist > (S.endless.best || 0)) S.endless.best = dist;
-      const causes = { wall: 'MUR', hazard: 'LASER', cable: 'CABLE', missile: 'MISSILE', drone: 'DRONE', train: 'RAME', altitude: 'TROP HAUT', outOfBounds: 'CHUTE', stalled: 'PANNE SECHE' };
+      const causes = { wall: 'MUR', hazard: 'LASER', cable: 'CABLE', missile: 'MISSILE', drone: 'DRONE', train: 'RAME', mover: 'OBSTACLE', crane: 'GRUE', press: 'PRESSE', arm: 'BRAS ROBOT', ball: 'BOULE', whale: 'BALEINE', heli: 'HELICO', train2: 'TRAIN', altitude: 'TROP HAUT', outOfBounds: 'CHUTE', stalled: 'PANNE SECHE' };
       this.results = Object.assign(res, { endless: true, time: this.runTime, stage: run.stageLabel(), cause: causes[this.crashKind] || 'CRASH', style: this.style.total, runStats: run.stats, xpDoubled: false, t: 0 });
       this.state = 'RESULTS'; this.centerMsg = null;
       if (this.ads) this.ads.onRunEnd(this.results);
@@ -461,6 +463,24 @@
       const run = this.endlessRun; if (run) run.shown += val;
       this.cellBump = Math.max(this.cellBump, 0.7);
       const now = performance.now(); if (now - this.cellSnd > 45) { this.audio.play('cell', null, 3 + (this.flyerPitch = ((this.flyerPitch || 0) + 1) % 5)); this.cellSnd = now; }
+    }
+
+    // v036 : anneau d'or franchi (fuel, points, note qui monte) ; série complète → SERIE PARFAITE (pluie de matériaux, gros bonus)
+    onRing(q, grp) {
+      const run = this.endlessRun; if (!run) return;
+      const pos = new V().fromArray(q.p), col = CC.CONFIG.hud.colors;
+      run.stats.rings = (run.stats.rings || 0) + 1; run.addBonus(60); run.addFuel(1.0);
+      this.audio.play('ring', null, grp.got);
+      this.effects.ring(pos, this.rocket.fwd, 0.4, q.rad * 1.4, 0.4, '#ffd23a', 0.7);
+      this.feed('ANNEAU  ' + grp.got + '/' + grp.n, col.yellow); this.cellBump = 1.2;
+      if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('collect');
+      if (grp.got === grp.n && !grp.dead) {
+        const v = Math.round(run.addBonus(250 * grp.n / 2)); run.addFuel(3);
+        this.audio.play('ringSeries'); this.onSmash(pos, grp.n * 4);
+        this.progress.toasts.push({ text: 'SERIE PARFAITE', sub: '+' + v, t: 0 });
+        this.feed('SERIE PARFAITE  +' + v, col.yellow); this.rig.shake = Math.max(this.rig.shake, 0.3);
+        if (CC.Haptics) CC.Haptics.pattern('mission');
+      }
     }
 
     // v034 : départ du boost (doigt maintenu) — coup de caméra, onde de choc à la tuyère, son, secousse
@@ -545,7 +565,7 @@
     }
 
     onTargetHit(t, rocket) {
-      if (t.hazard) { this.onRocketCrash(t.type === 'train' ? 'train' : 'drone', rocket.pos.clone(), new V(0, 1, 0)); return; }   // v034 : un drone ne se détruit pas, il détruit
+      if (t.hazard) { this.onRocketCrash(t.cause || (t.type === 'train' ? 'train' : 'drone'), rocket.pos.clone(), new V(0, 1, 0)); return; }   // v034 : un drone ne se détruit pas, il détruit
       const c = t.obb.c.clone();
       t.kill(this);
       if (this.endlessRun) {   // v033 : la roquette traverse la cible et continue ; essence rechargée
@@ -759,7 +779,7 @@
           if (rk.active) {
             rk.frame(dt, inp);
             if (this.endlessRun) {   // v034 : éclats, progression des missions
-              CC.Collect.update(this, this.endlessRun, dt);
+              CC.Collect.update(this, this.endlessRun, dt); CC.Collect.frameEnd(rk);
               if ((this.progTick += dt) > 0.25) { this.progTick = 0; this.progress.tick(this.endlessRun.dist, this.endlessRun.score, this.runTime); }
             }
             this.updateWarnings(dt, rk);
@@ -808,6 +828,7 @@
       this.trails.update(dt, rk, this.camera);   // après la caméra : effacement près de sa position de cette image
       this.audio.updateRocket(rk, dt);
       this.audio.updateWorld(this, dt);
+      if (this.endlessRun && this.state === 'FLIGHT') this.audio.updateAmbient(dt);
       this.flash = Math.max(0, this.flash - dt * 7);
       // v034 : intensité du boost pour le HUD (traits de vitesse) et l'aberration chromatique ; journal du HUD ; sursaut du compteur
       const boostOn = this.state === 'FLIGHT' && rk.active && rk.thrusting && !rk.freeBoost ? 1 : 0;
@@ -842,6 +863,7 @@
       this.sun.position.copy(focus).addScaledVector(this.sunDir, 150);
       this.sun.target.position.copy(focus);
       this.sky.position.copy(this.camera.position);
+      if (this.horizon) this.horizon.update(this);
       if (this.settings.postfx && this.postParams) {
         this.postParams.flash = this.flash * 0.85; this.postParams.flashColor = this.flashColor || '#ffffff';
         if (this.postChroma === undefined || this.postParamsRef !== this.postParams) { this.postParamsRef = this.postParams; this.postChroma = this.postParams.chromatic; }

@@ -625,3 +625,24 @@ trajectoire ; les plongées vers les cibles les évitent.
 - Déblocage par niveau : avenue 1, forêt 2, port 3, métro 4, monde miniature 5, base aérienne 7.
 - Préchauffage des textures à l'accueil ; ordre des zones forçable pour les tests : `?test=1&endless=<graine>&order=city,metro,port`.
 - Pilote automatique (4 graines, sans bouclier) : 2 650 à 7 878 m, traversées de jusqu'à 4 zones ; tronçons construits en 0 à 43 ms.
+
+## v036 — monde vivant, ambiances sonores, horizon, nuit néon, quatre nouvelles zones
+
+- **Monde vivant** (`src/world/life.js`, `zones_life.js`) : flottes d'objets (un InstancedMesh par flotte) — voitures, bus, tram sur le viaduc, rames de
+  métro, bateaux, voiliers, navire, camions porte-conteneurs, trains de marchandises, avions de chasse, avion de ligne, hélicoptères, montgolfières,
+  train électrique, oiseaux, mouettes, poissons, méduses, sous-marins — avec **bruit de passage** (train, klaxon, corne de navire, avion…) ;
+  **obstacles mobiles** `Sweeper` (conteneur qui se balance à une grue, presses, bras robotisés, baleine) ; particules d'ambiance (bulles, lucioles,
+  braises, poussière). Les flottes et particules lointaines sont invisibles et figées (aucun appel de dessin).
+- **Audio** : fonds sonores par zone (vent, grondement, bourdonnement, souffle) qui glissent d'une zone à l'autre, événements lointains tirés au hasard
+  (train lointain, sirène, oiseaux, hibou, baleine, presse, goutte…), **musique à styles** : tempo, gamme, batterie, basse, arpège et nappes propres à
+  chaque zone et à la nuit (`Music.STYLES`).
+- **Horizon** (`src/rendering/horizon.js`) : anneau de silhouettes superposées (perspective atmosphérique) teinté par le brouillard — mégapole, port avec
+  grues et cargos, pics de montagne, crêtes boisées, fond marin ; la nuit, fenêtres allumées, néons et feux d'antenne.
+- **Nuit néon** : ambiance violette lisible, façades sombres percées de fenêtres, enseignes néon (palette cyan / magenta / ambre / violet) avec halos,
+  lampadaires, phares ; forêt jour / couchant / nuit (lucioles). Aucun clignotement.
+- **Nouvelles zones** (`zones_d.js`) : CHUTE (245 → 22 m entre des tours géantes, Grande Arche), ASCENSION (12 → 236 m le long d'une tour, pas de tir d'où
+  une fusée décolle), PROFONDEUR (−70 m, récif, épave, base, grotte, squelette), USINE (convoyeurs, presses, fonderie, cuves, bras, chaîne).
+- **Anneaux d'or** (séries) : passer à travers tous = SERIE PARFAITE (matériaux, bonus, essence).
+- **Performance** : couleurs unies fusionnées en un seul lot par tronçon (322 → 177 appels de dessin en avenue) ; textures en mipmaps linéaires (moins de
+  scintillement) ; préchauffage des textures à l'accueil.
+- Pilote automatique (sans bouclier) : 4 071 à 9 501 m, jusqu'à 5 zones traversées par partie ; tronçons construits en 25–77 ms.

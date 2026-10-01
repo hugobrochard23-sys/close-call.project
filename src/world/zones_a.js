@@ -10,12 +10,13 @@
  *   le ciel au bout) · SIGNATURE : la rame qui fonce en face (on passe au-dessus). */
 (function () {
   const U = CC.U, G = CC.Gen, Z = CC.Zones, DEG = 180 / Math.PI;
+  const NEON_PAL = ['#ff3ad8', '#2be8ff', '#ffb02b', '#8a6aff'];
   const PAST = ['#ffffff', '#f2d6c4', '#d8e4f0', '#e8e0b8', '#d8c8e0', '#c8e0d0', '#f0c8c8'];
 
   // ============================================================== AVENUE
   // un quartier : style de façade, plage de hauteur, largeur des immeubles
   function district(S, lo, hi) {
-    const sr = S.sr, side = sr.pick(['facade', 'facadePink', 'facadeTan']);
+    const sr = S.sr, side = S.dark ? 'facadeDark' : sr.pick(['facade', 'facadePink', 'facadeTan']);
     return { mat: { side, top: 'concrete', bottom: 'concreteDark' }, tints: [sr.pick(['#ffffff', '#f2eee8', '#e8ecf0']), sr.pick(['#f2eee8', '#e8ecf0', '#ffffff'])], lo, hi };
   }
   // rues transversales : positions (distance) et largeur
@@ -44,7 +45,8 @@
         const lx = s * (S.vol(dc) - 2.2), h = 9;
         S.cyl(dc, lx, 0, 0.2, h, 'col:#2c2f33', undefined, 6, 0.14);
         S.bx(dc, lx - s * 1.3, h, 2.6, 0.22, 0.22, 'col:#3a3d42', undefined, false);
-        S.bx(dc, lx - s * 2.5, h - 0.15, 0.9, 0.22, 0.6, S.dark ? 'emis:#ffe8b0' : 'col:#dcdcd4', undefined, false);
+        S.bx(dc, lx - s * 2.5, h - 0.15, 0.9, 0.22, 0.6, S.dark ? 'basic:#ffe8b0' : 'col:#dcdcd4', undefined, false);
+        if (S.dark) S.glow(dc, lx - s * 2.5, h - 0.4, '#ffb864', 7);
       }); });
       if (!opts.noTrees) S.rows(S.d0 + 8, S.d1, 15, 0.12, (dc) => { if (cs(dc)) return; S.item(dc, (r) => {
         const p = S.at(dc, s * (S.vol(dc) - 5.2), 0);
@@ -68,6 +70,12 @@
           const w = r.between([14, 22]), v = S.vol(cx) + off + set;
           S.bx(cx, s * (v + w / 2), h / 2 - 0.5, w, h, dd - 0.6, dist.mat, tint);
           if (opts.shops) S.bx(cx, s * (v - 0.12 + w / 2), 2.1, w + 0.25, 4.2, dd - 0.4, 'storefront', tint, false);
+          if (S.dark) {          // enseignes néon : une barre au-dessus de la vitrine, parfois une enseigne verticale en potence ; palette limitée (cyan, magenta, ambre)
+            const pal = NEON_PAL, c1 = r.pick(pal);
+            if (r() < 0.65) S.neon(cx, s * (v - 0.4), 5.3, 0.3, 1.0, dd * 0.6, c1, 9);
+            if (r() < 0.4) S.neon(cx, s * (v - 1.2), r.between([9, 16]), 0.5, r.between([5, 9]), 1.3, r.pick(pal), 10);
+            if (r() < 0.25) S.neon(cx, s * (v + w * 0.5), h + 1.6, 0.4, 2.4, dd * 0.7, r.pick(pal), 12);
+          }
           if (h > 34 && roll < 0.4) { const w2 = w * 0.6, h2 = r.between([6, 14]); S.bx(cx, s * (v + w / 2 + 2), h + h2 / 2 - 0.5, w2, h2, dd * 0.6, dist.mat, tint); }
           if (roll > 0.72) { S.cyl(cx, s * (v + w * 0.65), h - 0.5, 1.7, 3, 'planks', undefined, 10, 1.7, false); for (const a of [-1, 1]) for (const c of [-1, 1]) S.bx(cx + c, s * (v + w * 0.65) + a, h + 1, 0.2, 2, 0.2, 'col:#3a3028', undefined, false); }
           else if (roll > 0.5) S.bx(cx, s * (v + w * 0.6), h + 4, 0.25, 8, 0.25, 'col:#2a2a2e', undefined, false);

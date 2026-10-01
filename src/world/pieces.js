@@ -182,7 +182,7 @@
     S.log = (dc, lx) => {
       const len = r.between([8, 16]), rad = r.between([0.6, 1.0]);
       if (!fits(dc, lx, len, rad * 2.2, 0, rad * 2)) return false; add(dc, lx, len, rad * 2.2);
-      b.cylinder({ p: T.at(dc, lx, rad), rad, h: len, seg: 7, mat: 'bark', r: [0, yawD(dc), 90], colSize: [len, rad * 2, rad * 2] });
+      b.cylinder({ p: T.at(dc, lx, rad), rad, h: len, seg: 7, mat: 'bark', r: [0, yawD(dc), 90], colSize: [rad * 2, len, rad * 2] });   // repère local du cylindre : l'axe est y (la boîte doit être couchée avec lui)
       return true;
     };
     S.bush = (dc, lx) => {
@@ -301,7 +301,7 @@
       const L = laneAt(dc), gap = R * 2 + 4, yb = L.y + R + 1.5;
       if (yb + 4 > 46 || overlaps(dc, L.lx, gap + 8, 6, 6) || dc < d0 + 40 || dc > d1 - 40) return false;
       const rad = 1.3; for (const s of [-1, 1]) { const x = L.lx + s * (gap / 2 + 2); cyl(dc, x, 0, rad, yb + 8, 'bark', undefined, 7, rad * 0.8); }
-      b.cylinder({ p: T.at(dc, L.lx, yb + 1), rad: 1.0, h: gap + 8, seg: 7, mat: 'bark', r: [0, yawD(dc), 90], colSize: [gap + 8, 2, 2] });
+      b.cylinder({ p: T.at(dc, L.lx, yb + 1), rad: 1.0, h: gap + 8, seg: 7, mat: 'bark', r: [0, yawD(dc), 90], colSize: [2, gap + 8, 2] });
       add(dc, L.lx, gap + 8, 6); busy_push(dc); return true;
     };
     G2.ruin = (dc) => {           // portique de pierre moussue

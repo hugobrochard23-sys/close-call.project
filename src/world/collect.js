@@ -124,12 +124,13 @@
 
   /* Ramassage : appelé chaque image de vol. Ne teste que les tronçons proches de la roquette. */
   Collect.update = function (game, run, dt) {
-    const rk = game.rocket; if (!rk.active) return;
+    const rk = game.rocket; if (!rk.active) { this._pz = undefined; return; }
     const C = CC.CONFIG.cells, p = rk.pos, R2 = C.radius * C.radius, RB2 = C.radiusBig * C.radiusBig, dist = run.dist, L = CC.CONFIG.endless.chunkLen;
     const A = shared; if (A) A.pts.size = C.size * (1 + 0.1 * Math.sin(performance.now() * 0.008));
     for (const [k, ch] of run.chunks) {
       const col = ch.collect; if (!col) continue;
       if (Math.abs((k + 0.5) * L - dist) > L * 0.5 + 60) { if (col.specials.length) this.spin(col, dt); continue; }   // hors de portée : on ne teste rien
+      this.rings(game, run, ch, p);
       const cs = col.cells;
       if (cs) {
         const a = cs.arr, M2 = C.magnet * C.magnet; let moved = false;
@@ -159,6 +160,24 @@
       }
     }
   };
+  // anneaux d'or : on franchit le plan de chaque anneau (en z) ; dans le rayon → passé, hors du rayon → manqué (la série est perdue)
+  Collect.rings = function (game, run, ch, p) {
+    if (!ch.rings || !ch.rings.length) return;
+    const pz = this._pz;
+    if (pz === undefined) return;
+    run.ringGroups = run.ringGroups || {};
+    for (const q of ch.rings) {
+      if (q.passed || q.missed) continue;
+      if (!q.p) q.p = run.T.at(q.d, q.lx, q.y);
+      const G = run.ringGroups[q.gid] || (run.ringGroups[q.gid] = { n: q.n, got: 0, dead: false });
+      if (pz > q.p[2] && p.z <= q.p[2]) {
+        const dx = p.x - q.p[0], dy = p.y - q.p[1];
+        if (dx * dx + dy * dy < q.rad * q.rad * 1.1) { q.passed = true; G.got++; game.onRing(q, G); }
+        else { q.missed = true; G.dead = true; }
+      }
+    }
+  };
+  Collect.frameEnd = function (rk) { this._pz = rk.active ? rk.pos.z : undefined; };
   Collect.spin = function (col, dt) {
     const t = performance.now() * 0.001;
     for (const s of col.specials) {
