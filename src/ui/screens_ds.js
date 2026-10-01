@@ -41,17 +41,8 @@
     const ay = top + 12 * k, as = 50 * k;
     DS.avatar(ctx, m, ay, as); hit(ui, m, ay, as, as, () => { ui.overlay = 'garage'; });
     DS.level(ctx, m + as + 8 * k, ay + 2 * k, 96 * k, 46 * k, prog.level, U.clamp(prog.xp / prog.need(prog.level), 0, 1), k);
-    const cw = DS.currency(ui, ctx, W - m - 50 * k, ay + 8 * k, 34 * k, P.materials || 0, k);
+    DS.currency(ui, ctx, W - m - 50 * k, ay + 8 * k, 34 * k, P.materials || 0, k);
     DS.iconButton(ui, ctx, W - m - 22 * k, ay + 25 * k, 42 * k, 'gear', () => { ui.overlay = 'msettings'; }, { k, shadow: false });
-    // --- logo
-    DS.logo(ctx, W / 2, top + 108 * k, 50 * k);
-    // --- meilleure distance
-    const bw = Math.min(250 * k, W - 40 * k), bh = 66 * k, bx = W / 2 - bw / 2, by = top + 178 * k;
-    DS.panel(ctx, bx, by, bw, bh, { k, accent: T.cyan, glow: true });
-    DS.icon(ctx, 'trophy', bx + 32 * k, by + bh / 2, 34 * k, T.gold, { shadow: true });
-    DS.text(ctx, 'BEST DISTANCE', bx + 62 * k, by + 18 * k, 14 * k, T.text2, { weight: 500, ls: 1.5 });
-    const bd = Math.round(P.bestDist || 0), bs = fmt(bd) + ' m';
-    DS.text(ctx, bs, bx + 62 * k, by + 44 * k, DS.fit(ctx, bs, 36 * k, bw - 76 * k), T.white, { weight: 700 });
     // --- bas : navigation, MISSIONS, PLAY (de bas en haut)
     const lvl = prog.level, items = [];
     if (lvl >= 2) items.push({ id: 'garage', icon: 'garage', label: 'GARAGE' });
@@ -60,11 +51,10 @@
     let bottom = top + HH;
     const gutter = Math.max(14 * k, (W - colW(L, k)) / 2);
     if (items.length) { const nh = DS.nav(ui, ctx, L, items, null, (id) => { ui.overlay = id; }); bottom -= nh; } else bottom -= 14 * k;
-    if (lvl >= 4) { const mh = 54 * k; bottom -= mh + 4 * k; DS.btn(ui, ctx, gutter, bottom, W - 2 * gutter, mh, { k, kind: 'secondary', label: 'MISSIONS', icon: 'mission', iconColor: T.cyanL, color: T.white, key: 'missions', action: () => { ui.overlay = 'quests'; } }); bottom -= 4 * k; }
     const ph = 72 * k; bottom -= ph + 10 * k;
     DS.btn(ui, ctx, gutter, bottom, W - 2 * gutter, ph, { k, kind: 'primary', label: 'PLAY', sub: 'ENDLESS', icon: 'play', size: ph * 0.46, breathe: true, glow: true, key: 'play', action: () => { game.firePad(); } });
     if ((P.launches || 0) < 3) { const msg = 'PASSE LES TROUS  ·  VISE LES RESERVOIRS'; DS.text(ctx, msg, W / 2, bottom - 14 * k, DS.fit(ctx, msg, 14 * k, W - 2 * gutter), T.white, { align: 'center', weight: 700, shadow: 'rgba(0,0,0,0.6)', ls: 1 }); }
-    if (!ui.isTouch()) DS.text(ctx, 'ESPACE OU CLIC : LANCER', W / 2, top + 258 * k, 12 * k, T.text2, { align: 'center', weight: 500, ls: 1.5 });
+    
     ctx.restore();
   };
 

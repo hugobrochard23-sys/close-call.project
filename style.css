@@ -20,10 +20,10 @@ body.cc-touch { touch-action: none; align-items: flex-start; justify-content: fl
   top: calc(env(safe-area-inset-top, 0px) + 10px); left: calc(env(safe-area-inset-left, 0px) + 10px);
   width: 46px; height: 46px; border-radius: 50%;
   /* v050 : bouton rond marine, liseré cyan, reflet haut, ombre douce */
-  background: radial-gradient(circle at 50% 28%, rgba(30,70,104,0.95), rgba(4,16,28,0.95)); border: 2px solid rgba(65,200,255,0.6);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.14);
+  background: rgba(5,20,34,0.92); border: 2px solid rgba(65,200,255,0.85); border-bottom-color: rgba(65,200,255,0.25);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
-.cc-pause::before, .cc-pause::after { content: ''; position: absolute; top: 13px; width: 5px; height: 16px; border-radius: 2px; background: #7BE8FF; }
+.cc-pause::before, .cc-pause::after { content: ''; position: absolute; top: 13px; width: 5px; height: 16px; border-radius: 2px; background: #FFFFFF; }
 .cc-pause::before { left: 14px; }
 .cc-pause::after { right: 14px; }
 

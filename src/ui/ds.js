@@ -43,6 +43,12 @@
     r = Math.max(0, Math.min(r, h / 2, w / 2));
     ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   };
+  // couleur CSS (#hex ou rgba) -> rgba avec un autre alpha
+  const withA = (c, a) => { if (c[0] === '#') { const n = parseInt(c.slice(1), 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')'; } return c.replace(/rgba?\(([^)]+)\)/, (m, p) => { const q = p.split(','); return 'rgba(' + q[0] + ',' + q[1] + ',' + q[2] + ',' + a + ')'; }); };
+  DS.withA = withA;
+  // contour éclairé : plus lumineux en haut qu'en bas (le seul effet de lumière des panneaux et boutons)
+  const edge = (ctx, y, h, c, top, bot) => { const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, withA(c, top)); g.addColorStop(1, withA(c, bot)); return g; };
+  DS.edge = edge;
   const lg = (ctx, y0, y1, stops) => { const g = ctx.createLinearGradient(0, y0, 0, y1); stops.forEach(([o, c]) => g.addColorStop(o, c)); return g; };
   DS.lg = lg;
 
@@ -52,11 +58,10 @@
     o = o || {}; const k = o.k || 1, r = o.r !== undefined ? o.r : T.radius * k;
     ctx.save(); if (o.alpha !== undefined) ctx.globalAlpha = o.alpha;
     if (o.shadow !== false) { ctx.shadowColor = 'rgba(0,0,0,0.38)'; ctx.shadowBlur = 16 * k; ctx.shadowOffsetY = 6 * k; }
-    rr(ctx, x, y, w, h, r); ctx.fillStyle = o.fill === 'flat' ? 'rgba(5,20,34,0.88)' : lg(ctx, y, y + h, [[0, T.panelTop], [1, T.panelBot]]); ctx.fill();
+    rr(ctx, x, y, w, h, r); ctx.fillStyle = 'rgba(5,20,34,0.9)'; ctx.fill();   // aplat : aucune ombre en haut
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-    if (o.glow) { rr(ctx, x, y, w, h, r); ctx.strokeStyle = (o.accent || T.cyan) + '55'; ctx.lineWidth = 5 * k; ctx.stroke(); }
-    rr(ctx, x + 1, y + 1, w - 2, h * 0.46, Math.max(0, r - 1)); ctx.fillStyle = 'rgba(255,255,255,0.045)'; ctx.fill();   // reflet haut
-    rr(ctx, x + 0.75 * k, y + 0.75 * k, w - 1.5 * k, h - 1.5 * k, r); ctx.strokeStyle = o.border || (o.accent ? o.accent : T.border); ctx.lineWidth = 1.5 * k; ctx.stroke();
+    if (o.glow) { rr(ctx, x, y, w, h, r); ctx.strokeStyle = withA(o.accent || T.cyan, 0.3); ctx.lineWidth = 5 * k; ctx.stroke(); }
+    rr(ctx, x + 0.75 * k, y + 0.75 * k, w - 1.5 * k, h - 1.5 * k, r); ctx.strokeStyle = edge(ctx, y, h, o.border || o.accent || T.cyan, 0.95, 0.22); ctx.lineWidth = 1.7 * k; ctx.stroke();
     ctx.restore();
   };
 
@@ -81,10 +86,9 @@
       if (o.shadow !== false) { ctx.shadowColor = 'rgba(0,0,0,0.42)'; ctx.shadowBlur = 14 * k; ctx.shadowOffsetY = 6 * k * (1 - 0.5 * P); }
       rr(ctx, x, y + lip, w, h - lip * 0.2, r); ctx.fillStyle = C.lip; ctx.fill();                                   // lèvre sombre (relief)
       ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-      rr(ctx, x, y, w, h - lip, r); ctx.fillStyle = lg(ctx, y, y + h - lip, [[0, C.top], [0.5, C.mid], [1, C.bot]]); ctx.fill();
-      if (o.glow) { rr(ctx, x - 1, y - 1, w + 2, h - lip + 2, r + 1); ctx.strokeStyle = C.mid + '66'; ctx.lineWidth = 6 * k; ctx.stroke(); }
-      rr(ctx, x + 2 * k, y + 2 * k, w - 4 * k, (h - lip) * 0.46, Math.max(0, r - 2 * k)); ctx.fillStyle = 'rgba(255,255,255,' + (0.2 - 0.08 * P) + ')'; ctx.fill();   // grand reflet
-      rr(ctx, x + 0.75 * k, y + 0.75 * k, w - 1.5 * k, h - lip - 1.5 * k, r); ctx.strokeStyle = C.rim; ctx.lineWidth = 1.5 * k; ctx.stroke();
+      rr(ctx, x, y, w, h - lip, r); ctx.fillStyle = C.mid; ctx.fill();   // aplat
+      if (o.glow) { rr(ctx, x - 1, y - 1, w + 2, h - lip + 2, r + 1); ctx.strokeStyle = withA(C.mid, 0.35); ctx.lineWidth = 6 * k; ctx.stroke(); }
+      rr(ctx, x + 1 * k, y + 1 * k, w - 2 * k, h - lip - 2 * k, r); ctx.strokeStyle = edge(ctx, y, h - lip, '#FFFFFF', 0.85, 0.12); ctx.lineWidth = 2 * k; ctx.stroke();   // contour plus éclairé en haut
       o._text = C;
     }
     ctx.restore();
@@ -113,10 +117,9 @@
     const hot = !ui.isTouch() && Math.hypot(ui.mouse.x - cx, ui.mouse.y - cy) <= r;
     ctx.save(); ctx.translate(cx, cy); ctx.scale(1 - 0.06 * P, 1 - 0.06 * P); ctx.translate(-cx, -cy);
     if (o.shadow !== false) { ctx.shadowColor = 'rgba(0,0,0,0.38)'; ctx.shadowBlur = 10 * k; ctx.shadowOffsetY = 4 * k; }
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.fillStyle = lg(ctx, cy - r, cy + r, [[0, 'rgba(14,44,70,0.95)'], [1, 'rgba(4,16,28,0.95)']]); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.fillStyle = 'rgba(5,20,34,0.92)'; ctx.fill();
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-    ctx.beginPath(); ctx.arc(cx, cy, r - 0.8 * k, 0, 6.2832); ctx.strokeStyle = hot ? T.cyanL : (o.accent || T.border); ctx.lineWidth = 1.6 * k; ctx.stroke();
-    ctx.beginPath(); ctx.arc(cx, cy - r * 0.2, r * 0.8, Math.PI * 1.15, Math.PI * 1.85); ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 2 * k; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, r - 0.8 * k, 0, 6.2832); ctx.strokeStyle = edge(ctx, cy - r, 2 * r, hot ? T.cyanL : (o.accent || T.cyan), 0.95, 0.22); ctx.lineWidth = 1.8 * k; ctx.stroke();
     DS.icon(ctx, icon, cx, cy, d * 0.52, o.color || T.cyanL);
     ctx.restore();
     if (action) ui.buttons.push({ x: cx - Math.max(r, 22 * k), y: cy - Math.max(r, 22 * k), w: Math.max(d, 44 * k), h: Math.max(d, 44 * k), action: () => { DS.press[key] = performance.now(); action(); } });
@@ -132,7 +135,6 @@
     if (f > 0) {
       ctx.save(); rr(ctx, x, y, w, h, r); ctx.clip();
       rr(ctx, x, y, fw, h, r); ctx.fillStyle = lg(ctx, y, y + h, [[0, o.c1 || T.cyanL], [1, o.c2 || T.blue]]); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.fillRect(x + r * 0.5, y + h * 0.1, fw - r, h * 0.28);
       if (o.glow) { ctx.shadowColor = o.c1 || T.cyan; ctx.shadowBlur = 8 * k; rr(ctx, x, y, fw, h, r); ctx.strokeStyle = (o.c1 || T.cyan) + '99'; ctx.lineWidth = 1.2 * k; ctx.stroke(); }
       ctx.restore();
     }
