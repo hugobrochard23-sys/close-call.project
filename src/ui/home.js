@@ -263,6 +263,10 @@
     cart:   ['..#........', '..#........', '..########.', '..#.#####..', '..#.#####..', '...#####...', '...#####...', '...........', '..##...##..', '..##...##..', '...........'],
     flame:  ['.....#.....', '....##.....', '....###....', '...####.#..', '..######.#.', '..#######..', '.#########.', '.####.####.', '.###...###.', '..###.###..', '...#####...'],
     nut:    ['...#####...', '..#######..', '.####.####.', '###.....###', '##.......##', '##.......##', '##.......##', '###.....###', '.####.####.', '..#######..', '...#####...'],
+    mult:   ['##.......##', '.##.....##.', '..##...##..', '...##.##...', '....###....', '....###....', '...##.##...', '..##...##..', '.##.....##.', '##.......##', '...........'],
+    tank:   ['..###......', '..#.#......', '.#########.', '.#########.', '.##.....##.', '.##.....##.', '.##.....##.', '.##.....##.', '.#########.', '.#########.', '...........'],
+    bolt:   ['.....###...', '....###....', '...###.....', '..#####....', '....###....', '...###.....', '..###......', '.###.......', '.##........', '.#.........', '...........'],
+    shield: ['.#########.', '###########', '###########', '###########', '###########', '.#########.', '.#########.', '..#######..', '...#####...', '....###....', '.....#.....'],
     gear:   ['....###....', '.#..###..#.', '.####.####.', '..##...##..', '###.....###', '###.....###', '###.....###', '..##...##..', '.####.####.', '.#..###..#.', '....###....'],
     target: ['...#####...', '..##...##..', '.#.......#.', '#..#####..#', '#..#...#..#', '#..#.#.#..#', '#..#...#..#', '#..#####..#', '.#.......#.', '..##...##..', '...#####...'],
   };
@@ -370,36 +374,51 @@
     if (arm <= 0) return;
     ctx.save(); ctx.globalAlpha = arm;
     const margin = u * 0.04, ic = u * 0.1;
-    // 2. niveau et XP (haut gauche) ; tout le bloc mène à l'écran PROGRESSION
-    const bs = u * 0.135, bx = margin, by = Y(0.028) + (P ? 0 : 0);
+    // v042 : accueil façon jeu mobile — niveau + barre (le chiffre est DANS la barre) à gauche, RECORD à droite, écrous et réglages dessous
+    const bs = u * 0.135, bx = margin, by = Y(0.028), recW = u * (P ? 0.34 : 0.26), recX = W - margin - recW;
     levelBadge(ui, ctx, game, L, bx, by, bs, () => { ui.overlay = 'progress'; });
-    const xw = u * (P ? 0.38 : 0.3), xx = bx + bs + u * 0.03, xk = prog.xp / prog.need(prog.level);
-    bar(ctx, xx, by + bs * 0.52, xw, bs * 0.2, xk, CY);
-    text(ui, ctx, prog.rank(prog.level), xx, by + bs * 0.06, ui.fitPx(['COMMANDANT'], xw, bs * 0.04), '#e8eef8', {});
-    text(ui, ctx, prog.xp + ' / ' + prog.need(prog.level) + ' XP', xx, by + bs * 0.8, ui.fitPx(['0000 / 0000 XP'], xw, bs * 0.03), '#9fb0c8', {});
-    // réglages (haut droite)
-    const gr = u * 0.055, gx = W - margin - gr, gy = by + gr;
-    // v038k : l'engrenage est seul (pas de rectangle derrière), un peu plus grand ; il s'éclaire au survol
-    if (!PIX) pxRect(ctx, gx - gr, gy - gr, 2 * gr, 2 * gr, inRect(ui, gx - gr, gy - gr, 2 * gr, 2 * gr) ? 'rgba(255,255,255,0.2)' : 'rgba(8,12,20,0.7)', '#9fb0c8', Math.round(gr * 0.28), 2);
-    ICON.gear(ctx, gx, gy, gr * (PIX ? 0.95 : 0.58), inRect(ui, gx - gr, gy - gr, 2 * gr, 2 * gr) ? '#ffffff' : '#c2c3c7');
+    const xx = bx + bs + u * 0.025, xw = recX - u * 0.025 - xx, xk = prog.xp / prog.need(prog.level), barH2 = bs * 0.4, barY = by + bs - barH2;
+    text(ui, ctx, prog.rank(prog.level), xx, by + bs * 0.04, ui.fitPx(['COMMANDANT'], xw, bs * 0.045), '#f4f1e8', {});
+    const xl = prog.xp + ' / ' + prog.need(prog.level), xlp = ui.fitPx([xl], xw - 8, barH2 * 0.075);
+    if (PIX) {
+      const ux = Math.max(2, Math.round(barH2 * 0.12));
+      ctx.fillStyle = '#46548f'; ctx.fillRect(Math.round(xx - ux), Math.round(barY - ux), Math.round(xw + 2 * ux), Math.round(barH2 + 2 * ux));
+      ctx.fillStyle = '#10142a'; ctx.fillRect(Math.round(xx), Math.round(barY), Math.round(xw), Math.round(barH2));
+      const fw = Math.round(U.clamp(xk, 0, 1) * xw); ctx.fillStyle = '#ffd23a'; ctx.fillRect(Math.round(xx), Math.round(barY), fw, Math.round(barH2));
+      const tx2 = xx + xw / 2, ty2 = barY + barH2 / 2 - xlp * 3.6;
+      for (const [clipX, clipW, col2] of [[xx, fw, '#10142a'], [xx + fw, xw - fw, '#f4f1e8']]) { ctx.save(); ctx.beginPath(); ctx.rect(clipX, barY, clipW, barH2); ctx.clip(); text(ui, ctx, xl, tx2, ty2, xlp, col2, { align: 'center' }); ctx.restore(); }
+    } else { bar(ctx, xx, barY, xw, barH2, xk, CY); text(ui, ctx, xl, xx + xw / 2, barY + barH2 / 2 - xlp * 3.6, xlp, '#ffffff', { align: 'center' }); }
+    // RECORD (haut droite) : coupe + score
+    const best = prog.P.best;
+    pill(ctx, recX, by, recW, bs, 'rgba(28,35,66,0.97)', '#46548f', bs * 0.2);
+    ICON.trophy(ctx, recX + bs * 0.5, by + bs / 2, bs * 0.3, '#ffd23a');
+    { const rl = U.formatInt(best), rp = ui.fitPx([rl], recW - bs * 0.95, bs * 0.05);
+      text(ui, ctx, 'RECORD', recX + bs * 0.95 + (recW - bs * 0.95) / 2, by + bs * 0.18, ui.fitPx(['RECORD'], recW - bs * 0.95, bs * 0.03), '#8d97c4', { align: 'center' });
+      text(ui, ctx, rl, recX + bs * 0.95 + (recW - bs * 0.95) / 2, by + bs * 0.52, rp, '#ffd23a', { align: 'center' }); }
+    // écrous + réglages (2e rangée, à droite)
+    const gr = u * 0.055, gx = W - margin - gr, gy = by + bs + margin * 0.8 + gr;
+    ICON.gear(ctx, gx, gy, gr * 0.95, inRect(ui, gx - gr, gy - gr, 2 * gr, 2 * gr) ? '#ffffff' : '#c2c3c7');
     hit(ui, gx - gr * 1.1, gy - gr * 1.1, gr * 2.2, gr * 2.2, () => { ui.overlay = 'msettings'; });
-    // v038j : plus de titre sur l'accueil (le jeu s'ouvre sur la roquette) ; on garde seulement le record
-    const ly = Y(P ? 0.135 : 0.03), best = prog.P.best;
-    if (best > 0) text(ui, ctx, 'RECORD ' + U.formatInt(best), W / 2, ly, ui.fitPx(['RECORD 000.000'], W * 0.5, u * 0.0058), '#ffd23a', { align: 'center' });
+    { const nl = U.formatInt(prog.P.materials || 0), nh = gr * 1.6, npx = nh * 0.075, nw = F.measure(nl, npx) + nh * 1.4, nx = gx - gr * 1.4 - nw, ny = gy - nh / 2;
+      pill(ctx, nx, ny, nw, nh, 'rgba(28,35,66,0.97)', '#46548f', nh * 0.3);
+      ICON.nut(ctx, nx + nh * 0.55, gy, nh * 0.3, '#ffd23a');
+      text(ui, ctx, nl, nx + nw - nh * 0.3, gy - npx * 3.6, npx, '#f4f1e8', { align: 'right' }); }
+    // APPUYER POUR JOUER (sous la roquette)
+    { const pj = 'APPUYER POUR JOUER'; text(ui, ctx, pj, W / 2, Y(0.66), ui.fitPx([pj], W * 0.8, u * 0.0075 + Math.sin(performance.now() * 0.005) * 0), '#f4f1e8', { align: 'center', alpha: 0.75 + 0.25 * Math.sin(performance.now() * 0.006) }); }
     // 1. la roquette : anneau pulsant + doigt qui touche (les 3 premiers vols : consigne écrite en plus)
     // 4. barre d'onglets en bas (style jeu mobile) et 3. mission la plus avancée juste au-dessus
     // v039 : la barre d'onglets se remplit au fil des niveaux (niveau 1 : rien que la roquette)
     const lvl = prog.level, tabsList = [];
-    if (lvl >= 2) tabsList.push({ icon: 'mission', label: 'MISSION', action: () => { ui.overlay = 'quests'; } });
-    if (lvl >= 3) tabsList.push({ icon: 'trophy', label: 'PROGRES', action: () => { ui.overlay = 'progress'; } });
+    if (lvl >= 3) tabsList.push({ icon: 'mission', label: 'MISSION', action: () => { ui.overlay = 'quests'; } });
+    if (lvl >= 2) tabsList.push({ icon: 'trophy', label: 'PROGRES', action: () => { ui.overlay = 'progress'; } });
     if (lvl >= 2) tabsList.push({ icon: 'home', label: 'ACCUEIL', active: true });
     if (lvl >= 4) tabsList.push({ icon: 'star', label: 'DEFIS', action: () => { ui.overlay = 'defi'; } });
     if (lvl >= 5) tabsList.push({ icon: 'shop', label: 'BOUTIQUE', action: () => { ui.overlay = 'shop'; } });
     const barH = tabsList.length ? tabBar(ui, ctx, L, tabsList) : 0;
     // v040 : plus de mission affichée sur l'accueil (elle reste dans l'onglet MISSION) ; aux 3 premiers vols, le but en trois lignes
     if ((prog.P.launches || 0) < 3) {
-      const base = T + HH - barH - u * 0.2, lines2 = [['TOUCHE LA ROQUETTE', '#f4f1e8'], ['PASSE LES TROUS', '#ffd23a'], ['VISE LES RESERVOIRS', '#ffd23a']];
-      lines2.forEach(([g2, c2], i) => text(ui, ctx, g2, W / 2, base + i * u * 0.075 - u * 0.075, ui.fitPx([g2], W * 0.86, u * 0.005), c2, { align: 'center' }));
+      const base = Y(0.72), lines2 = [['TOUCHE LA ROQUETTE', '#f4f1e8'], ['PASSE LES TROUS', '#ffd23a'], ['VISE LES RESERVOIRS', '#ffd23a']];
+      lines2.slice(1).forEach(([g2, c2], i) => text(ui, ctx, g2, W / 2, base + i * u * 0.07, ui.fitPx([g2], W * 0.86, u * 0.005), c2, { align: 'center' }));
     }
     if (!touch) text(ui, ctx, 'ESPACE OU CLIC : LANCER    F1 : TOUCHES', W / 2, T + HH - barH - u * 0.035, ui.fitPx(['ESPACE OU CLIC : LANCER    F1 : TOUCHES'], W * 0.8, u * 0.0032), '#8a96a8', { align: 'center' });
     
@@ -453,7 +472,7 @@
   Home.drawQuests = function (ui, ctx, game, W, H) {
     const L = frame(ui, ctx, game, W, H, 'MISSION', ORANGE), { HH, u, Y, P } = L, prog = game.progress;
     const rowH = Math.min(u * 0.34, HH * 0.19), x0 = W * 0.06, w = W * 0.88;
-    text(ui, ctx, 'CHAQUE MISSION FINIE RAPPORTE DE L\'XP', W / 2, Y(0.115), ui.fitPx(['CHAQUE MISSION FINIE RAPPORTE DE L\'XP'], w, u * 0.0052), '#9fb0c8', { align: 'center' });
+    text(ui, ctx, 'CHAQUE MISSION FAIT MONTER TON NIVEAU', W / 2, Y(0.115), ui.fitPx(['CHAQUE MISSION FAIT MONTER TON NIVEAU'], w, u * 0.0052), '#9fb0c8', { align: 'center' });
     prog.P.missions.forEach((m, i) => {
       const y = Y(0.16) + i * (rowH + HH * 0.02), done = m.done;
       pxRect(ctx, x0, y, w, rowH, 'rgba(12,18,30,0.85)', done ? GREEN : 'rgba(159,176,200,0.5)');
@@ -464,7 +483,7 @@
       bar(ctx, tx, y + rowH * 0.52, tW * 0.62, rowH * 0.15, m.progress / m.target, done ? GREEN : ORANGE);
       const cnt = m.progress + '/' + m.target, np = ui.fitPx([cnt], tW * 0.34, rowH * 0.03);
       text(ui, ctx, cnt, tx + tW * 0.66, y + rowH * 0.595 - np * 3.5, np, '#dfe6f0', {});
-      text(ui, ctx, done ? 'TERMINEE' : '+' + m.xp + ' XP', tx, y + rowH * 0.76, ui.fitPx(['+000 XP'], tW * 0.5, rowH * 0.028), done ? GREEN : CY, {});
+      text(ui, ctx, done ? 'TERMINEE' : '+' + m.xp, tx, y + rowH * 0.76, ui.fitPx(['+000'], tW * 0.5, rowH * 0.028), done ? GREEN : CY, {});
     });
     const tip = 'UNE NOUVELLE MISSION APRES CHAQUE VOL';
     text(ui, ctx, tip, W / 2, Y(0.16) + 3 * (rowH + HH * 0.02) + HH * 0.01, ui.fitPx([tip], w, u * 0.0048), '#7f8da3', { align: 'center' });
@@ -582,6 +601,7 @@
     text(ui, ctx, rk, colA.x, y, rp, r.newRecord ? GOLD : '#c8d0dc', { align: 'center' });
     y += rp * 7 + S(8);
     if (!r.newRecord && r.best > r.score) { const mq = "IL T'A MANQUE " + U.formatInt(r.best - r.score), mpx2 = fitq(mq, colA.w, 3.2); text(ui, ctx, mq, colA.x, y, mpx2, GOLD, { align: 'center' }); y += mpx2 * 7 + S(8); }
+    if (r.materials > 0) { const nl = '+' + r.materials, nplx = fitq(nl, colA.w * 0.4, 3.0), nw2 = F.measure(nl, nplx) + nplx * 9; ICON.nut(ctx, colA.x - nw2 / 2 + nplx * 3, y + nplx * 3.6, nplx * 3.4, '#ffd23a'); text(ui, ctx, nl, colA.x - nw2 / 2 + nplx * 9, y, nplx, '#ffd23a', {}); y += nplx * 7 + S(8); }
     if (r.cause) { const cq = 'TOUCHE : ' + r.cause, cpx2 = fitq(cq, colA.w, 2.2); text(ui, ctx, cq, colA.x, y, cpx2, RED, { align: 'center' }); y += cpx2 * 7 + S(4); }
     ctx.globalAlpha = 1;
     y += S(P ? 26 : 16);
@@ -597,7 +617,7 @@
     const bs = S(64), bx0 = colA.x - colA.w / 2, bh = S(26), bxx = bx0 + bs + S(12), bww = colA.w - bs - S(12);
     ctx.globalAlpha = al(tBar - 0.2, 0.3);
     Home.badge(ctx, bx0, y, bs, at.level, ui);
-    text(ui, ctx, '+' + tot + ' XP', bxx, y + bs * 0.02, fitq('+000 XP', bww, 3.4), CY, { outline: '#0b0e14' });
+    text(ui, ctx, '+' + tot, bxx, y + bs * 0.02, fitq('+000', bww, 3.4), CY, { outline: '#0b0e14' });
     Home.meter(ctx, bxx, y + bs - bh - S(2), bww, bh, at.xp / prog.need(at.level), CY, '#1a7ad0');
     ctx.globalAlpha = 1;
     y += bs + S(P ? 36 : 20);
@@ -614,7 +634,7 @@
       Home.meter(ctx, tx, my + mh - S(30), tw2 - S(58), S(14), m.progress / m.target, m.justDone ? GREEN : ORANGE, m.justDone ? '#20a030' : '#d05a10');
       if (m.justDone) { Home.icon.check(ctx, tx + tw2 - S(30), my + mh - S(23), S(11), GREEN); }
       else text(ui, ctx, m.progress + '/' + m.target, tx + tw2, my + mh - S(30) - S(2.2) * 1.5, S(2.2), '#dfe6f0', { align: 'right' });
-      if (m.justDone) text(ui, ctx, '+' + m.xp + ' XP', tx + tw2, my + S(12), S(2.2), GREEN, { align: 'right' });
+      if (m.justDone) text(ui, ctx, '+' + m.xp, tx + tw2, my + S(12), S(2.2), GREEN, { align: 'right' });
       ctx.globalAlpha = 1;
     }
     // niveau gagné : bandeau qui claque (avec le décor débloqué)
@@ -634,14 +654,14 @@
     // -- boutons ancrés en bas : XP x2 (publicité), REJOUER
     const ready = t > 0.6, xpDone = t > segs[0].t0 + segs[0].dur;
     const bw2 = P ? W * 0.9 : colB.w, bxb = P ? W * 0.05 : colB.x - colB.w / 2;
-    const adOk = game.ads && game.ads.enabled() && !r.xpDoubled && r.gained >= 25 && !game.testMode;
+    const adOk = game.ads && game.ads.enabled() && !r.xpDoubled && r.gained >= 3 && !game.testMode;
     const bh1 = Math.max(S(72), 60 * ui.pixelRatio()), bh0 = Math.max(S(54), 48 * ui.pixelRatio());
     const yRe = Y(0.975) - bh1 - (P ? S(8) : 0), yAd = yRe - S(12) - bh0;
     if (adOk && xpDone) {
       const on = inRect(ui, bxb, yAd, bw2, bh0), pl = 0.92 + 0.08 * Math.sin(t * 5);
       if (PXL) pill(ctx, bxb, yAd, bw2, bh0, on ? 'rgba(46,56,104,0.97)' : 'rgba(28,35,66,0.97)', '#46548f', bh0 * 0.3); else Home.button3d(ctx, bxb, yAd, bw2, bh0, on ? '#fff27a' : '#ffec27', '#ffa300', '#ab5236', pl);
       Home.icon.play(ctx, bxb + bh0 * 0.55, yAd + bh0 / 2 - bh0 * 0.03, bh0 * 0.2, PXL ? '#ffd23a' : '#ffffff');
-      const lbl = 'XP X2', lpx = fitq(lbl, bw2 - bh0 * 1.2, 3.6);
+      const lbl = 'X2', lpx = fitq(lbl, bw2 - bh0 * 1.2, 3.6);
       text(ui, ctx, lbl, bxb + bh0 * 1.0, yAd + bh0 / 2 - lpx * 3.6 - bh0 * 0.03, lpx, '#ffffff', { outline: '#0e4a80' });
       text(ui, ctx, 'PUB', bxb + bw2 - bh0 * 0.4, yAd + bh0 / 2 - S(2.6) * 3.6 - bh0 * 0.03, S(2.6), PXL ? '#ffd23a' : '#d6f4ff', { align: 'right', outline: PXL ? null : '#0e4a80' });
       hit(ui, bxb, yAd, bw2, bh0, () => game.ads.rewarded(() => Home.doubleXp(game), null, 'xp'));
@@ -657,6 +677,59 @@
     // dès le 3e vol : toucher n'importe où relance tout de suite (sauf le bouton pub, plus haut dans la liste)
     if ((prog.P.launches || 0) >= 2 && ready) ui.buttons.push({ x: 0, y: T, w: W, h: HH, action: () => { const go = () => game.goHome({ autoLaunch: false }); game.ads ? game.ads.beforeContinue(go) : go(); } });
     else ui.buttons.push({ x: 0, y: T, w: W, h: HH, action: () => { r.t = Math.max(r.t, 6); } });
+  };
+
+  // ============================================================================================================
+  //   FUSEE (onglet PROGRES) : on améliore la roquette avec les écrous gagnés en touchant les réservoirs
+  // ============================================================================================================
+  Home.drawUpgrades = function (ui, ctx, game, W, H) {
+    const L = Home.layout(ui, W, H), { T, HH, P, u, Y } = L, prog = game.progress, nuts = prog.P.materials || 0;
+    ui.dim(ctx, W, H, 0.9);
+    const mx = W * 0.05, mw = W * 0.9, t = performance.now() * 0.001;
+    // titre + écrous
+    text(ui, ctx, 'FUSEE', mx, Y(0.04), ui.fitPx(['FUSEE'], W * 0.4, u * 0.012), '#ffd23a', {});
+    { const nl = U.formatInt(nuts), nh = u * 0.09, npx = nh * 0.075, nw = F.measure(nl, npx) + nh * 1.4, nx = W - mx - nw, ny = Y(0.036);
+      pill(ctx, nx, ny, nw, nh, 'rgba(28,35,66,0.97)', '#46548f', nh * 0.3); ICON.nut(ctx, nx + nh * 0.55, ny + nh / 2, nh * 0.3, '#ffd23a'); text(ui, ctx, nl, nx + nw - nh * 0.3, ny + nh / 2 - npx * 3.6, npx, '#f4f1e8', { align: 'right' }); }
+    // vitrine : la roquette en grand, ses caractéristiques de chaque côté
+    const py = Y(0.115), ph = HH * 0.2;
+    pill(ctx, mx, py, mw, ph, 'rgba(28,35,66,0.97)', '#46548f', ph * 0.1);
+    Home.gridDraw(ctx, 'rocket', W / 2, py + ph / 2 + Math.sin(t * 2) * 2, ph * 0.78, '#f4f1e8');
+    const stat = (label, val, x, y, align) => { const lp = ui.fitPx([label], mw * 0.28, u * 0.004); text(ui, ctx, label, x, y, lp, '#8d97c4', { align }); text(ui, ctx, val, x, y + lp * 11, ui.fitPx([val], mw * 0.28, u * 0.0075), '#ffd23a', { align }); };
+    const E = CC.CONFIG.endless;
+    stat('ESSENCE', (E.fuelStart + prog.fuelBonus()) + ' S', mx + mw * 0.05, py + ph * 0.16, 'left');
+    stat('MULTI MAX', 'X' + prog.multCap(), mx + mw * 0.05, py + ph * 0.58, 'left');
+    stat('RENDEMENT', Math.round((1 - prog.drainK()) * 100) + '%', mx + mw * 0.95, py + ph * 0.16, 'right');
+    stat('COQUE', String(prog.hullCharges()), mx + mw * 0.95, py + ph * 0.58, 'right');
+    // cartes d'amélioration
+    const cy0 = Y(0.34), chh = HH * 0.112, gap = HH * 0.014;
+    CC.Progress.UPG.forEach((up, i) => {
+      const y = cy0 + i * (chh + gap), lv = prog.upLevel(up.id), cost = prog.upCost(up.id), can = prog.canBuy(up.id), maxed = cost === null;
+      pill(ctx, mx, y, mw, chh, 'rgba(28,35,66,0.97)', '#46548f', chh * 0.14);
+      // icône dans sa case
+      const ib = chh * 0.74, ix = mx + chh * 0.13, iy = y + (chh - ib) / 2;
+      pill(ctx, ix, iy, ib, ib, 'rgba(16,20,42,1)', '#46548f', ib * 0.2);
+      ICON[up.icon](ctx, ix + ib / 2, iy + ib / 2, ib * 0.28, '#ffd23a');
+      const bw = mw * 0.26, bh = chh * 0.6, bx2 = mx + mw - bw - chh * 0.14, by2 = y + (chh - bh) / 2;
+      const tx = ix + ib + chh * 0.16, tw2 = bx2 - tx - chh * 0.1;
+      text(ui, ctx, up.name, tx, y + chh * 0.15, ui.fitPx(['MULTIPLICATEUR'], tw2, chh * 0.026), '#f4f1e8', {});
+      // pastilles de niveau
+      const pw = chh * 0.1, pg = chh * 0.05;
+      for (let k = 0; k < up.max; k++) { ctx.fillStyle = k < lv ? '#ffd23a' : '#10142a'; ctx.fillRect(Math.round(tx + k * (pw + pg)), Math.round(y + chh * 0.46), Math.round(pw), Math.round(pw)); if (k >= lv) { ctx.strokeStyle = '#46548f'; ctx.lineWidth = 1; ctx.strokeRect(Math.round(tx + k * (pw + pg)) + 0.5, Math.round(y + chh * 0.46) + 0.5, Math.round(pw) - 1, Math.round(pw) - 1); } }
+      const dl = up.desc(maxed ? lv : lv + 1), dp = ui.fitPx(['-40% CONSOMMATION'], tw2, chh * 0.02);
+      text(ui, ctx, maxed ? up.desc(lv) : dl, tx, y + chh * 0.7, dp, maxed ? '#8d97c4' : '#ffd23a', {});
+      // bouton prix
+      if (maxed) { text(ui, ctx, 'MAX', bx2 + bw / 2, by2 + bh / 2 - ui.fitPx(['MAX'], bw, bh * 0.04) * 3.6, ui.fitPx(['MAX'], bw, bh * 0.04), '#ffd23a', { align: 'center' }); }
+      else {
+        if (can) Home.button3d(ctx, bx2, by2, bw, bh, '#ffd23a', '#ffd23a', '#c9961a', 1); else pill(ctx, bx2, by2, bw, bh, 'rgba(16,20,42,1)', '#46548f', bh * 0.25);
+        const cl = String(cost), cp = ui.fitPx([cl], bw * 0.5, bh * 0.03);
+        ICON.nut(ctx, bx2 + bw * 0.22, by2 + bh * 0.47, bh * 0.18, can ? '#10142a' : '#8d97c4');
+        text(ui, ctx, cl, bx2 + bw * 0.86, by2 + bh * 0.46 - cp * 3.6, cp, can ? '#10142a' : '#8d97c4', { align: 'right' });
+        hit(ui, mx, y, mw, chh, () => { if (prog.buy(up.id)) { game.audio.play('levelUp'); if (CC.Haptics) CC.Haptics.pattern('mission'); } else game.audio.play('warnFuel'); });
+      }
+    });
+    const hint = 'TOUCHE UN RESERVOIR POUR GAGNER DES ECROUS', hp = ui.fitPx([hint], mw, u * 0.0036);
+    text(ui, ctx, hint, W / 2, Y(0.87), hp, '#8d97c4', { align: 'center' });
+    backButton(ui, ctx, L, ui.key('RETOUR', 'ESC'), () => { ui.overlay = null; });
   };
 
   // XP ×2 : la publicité a été regardée jusqu'au bout → même gain ajouté, barre qui repart

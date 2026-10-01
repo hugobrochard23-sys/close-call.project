@@ -130,7 +130,7 @@
       // --- forces ---
       if (this.thrusting) {
         this.vel.addScaledVector(this.fwd, cfg.thrust * dt);
-        if (!this.freeBoost) this.fuel = Math.max(0, this.fuel - dt * (this.game.endlessRun ? CC.CONFIG.endless.fuelDrain || 1 : 1));
+        if (!this.freeBoost) this.fuel = Math.max(0, this.fuel - dt * (this.game.endlessRun ? (CC.CONFIG.endless.fuelDrain || 1) * this.game.progress.drainK() : 1));
       }
       speed = this.vel.length();
       if (speed > 1e-4) {

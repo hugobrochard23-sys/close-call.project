@@ -324,6 +324,7 @@
       this.bonus = 0; this.shown = 0; this.multT = 0; this.chain = 0; this.chainT = 0; this.stats = { cells: 0, gold: 0, targets: 0, close: 0, boosts: 0 };
       this.envFrom = null; this.envT = 1;
       this.pending = [];                                // chars à créer (un par image)
+      this.multCap = game.progress.multCap(); this.hull = game.progress.hullCharges(); this.doorChain = 0;   // v042 : améliorations de la fusée
       this.ensure(-1);
       this.announce(0);
     }
@@ -385,7 +386,7 @@
         if (this.altT > cfg.ceilingGrace) { this.altT = 0; g.onRocketCrash('altitude', rk.pos.clone(), null); }
       } else this.altT = 0;
     }
-    get mult() { return this.multT > 0 ? 2 : 1; }
+    get mult() { return Math.min(this.multCap || 2, 1 + Math.floor((this.doorChain || 0) / 3)); }   // v042 : X1, X2, X3… selon la série de portes parfaites (plafond : amélioration MULTIPLICATEUR)
     get score() { return Math.floor(this.dist) + Math.floor(this.bonus); }
     addBonus(points) { const v = points * this.mult; this.bonus += v; return v; }
     addFuel(s) {

@@ -325,11 +325,11 @@ CC.CONFIG = {
 
   // v034 : PROGRESSION — XP, niveaux, missions
   progress: {
-    xpPerMeter: 0.04,            // v034b : 1 XP pour 25 m (les parties durent ~3 fois plus : on ne monte pas trop vite)
-    xpPerBonus: 0.03,            // 1 XP pour ~33 points de bonus (éclats, cibles, frôlements)
-    recordXp: 25,                // XP d'un nouveau record
-    firstRunXp: 30,              // XP du tout premier vol
-    levelBase: 300, levelStep: 200, levelMaterials: 200,   // XP pour passer du niveau n au suivant : base + step × (n − 1) ; matériaux offerts à chaque niveau   // XP pour passer du niveau n au suivant : base + step × (n − 1)
+    xpPerMeter: 0.004,            // v034b : 1 XP pour 25 m (les parties durent ~3 fois plus : on ne monte pas trop vite)
+    xpPerBonus: 0.003,            // 1 XP pour ~33 points de bonus (éclats, cibles, frôlements)
+    recordXp: 3,                // XP d'un nouveau record
+    firstRunXp: 3,              // XP du tout premier vol
+    levelBase: 30, levelStep: 20, levelMaterials: 20,   // XP pour passer du niveau n au suivant : base + step × (n − 1) ; matériaux offerts à chaque niveau   // XP pour passer du niveau n au suivant : base + step × (n − 1)
     missionSlots: 1,
     worlds: { city: 1, forest: 2, usine: 2, port: 3, tour: 3, sky: 3, chute: 3, metro: 4, eau: 3, mini: 5 },   // niveau qui débloque chaque décor
     ranks: ['RECRUE', 'PILOTE', 'AS', 'CAPITAINE', 'MAJOR', 'COMMANDANT', 'LEGENDE'],

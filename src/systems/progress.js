@@ -33,11 +33,34 @@
       S.prog = Object.assign({ materials: 0, xp: 0, level: 1, runs: 0, best: 0, seed: 1, stats: {}, missions: [], seen: 1, launches: 0 }, S.prog || {});
       S.prog.stats = Object.assign({ dist: 0, targets: 0, cells: 0, boosts: 0, close: 0, gold: 0, time: 0 }, S.prog.stats);
       this.P = S.prog;
+      // v042 : l'XP est divisée par 10 (anciennes sauvegardes converties une fois) ; améliorations de la fusée
+      if (!this.P.v2) { this.P.xp = Math.floor((this.P.xp || 0) / 10); this.P.missions = (this.P.missions || []).map((m) => Object.assign(m, { xp: Math.max(1, Math.round((m.xp || 10) / 10)) })); this.P.v2 = 1; }
+      this.P.up = Object.assign({ mult: 0, tank: 0, eff: 0, hull: 0 }, this.P.up || {});
       // classement du niveau déjà enregistré dans une ancienne sauvegarde : record de distance → meilleur score au minimum
       if (S.endless && S.endless.best > this.P.best) this.P.best = S.endless.best;
       this.fill();
       this.run = null; this.toasts = [];
     }
+
+    // ---------- améliorations de la fusée (écran FUSEE) ----------
+    // coût en écrous du niveau suivant ; chaque amélioration a 5 niveaux
+    static get UPG() {
+      return [
+        { id: 'mult', name: 'MULTIPLICATEUR', icon: 'mult', max: 5, cost: [15, 30, 60, 110, 180], desc: (l) => 'MAXIMUM X' + (2 + l) },
+        { id: 'tank', name: 'RESERVOIR', icon: 'tank', max: 5, cost: [10, 25, 50, 90, 150], desc: (l) => '+' + 3 * l + ' S D ESSENCE' },
+        { id: 'eff', name: 'RENDEMENT', icon: 'bolt', max: 5, cost: [12, 28, 55, 100, 160], desc: (l) => '-' + 8 * l + '% CONSOMMATION' },
+        { id: 'hull', name: 'COQUE', icon: 'shield', max: 5, cost: [20, 40, 80, 130, 200], desc: (l) => Progress.hullCharges(l) + ' COUP ABSORBE' },
+      ];
+    }
+    static hullCharges(l) { return [0, 1, 1, 2, 2, 3][l] || 0; }
+    upLevel(id) { return this.P.up[id] || 0; }
+    multCap() { return 2 + this.upLevel('mult'); }
+    fuelBonus() { return 3 * this.upLevel('tank'); }
+    drainK() { return 1 - 0.08 * this.upLevel('eff'); }
+    hullCharges() { return Progress.hullCharges(this.upLevel('hull')); }
+    upCost(id) { const u = Progress.UPG.find((x) => x.id === id), l = this.upLevel(id); return l >= u.max ? null : u.cost[l]; }
+    canBuy(id) { const c = this.upCost(id); return c !== null && (this.P.materials || 0) >= c; }
+    buy(id) { if (!this.canBuy(id)) return false; this.P.materials -= this.upCost(id); this.P.up[id] = this.upLevel(id) + 1; this.game.writeSave(); return true; }
 
     // ---------- niveaux ----------
     need(level) { return C().levelBase + C().levelStep * (Math.max(1, level) - 1); }
@@ -62,7 +85,7 @@
       const avail = Object.keys(TYPES).filter((k) => TYPES[k].min <= P.level - 1), pool = avail.filter((k) => !used.has(k)), list = pool.length ? pool : avail;
       const type = list[Math.floor(rng() * list.length)];
       const T = TYPES[type], target = T.gen(lv);
-      const xp = Math.round((90 + 30 * lv) * T.xp / 10) * 10;
+      const xp = Math.max(2, Math.round((9 + 3 * lv) * T.xp));
       return { type, target, xp, progress: 0, done: false, id: P.seed };
     }
     missionText(m) { return TYPES[m.type].text(m.target); }
@@ -107,7 +130,7 @@
     check(m) {
       if (m.done || m.progress < m.target) return;
       m.done = true; this.run.doneIds.push(m.id); this.run.missionXp += m.xp;
-      this.toasts.push({ text: 'MISSION ACCOMPLIE', sub: '+' + m.xp + ' XP', t: 0 });
+      this.toasts.push({ text: 'MISSION ACCOMPLIE', sub: '+' + m.xp, t: 0 });
       const g = this.game;
       g.audio.play('mission');
       if (CC.Haptics) CC.Haptics.pattern('mission');
@@ -131,7 +154,7 @@
       const before = { level: P.level, xp: P.xp, need: this.need(P.level) };
       const worldsBefore = this.unlockedWorlds();
       const missions = P.missions.map((m) => ({ text: this.missionText(m), progress: Math.min(m.progress, m.target), target: m.target, xp: m.xp, done: m.done, justDone: r.doneIds.includes(m.id) }));
-      const matRun = (r.cells || 0), lvBefore = P.level;
+      const matRun = (r.nuts || 0) + Math.floor(dist / 250), lvBefore = P.level;   // v042 : écrous = réservoirs touchés + 1 par 250 m
       this.addXp(gained);
       const lvReward = Math.max(0, P.level - lvBefore) * cfg.levelMaterials;
       P.materials = (P.materials || 0) + matRun + lvReward;

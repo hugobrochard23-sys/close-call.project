@@ -314,7 +314,7 @@
       this.progress.beginRun(); this.reviveUsed = false; this.hudFeed.length = 0; this.cellHap = 0; this.cellSnd = 0;
       if (opts.home) { this.enterPad(); return; }
       this.restartLevel(true);
-      this.rocket.fuel = CC.CONFIG.endless.fuelStart;
+      this.rocket.fuelMax = CC.CONFIG.endless.fuelMax + this.progress.fuelBonus(); this.rocket.fuel = CC.CONFIG.endless.fuelStart + this.progress.fuelBonus();
       const rec = this.progress.P.best;
       this.centerMsg = rec ? 'RECORD ' + U.formatInt(rec) : 'VA LE PLUS LOIN POSSIBLE';
       this.centerMsgT = 2.6;
@@ -365,7 +365,7 @@
       const pad = this.pad, PC = CC.CONFIG.pad, rk = this.rocket;
       this.input.setAim(0, pad.pitch); this.rig.setAim(0, pad.pitch);
       rk.launch(pad.origin.clone(), pad.dir.clone(), { speed: PC.launchSpeed, ignited: true, freeBoost: PC.freeBoost });
-      rk.fuel = Math.min(rk.fuel, CC.CONFIG.endless.fuelStart);
+      rk.fuelMax = CC.CONFIG.endless.fuelMax + this.progress.fuelBonus(); rk.fuel = Math.min(rk.fuel, CC.CONFIG.endless.fuelStart + this.progress.fuelBonus());
       pad.ignite(); this.audio.play('padIgnite');
       this.rig.startHandoff(true); this.rig.startFlight();
       this.padMode = false;
@@ -436,11 +436,12 @@
       const run = this.endlessRun; if (!run) return;
       run.stats.doors = (run.stats.doors || 0) + 1;
       run.doorChain = perfect ? (run.doorChain || 0) + 1 : 0;
-      const ch = run.doorChain, v = Math.round(run.addBonus(perfect ? 40 * (1 + Math.min(ch, 9) * 0.25) : 15));
+      const ch = run.doorChain, m0 = run.mult, v = Math.round(run.addBonus(perfect ? 60 : 20));
       run.addFuel(perfect ? 1.2 : 0.3);
       const col = CC.CONFIG.hud.colors;
-      this.feed(perfect ? 'PARFAIT' + (ch > 1 ? '  X' + ch : '') + '  +' + v : 'PASSE  +' + v, perfect ? '#ffd23a' : '#f4f1e8');
+      this.feed(perfect ? 'PARFAIT  +' + v : 'PASSE  +' + v, perfect ? '#ffd23a' : '#f4f1e8');
       this.audio.play('door', null, Math.min(ch, 8));
+      if (run.mult > m0) this.feed('MULTIPLICATEUR  X' + run.mult, '#ffd23a');
       if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('fire');
       this.cellBump = Math.max(this.cellBump, perfect ? 1 : 0.4);
     }
@@ -572,7 +573,7 @@
       const dir = this.rig.aimDir.clone();
       const muzzle = this.launcherEye.clone().addScaledVector(dir, this.level.launcher.type === 'tripod' ? 3.2 : 1.3).addScaledVector(this.rig.up, -0.25);
       this.rocket.launch(muzzle, dir);
-      if (this.endlessRun) this.rocket.fuel = Math.min(this.rocket.fuel, CC.CONFIG.endless.fuelStart);   // v033 : réservoir de 20 s, départ à 14 s
+      if (this.endlessRun) { this.rocket.fuelMax = CC.CONFIG.endless.fuelMax + this.progress.fuelBonus(); this.rocket.fuel = Math.min(this.rocket.fuel, CC.CONFIG.endless.fuelStart + this.progress.fuelBonus()); }   // v033 : réservoir de 20 s, départ à 14 s
       this.effects.launchBurst(muzzle.clone(), dir);
       this.audio.play('launch');
       // v024 : animation du tube (renflement qui file vers la bouche + recul)
@@ -598,6 +599,11 @@
         this.rig.shake = 0.7;
         this.audio.play('boom', c); this.audio.play('target');
         this.endlessRun.addFuel(CC.CONFIG.endless.fuelTarget);
+        if (!t.guard && (t.type === 'fuel' || t.type === 'truck')) {   // v042 : un RESERVOIR touché rapporte des écrous (monnaie des améliorations), multipliés par la série
+          const n = (t.type === 'fuel' ? 3 : 2) * this.endlessRun.mult;
+          this.progress.event('nuts', n); this.endlessRun.stats.nuts = (this.endlessRun.stats.nuts || 0) + n;
+          this.feed('RESERVOIR  +' + n, '#ffd23a');
+        }
         if (!t.guard) {   // v034 : cible détruite = 100 points (un char de garde ne rapporte rien : il tirait sur nous)
           const v = Math.round(this.endlessRun.addBonus(CC.CONFIG.score.target));
           this.endlessRun.stats.targets++; this.progress.event('targets');
@@ -630,7 +636,13 @@
     onRocketCrash(kind, pos, normal) {
       if (!this.rocket.active) return;
       if (this.rocket.shieldT > 0 && kind !== 'outOfBounds' && kind !== 'stalled') return;   // v034 : bouclier du revive
-      const rk = this.rocket;
+      const rk = this.rocket, runH = this.endlessRun;
+      if (runH && runH.hull > 0 && kind !== 'outOfBounds' && kind !== 'stalled' && kind !== 'altitude' && this.state === 'FLIGHT') {   // v042 : COQUE — un coup absorbé, la roquette traverse
+        runH.hull--; rk.shieldT = 1.5; runH.doorChain = 0;
+        this.flash = 0.7; this.flashColor = '#ffd23a'; this.rig.shake = 1; this.audio.play('boom', pos); this.effects.explosion(pos, normal, false, 'orange');
+        this.feed('COQUE  -1', '#ff4258'); if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('warn');
+        return;
+      }
       this.lastSpeed = 0; this.crashKind = kind;
       rk.active = false; rk.mesh.visible = false; rk.light.intensity = 0; rk.rope.visible = false; rk.grapple.active = false;
       this.effects.explosion(pos, normal, false, 'orange');

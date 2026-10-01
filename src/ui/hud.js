@@ -95,13 +95,13 @@
       const px = pillH * 0.075, sc = U.formatInt(run.score), sw = Math.max(F.measure('0.000', px), F.measure(sc, px)), pw = sw + pillH * 1.0;
       let bump = 1 + 0.1 * Math.min(1, game.cellBump);
       // v040 : plus de rectangle derrière le score — gros chiffres blancs (jaune si record battu) ; sous eux, une fine barre « vers le record »
-      const spx2 = px * 1.35;
+      const spx2 = px * 1.15, mpx = px * 1.8, mlab = 'X' + run.mult, mw = F.measure(mlab, mpx), gap = px * 6, sw2 = F.measure(sc, spx2), gx0 = W / 2 - (mw + gap + sw2) / 2;
       ctx.save(); ctx.translate(W / 2, top + pillH / 2); ctx.scale(bump, bump); ctx.translate(-W / 2, -(top + pillH / 2));
-      F.draw(ctx, sc, W / 2, top + pillH / 2 - spx2 * 3.6, spx2, broke ? '#ffd23a' : '#f4f1e8', { align: 'center' });
+      F.draw(ctx, mlab, gx0, top + pillH / 2 - mpx * 3.6, mpx, run.mult > 1 ? '#ffd23a' : '#f4f1e8', { align: 'left' });
+      F.draw(ctx, sc, gx0 + mw + gap, top + pillH / 2 - spx2 * 3.6, spx2, broke ? '#ffd23a' : '#f4f1e8', { align: 'left' });
       ctx.restore();
       if (rec > 0) { const bw = Math.min(W * 0.46, pw * 1.5), bh2 = Math.max(4, pillH * 0.1); Home.meter(ctx, W / 2 - bw / 2, top + pillH + bh2, bw, bh2, Math.min(1, run.score / rec), '#ffd23a', '#ffd23a'); }
-      if ((run.doorChain || 0) >= 2) F.draw(ctx, 'X' + run.doorChain, W / 2 + F.measure(sc, spx2) / 2 + px * 5, top + pillH / 2 - px * 3.6, px * 1.2, '#ffd23a', { align: 'left' });
-      if (run.multT > 0) {
+      if (false) {
         const mh = pillH * 0.8, mw = pillH * 1.5, mx = W / 2 - pw / 2 - mw - pillH * 0.15, my = top + (pillH - mh) / 2;
         Home.pill(ctx, mx, my, mw, mh, '#c020a8', '#ffb0f0');
         F.draw(ctx, 'X2', mx + mw / 2, my + mh / 2 - px * 3.3, px * 0.9, '#ffffff', { align: 'center', outline: '#500848' });
@@ -232,7 +232,7 @@
         else if (rk.fuel / rk.fuelMax < 0.35) { label = 'RELACHE LE BOOST'; kind = 'hold'; }
       }
       if (!label) return;
-      const ctx = this.ctx, px = this.refH * 0.0042, w = CC.Font.measure(label, px, !this.modern) + px * 14, h = px * 16, x = W / 2 - w / 2, y = H * 0.23;
+      const ctx = this.ctx, px = this.refH * 0.0026, w = CC.Font.measure(label, px, !this.modern) + px * 14, h = px * 16, x = W / 2 - w / 2, y = H * 0.23;
       CC.Home.pill(ctx, x, y, w, h, 'rgba(28,35,66,0.97)', '#46548f');
       const cx = x + px * 6, cy = y + h / 2, r = px * 2.2, k = (t % 3.2) / 3.2;
       if (kind === 'door') CC.Home.icon.target(ctx, cx, cy, r * 1.3, '#ffd23a');
@@ -243,7 +243,7 @@
         ctx.beginPath(); ctx.arc(cx + ox, cy, r, 0, Math.PI * 2); ctx.fill();
         if (kind === 'hold') { ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = Math.max(2, px * 0.6); ctx.beginPath(); ctx.arc(cx, cy, r + px * (1 + 2 * ((k * 3) % 1)), 0, Math.PI * 2); ctx.stroke(); }
       }
-      this.text(label, x + px * 11, y + h / 2 - px * 3.5, 0.0042, '#f4f1e8', {});
+      this.text(label, x + px * 11, y + h / 2 - px * 3.5, 0.0026, '#f4f1e8', {});
     }
 
     // Jauge d'essence (v009) : longueur du cadre proportionnelle au réservoir du niveau, remplissage = essence restante.

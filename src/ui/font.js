@@ -172,7 +172,7 @@
       ctx.save(); if (opts.alpha !== undefined) ctx.globalAlpha = opts.alpha;
       ctx.font = size + 'px ' + PS; ctx.textBaseline = 'alphabetic';
       const base = Math.round(y + px * 7.2 + size * 0.0), sh = Math.max(1, Math.round(size / 8));
-      for (const sg of segments) { const t = sg.t.toUpperCase(); if ((sg.c || color) !== '#10142a') { ctx.fillStyle = 'rgba(16,20,42,0.85)'; ctx.fillText(t, Math.round(cx + sh), base + sh); } ctx.fillStyle = sg.c || color; ctx.fillText(t, Math.round(cx), base); cx += t.length * size; }
+      for (const sg of segments) { const t = sg.t.toUpperCase(); ctx.fillStyle = sg.c || color; ctx.fillText(t, Math.round(cx), base); cx += t.length * size; }
       ctx.restore(); return width;
     }
     if (typeof segments === 'string') segments = [{ t: segments, c: color }];
