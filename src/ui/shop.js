@@ -150,5 +150,6 @@
     return (s.short || s.name) + ' DEBLOQUEE - MERCI !';
   };
 
+  Shop.icon = icon;
   CC.Shop = Shop;
 })();

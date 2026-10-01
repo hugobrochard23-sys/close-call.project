@@ -58,7 +58,9 @@
       else if (this.overlay === 'missions' || this.overlay === 'difficulty') { this.buttons = []; this.drawMissions(ctx, game, W, H); }
       else if (this.overlay === 'defi') { this.buttons = []; this.drawDefi(ctx, game, W, H); }   // v033
       else if (this.overlay === 'quests') { this.buttons = []; CC.Home.drawQuests(this, ctx, game, W, H); }        // v034
-      else if (this.overlay === 'progress') { this.buttons = []; CC.Home.drawUpgrades(this, ctx, game, W, H); }
+      else if (this.overlay === 'progress') { this.buttons = []; CC.Home.drawGarage(this, ctx, game, W, H); }
+      else if (this.overlay === 'garage') { this.buttons = []; CC.Home.drawGarage(this, ctx, game, W, H); }
+      else if (this.overlay === 'map') { this.buttons = []; CC.Home.drawMap(this, ctx, game, W, H); }
       else if (this.overlay === 'msettings') { this.buttons = []; CC.Home.drawSettings(this, ctx, game, W, H); }
       else if (this.overlay === 'revive') { this.buttons = []; CC.Home.drawRevive(this, ctx, game, W, H); }
       else if (this.overlay === 'generating') { this.buttons = []; this.drawGenerating(ctx, game, W, H); }

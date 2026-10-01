@@ -405,7 +405,7 @@
     finishEndless() {
       const run = this.endlessRun, S = this.save, dist = Math.round(run.dist);
       this.ui.overlay = null;
-      const res = this.progress.endRun({ dist: run.dist, bonus: run.bonus, time: this.runTime });
+      const res = this.progress.endRun({ dist: run.dist, bonus: run.bonus, time: this.runTime, maxMult: run.maxMult || 1 });
       S.endless = S.endless || { best: 0, runs: 0 };
       S.endless.runs = (S.endless.runs || 0) + 1;
       if (dist > (S.endless.best || 0)) S.endless.best = dist;
@@ -442,6 +442,7 @@
       this.feed(perfect ? 'PARFAIT  +' + v : 'PASSE  +' + v, perfect ? '#ffd23a' : '#f4f1e8');
       this.audio.play('door', null, Math.min(ch, 8));
       if (run.mult > m0) this.feed('MULTIPLICATEUR  X' + run.mult, '#ffd23a');
+      run.maxMult = Math.max(run.maxMult || 1, run.mult);
       if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('fire');
       this.cellBump = Math.max(this.cellBump, perfect ? 1 : 0.4);
     }

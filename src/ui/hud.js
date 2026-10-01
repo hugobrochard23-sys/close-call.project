@@ -232,7 +232,7 @@
         else if (rk.fuel / rk.fuelMax < 0.35) { label = 'RELACHE LE BOOST'; kind = 'hold'; }
       }
       if (!label) return;
-      const ctx = this.ctx, px = this.refH * 0.0026, w = CC.Font.measure(label, px, !this.modern) + px * 14, h = px * 16, x = W / 2 - w / 2, y = H * 0.23;
+      const ctx = this.ctx, px = this.refH * 0.0042, w = CC.Font.measure(label, px, !this.modern) + px * 14, h = px * 16, x = W / 2 - w / 2, y = H * 0.23;
       CC.Home.pill(ctx, x, y, w, h, 'rgba(28,35,66,0.97)', '#46548f');
       const cx = x + px * 6, cy = y + h / 2, r = px * 2.2, k = (t % 3.2) / 3.2;
       if (kind === 'door') CC.Home.icon.target(ctx, cx, cy, r * 1.3, '#ffd23a');
@@ -243,7 +243,7 @@
         ctx.beginPath(); ctx.arc(cx + ox, cy, r, 0, Math.PI * 2); ctx.fill();
         if (kind === 'hold') { ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = Math.max(2, px * 0.6); ctx.beginPath(); ctx.arc(cx, cy, r + px * (1 + 2 * ((k * 3) % 1)), 0, Math.PI * 2); ctx.stroke(); }
       }
-      this.text(label, x + px * 11, y + h / 2 - px * 3.5, 0.0026, '#f4f1e8', {});
+      this.text(label, x + px * 11, y + h / 2 - px * 3.5, 0.0042, '#f4f1e8', {});
     }
 
     // Jauge d'essence (v009) : longueur du cadre proportionnelle au réservoir du niveau, remplissage = essence restante.

@@ -374,47 +374,20 @@
     if (arm <= 0) return;
     ctx.save(); ctx.globalAlpha = arm;
     const margin = u * 0.04, ic = u * 0.1;
-    // v042 : accueil façon jeu mobile — niveau + barre (le chiffre est DANS la barre) à gauche, RECORD à droite, écrous et réglages dessous
-    const bs = u * 0.135, bx = margin, by = Y(0.028), recW = u * (P ? 0.34 : 0.26), recX = W - margin - recW;
-    levelBadge(ui, ctx, game, L, bx, by, bs, () => { ui.overlay = 'progress'; });
-    const xx = bx + bs + u * 0.025, xw = recX - u * 0.025 - xx, xk = prog.xp / prog.need(prog.level), barH2 = bs * 0.4, barY = by + bs - barH2;
-    text(ui, ctx, prog.rank(prog.level), xx, by + bs * 0.04, ui.fitPx(['COMMANDANT'], xw, bs * 0.045), '#f4f1e8', {});
-    const xl = prog.xp + ' / ' + prog.need(prog.level), xlp = ui.fitPx([xl], xw - 8, barH2 * 0.075);
-    if (PIX) {
-      const ux = Math.max(2, Math.round(barH2 * 0.12));
-      ctx.fillStyle = '#46548f'; ctx.fillRect(Math.round(xx - ux), Math.round(barY - ux), Math.round(xw + 2 * ux), Math.round(barH2 + 2 * ux));
-      ctx.fillStyle = '#10142a'; ctx.fillRect(Math.round(xx), Math.round(barY), Math.round(xw), Math.round(barH2));
-      const fw = Math.round(U.clamp(xk, 0, 1) * xw); ctx.fillStyle = '#ffd23a'; ctx.fillRect(Math.round(xx), Math.round(barY), fw, Math.round(barH2));
-      const tx2 = xx + xw / 2, ty2 = barY + barH2 / 2 - xlp * 3.6;
-      for (const [clipX, clipW, col2] of [[xx, fw, '#10142a'], [xx + fw, xw - fw, '#f4f1e8']]) { ctx.save(); ctx.beginPath(); ctx.rect(clipX, barY, clipW, barH2); ctx.clip(); text(ui, ctx, xl, tx2, ty2, xlp, col2, { align: 'center' }); ctx.restore(); }
-    } else { bar(ctx, xx, barY, xw, barH2, xk, CY); text(ui, ctx, xl, xx + xw / 2, barY + barH2 / 2 - xlp * 3.6, xlp, '#ffffff', { align: 'center' }); }
-    // RECORD (haut droite) : coupe + score
-    const best = prog.P.best;
-    pill(ctx, recX, by, recW, bs, 'rgba(28,35,66,0.97)', '#46548f', bs * 0.2);
-    ICON.trophy(ctx, recX + bs * 0.5, by + bs / 2, bs * 0.3, '#ffd23a');
-    { const rl = U.formatInt(best), rp = ui.fitPx([rl], recW - bs * 0.95, bs * 0.05);
-      text(ui, ctx, 'RECORD', recX + bs * 0.95 + (recW - bs * 0.95) / 2, by + bs * 0.18, ui.fitPx(['RECORD'], recW - bs * 0.95, bs * 0.03), '#8d97c4', { align: 'center' });
-      text(ui, ctx, rl, recX + bs * 0.95 + (recW - bs * 0.95) / 2, by + bs * 0.52, rp, '#ffd23a', { align: 'center' }); }
-    // écrous + réglages (2e rangée, à droite)
-    const gr = u * 0.055, gx = W - margin - gr, gy = by + bs + margin * 0.8 + gr;
+    // v043 : en-tête marine (avatar, niveau, record) ; réglages et écrous dessous, à droite
+    const hdrBottom = Home.drawTop(ui, ctx, game, L, 'home');
+    const gr = u * 0.055, gx = W - margin - gr, gy = hdrBottom + margin * 0.8 + gr;
     ICON.gear(ctx, gx, gy, gr * 0.95, inRect(ui, gx - gr, gy - gr, 2 * gr, 2 * gr) ? '#ffffff' : '#c2c3c7');
     hit(ui, gx - gr * 1.1, gy - gr * 1.1, gr * 2.2, gr * 2.2, () => { ui.overlay = 'msettings'; });
-    { const nl = U.formatInt(prog.P.materials || 0), nh = gr * 1.6, npx = nh * 0.075, nw = F.measure(nl, npx) + nh * 1.4, nx = gx - gr * 1.4 - nw, ny = gy - nh / 2;
-      pill(ctx, nx, ny, nw, nh, 'rgba(28,35,66,0.97)', '#46548f', nh * 0.3);
-      ICON.nut(ctx, nx + nh * 0.55, gy, nh * 0.3, '#ffd23a');
-      text(ui, ctx, nl, nx + nw - nh * 0.3, gy - npx * 3.6, npx, '#f4f1e8', { align: 'right' }); }
+    { const nl = U.formatInt(prog.P.materials || 0), nh = gr * 1.5, npx = nh * 0.075, nw = F.measure(nl, npx) + nh * 1.4, nx = gx - gr * 0.2, ny = gy + gr * 1.4;
+      pill(ctx, nx - nw + gr * 1.2, ny, nw, nh, 'rgba(28,35,66,0.97)', '#46548f', nh * 0.3);
+      Home.bigIcon(ctx, 'coins', nx - nw + gr * 1.2 + nh * 0.55, ny + nh / 2, nh * 0.85);
+      text(ui, ctx, nl, nx + gr * 1.2 - nh * 0.3, ny + nh / 2 - npx * 3.6, npx, '#f4f1e8', { align: 'right' }); }
     // APPUYER POUR JOUER (sous la roquette)
     { const pj = 'APPUYER POUR JOUER'; text(ui, ctx, pj, W / 2, Y(0.66), ui.fitPx([pj], W * 0.8, u * 0.0075 + Math.sin(performance.now() * 0.005) * 0), '#f4f1e8', { align: 'center', alpha: 0.75 + 0.25 * Math.sin(performance.now() * 0.006) }); }
     // 1. la roquette : anneau pulsant + doigt qui touche (les 3 premiers vols : consigne écrite en plus)
     // 4. barre d'onglets en bas (style jeu mobile) et 3. mission la plus avancée juste au-dessus
-    // v039 : la barre d'onglets se remplit au fil des niveaux (niveau 1 : rien que la roquette)
-    const lvl = prog.level, tabsList = [];
-    if (lvl >= 3) tabsList.push({ icon: 'mission', label: 'MISSION', action: () => { ui.overlay = 'quests'; } });
-    if (lvl >= 2) tabsList.push({ icon: 'trophy', label: 'PROGRES', action: () => { ui.overlay = 'progress'; } });
-    if (lvl >= 2) tabsList.push({ icon: 'home', label: 'ACCUEIL', active: true });
-    if (lvl >= 4) tabsList.push({ icon: 'star', label: 'DEFIS', action: () => { ui.overlay = 'defi'; } });
-    if (lvl >= 5) tabsList.push({ icon: 'shop', label: 'BOUTIQUE', action: () => { ui.overlay = 'shop'; } });
-    const barH = tabsList.length ? tabBar(ui, ctx, L, tabsList) : 0;
+    const barH = Home.drawTabs(ui, ctx, game, L, null);   // v043 : GARAGE · MAP · BOUTIQUE (au fil des niveaux)
     // v040 : plus de mission affichée sur l'accueil (elle reste dans l'onglet MISSION) ; aux 3 premiers vols, le but en trois lignes
     if ((prog.P.launches || 0) < 3) {
       const base = Y(0.72), lines2 = [['TOUCHE LA ROQUETTE', '#f4f1e8'], ['PASSE LES TROUS', '#ffd23a'], ['VISE LES RESERVOIRS', '#ffd23a']];
