@@ -284,6 +284,10 @@
     for (const k of Object.keys(GR)) ICON[k] = (ctx, cx, cy, r, col) => gridDraw(ctx, k, cx, cy, r * 2.3, col || '#e8ecef');
     ICON.gem = ICON.star;
   }
+  // v045 : en habillage pixel, les icônes courantes passent en 3D (repli : la grille, le temps du rendu)
+  if (PIX) for (const [k, n] of [['gear', 'gear'], ['nut', 'nut'], ['trophy', 'trophy'], ['star', 'star'], ['lock', 'lock'], ['rocket', 'rocket']]) {
+    const old = ICON[k]; ICON[k] = (ctx, cx, cy, r, col) => { if (CC.Icons3D && CC.Icons3D.ready(n)) Home.bigIcon(ctx, n, cx, cy, r * (k === 'gear' ? 3.1 : 2.4)); else old(ctx, cx, cy, r, col); };
+  }
   Home.gridDraw = gridDraw;
   Home.pixDraw = pixDraw;
   Home.icon = ICON;

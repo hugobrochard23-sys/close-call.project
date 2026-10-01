@@ -29,7 +29,17 @@
   ICONS.coins = mk((R) => { for (const [x, y] of [[2, 10], [8, 10], [5, 6], [5, 12]]) { R(x, y, 6, 3, '#d9a441'); R(x, y, 6, 1, '#f0d28a'); R(x, y + 2, 6, 1, '#9a7126'); } R(5, 2, 6, 3, '#d9a441'); R(5, 2, 6, 1, '#f0d28a'); R(5, 4, 6, 1, '#9a7126'); });
   ICONS.pilot = mk((R) => { R(3, 5, 10, 9, '#d7b79a'); R(2, 2, 12, 4, '#5b6b7b'); R(2, 5, 12, 1, '#3c4856'); R(2, 6, 2, 6, '#6b5b7b'); R(12, 6, 2, 6, '#6b5b7b'); R(5, 8, 2, 2, K); R(9, 8, 2, 2, K); R(7, 12, 2, 1, '#a05040'); R(6, 0, 4, 2, '#5b6b7b'); });
   ICONS.trophy = mk((R) => { R(3, 1, 10, 2, Y); R(4, 3, 8, 5, Y); R(1, 2, 3, 4, Y); R(12, 2, 3, 4, Y); R(2, 3, 1, 2, null); R(13, 3, 1, 2, null); R(6, 8, 4, 3, '#9a7126'); R(4, 11, 8, 2, Y); R(5, 3, 2, 4, '#f0d28a'); });
-  Home.bigIcon = function (ctx, name, cx, cy, size) { const c = ICONS[name]; if (!c) return; const s = Math.max(1, Math.round(size / 16)), d = 16 * s; ctx.imageSmoothingEnabled = false; ctx.drawImage(c, Math.round(cx - d / 2), Math.round(cy - d / 2), d, d); };
+  // v045 : icônes 3D (CC.Icons3D) en priorité ; l'ancienne grille 16×16 sert de repli le temps du rendu
+  const ALIAS = { coins: 'nut' };
+  Home.bigIcon = function (ctx, name, cx, cy, size, opts) {
+    opts = opts || {};
+    const I3 = CC.Icons3D, key = opts.frame !== undefined ? name + '@' + ((opts.frame % 12) + 12) % 12 : (ALIAS[name] || name), c3 = I3 && I3.get(key);
+    if (c3) {
+      const d = size * 1.35;
+      ctx.save(); ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.beginPath(); ctx.ellipse(cx, cy + size * 0.52, size * 0.36, size * 0.09, 0, 0, 6.283); ctx.fill();
+      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(c3, cx - d / 2, cy - d / 2 - size * 0.04, d, d); ctx.restore(); return;
+    }
+    const c = ICONS[name]; if (!c) return; const s = Math.max(1, Math.round(size / 16)), d = 16 * s; ctx.imageSmoothingEnabled = false; ctx.drawImage(c, Math.round(cx - d / 2), Math.round(cy - d / 2), d, d); };
 
   // ---------- en-tête ----------
   // mode 'home' : avatar + niveau + barre ; mode 'sub' : flèche retour + DISTANCE totale, puis bandeau SCORE / COMBO. Retourne le bas de la zone utilisée.
@@ -75,7 +85,7 @@
       const cx = bx + cw * (i + 0.5), on = active === t.id, hot = inRect(ui, bx + cw * i, by - bh * 0.5, cw, bh * 1.5);
       if (i) { ctx.fillStyle = EDGE; ctx.fillRect(Math.round(bx + cw * i - 1), Math.round(by + bh * 0.12), 2, Math.round(bh * 0.76)); }
       if (on) { Home.stair(ctx, bx + cw * i + 3, by + 3, cw - 6, bh - 6, 3); ctx.strokeStyle = '#e0c690'; ctx.lineWidth = 3; ctx.stroke(); ctx.fillStyle = 'rgba(90,102,116,0.35)'; ctx.fill(); }
-      Home.bigIcon(ctx, t.icon, cx, by + bh * 0.05 - (hot ? 3 : 0), bh * 0.95);
+      Home.bigIcon(ctx, t.icon, cx, by + bh * 0.05 - (hot ? 3 : 0), bh * 0.95, t.icon === 'shop' && on ? { frame: Math.floor(performance.now() / 160) } : undefined);
       txt(ctx, t.label, cx, by + bh * 0.66, cw * 0.92, 1.5, on ? '#f0dcae' : CREAM, 'center');
       hit(ui, bx + cw * i, by - bh * 0.55, cw, bh * 1.55, () => { ui.overlay = on ? null : t.id; });
     });
@@ -122,7 +132,7 @@
     const pw = vw * 0.55;
     ctx.fillStyle = STEEL2; ctx.fillRect(Math.round(m + 5), Math.round(vy + 5), Math.round(pw - 5), Math.round(vh - 10));
     ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(Math.round(m + 5), Math.round(vy + vh * 0.62), Math.round(pw - 5), Math.round(vh * 0.38 - 5));
-    rocketSide(ctx, m + 5, vy + 5, pw - 5, vh - 10, t);
+    if (CC.Icons3D && CC.Icons3D.ready('rocket_big')) { const d = Math.min(pw - 5, vh - 10) * 1.15; ctx.imageSmoothingEnabled = true; ctx.drawImage(CC.Icons3D.get('rocket_big'), m + 5 + (pw - 5 - d) / 2, vy + 5 + (vh - 10 - d) / 2 + Math.sin(t * 2) * 2, d, d); } else rocketSide(ctx, m + 5, vy + 5, pw - 5, vh - 10, t);
     const slots = [['tank', 'engine', 'ESSENCE'], ['eff', 'boost', 'RENDEMENT'], ['hull', 'body', 'COQUE'], ['mult', 'paint', 'MULTI']];
     const gx0 = m + pw + 8, sw = (vw - pw - 8 - 8) / 2, sh = (vh - 24) / 2;
     slots.forEach(([up, ic, lab], i) => {
@@ -202,7 +212,8 @@
     const by = top + HH * 0.016, bh = HH * 0.065, bw = W * 0.84, bx = (W - bw) / 2;
     panel(ctx, bx, by, bw, bh, NAVY, '#e0c690', bh * 0.2);
     ctx.fillStyle = '#e0c690'; ctx.fillRect(Math.round(bx - m * 0.9), Math.round(by + bh * 0.2), Math.round(m * 0.9), Math.round(bh * 0.6)); ctx.fillRect(Math.round(bx + bw), Math.round(by + bh * 0.2), Math.round(m * 0.9), Math.round(bh * 0.6));
-    txt(ctx, 'BOUTIQUE', W / 2, by + bh * 0.28, bw * 0.8, 3, GOLD, 'center');
+    txt(ctx, 'BOUTIQUE', W / 2 + bh * 0.4, by + bh * 0.28, bw * 0.6, 3, GOLD, 'center');
+    Home.bigIcon(ctx, 'shop', bx + bh * 0.62, by + bh * 0.52, bh * 0.95, { frame: Math.floor(performance.now() / 160) });
     // onglets par rareté
     this.tab = this.tab || 0; this.page = this.page || 0;
     const ty = by + bh + HH * 0.014, th = HH * 0.044, tw = (W - 2 * m - 8) / 3;
