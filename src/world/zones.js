@@ -196,6 +196,12 @@
     const r = G.stream(T.seed, 'plan' + zi);
     const names = Object.keys(def.scenes).filter((n) => n !== def.signature);
     for (let i = names.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = names[i]; names[i] = names[j]; names[j] = t; }
+    if (def.early) {   // v056 : deux scènes « spéciales » dans les premières scènes de la zone (jamais en toute première)
+      const pick = def.early.filter((n) => names.indexOf(n) >= 0); for (let i = pick.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = pick[i]; pick[i] = pick[j]; pick[j] = t; }
+      const sp = pick.slice(0, 2); for (const n of sp) names.splice(names.indexOf(n), 1);
+      names.splice(Math.min(1, names.length), 0, ...sp);
+    }
+    if (zi === 0 && def.notFirst) { const k = names.findIndex((n) => def.notFirst.indexOf(n) < 0); if (def.notFirst.indexOf(names[0]) >= 0 && k > 0) { const t = names[0]; names[0] = names[k]; names[k] = t; } }   // v056 : pas de scène en altitude juste au départ
     const total = end - padOut - (start + padIn);
     const sigAt = def.signature ? Math.max(1, Math.round(names.length * r.between([0.45, 0.65]))) : -1;
     if (sigAt > 0) names.splice(Math.min(sigAt, names.length), 0, def.signature);

@@ -188,7 +188,7 @@
     if (S.sr() < 0.25) S.rows(S.d0 + 20, S.d1, 34, 0.15, (dc) => S.item(dc, (r) => { const y = 14 + r.between([0, 4]); S.bx(dc, 0, y, 2 * S.vol(dc), 0.06, 0.06, 'col:#2a2a2a', undefined, false); for (let k = -8; k <= 8; k++) S.bx(dc, k * S.vol(dc) / 8.5, y - 0.6, 0.7, 1.0, 0.05, 'col:' + r.pick(['#e02a3c', '#2a6ac8', '#e8a020', '#2aa060']), undefined, false); }));   // v039 : fanions rares (décor optionnel)
     farTowers(S, 50, 120, 6);
   } };
-  city.scenes.passage = { len: [200, 270], pin(T, sc) { const mid = (sc.d0 + sc.d1) / 2; return { lx: U.clamp(T.laneX0(mid), -6, 6), y: U.clamp(T.laneY0(mid), 13, 22), from: (sc.d1 - sc.d0) / 2 - 50, to: (sc.d1 - sc.d0) / 2 + 50 }; },
+  city.scenes.passage = { len: [200, 270], noDoor: true, pin(T, sc) { const mid = (sc.d0 + sc.d1) / 2; return { lx: U.clamp(T.laneX0(mid), -6, 6), y: U.clamp(T.laneY0(mid), 13, 22), from: (sc.d1 - sc.d0) / 2 - 50, to: (sc.d1 - sc.d0) / 2 + 50 }; },
     build(S) {
       const sr = S.sr, crosses = [], dist = district(S, sr.between([28, 42]), sr.between([48, 70])), c = S.mid;
       avenueRoad(S, crosses); furniture(S, crosses);
@@ -238,7 +238,7 @@
 
   // ---------- v054 : VILLE PLUS VARIEE — ruelle serrée · plongée entre des poteaux · enfilade de façades percées ----------
   // RUELLE : deux murs d'immeubles très hauts qui se resserrent (≈ 2 × rayon + 12 m), passerelles et enseignes en travers, la trajectoire est verrouillée au milieu
-  city.scenes.ruelle = { len: [230, 300],
+  city.scenes.ruelle = { len: [230, 300], noDoor: true,
     pin(T, sc) { const mid = (sc.d0 + sc.d1) / 2; return { lx: U.clamp(T.laneX0(mid), -5, 5), y: U.clamp(T.laneY0(mid), 12, 26), from: 40, to: sc.d1 - sc.d0 - 40 }; },
     build(S) {
       const sr = S.sr, dist = district(S, sr.between([70, 100]), sr.between([100, 150])), L0 = S.lane(S.mid), half = S.R + 5.5;
@@ -257,7 +257,7 @@
       farTowers(S, 90, 190, 3);
     } };
   // PLONGEE : on entre très haut par un portique ; il faut piquer entre des paires de poteaux (mâts d'antenne) jusqu'à la rue
-  city.scenes.plongee = { len: [260, 330],
+  city.scenes.plongee = { len: [260, 330], noDoor: true,
     pin(T, sc) { const mid = (sc.d0 + sc.d1) / 2; return { lx: U.clamp(T.laneX0(mid), -5, 5), y: 60, y2: 12, from: 34, to: sc.d1 - sc.d0 - 46 }; },
     build(S) {
       const sr = S.sr, dist = district(S, sr.between([90, 130]), sr.between([130, 190])), c0 = S.d0 + 60;
@@ -277,9 +277,9 @@
       farTowers(S, 110, 200, 3);
     } };
   // ENFILADE : cinq façades successives, chacune percée d'une fenêtre à la hauteur de la trajectoire (qui monte et descend d'une à l'autre)
-  city.scenes.enfilade = { len: [240, 300],
+  city.scenes.enfilade = { len: [200, 250], noDoor: true,
     build(S) {
-      const sr = S.sr, dist = district(S, sr.between([60, 90]), sr.between([90, 130])), n = 5, step = (S.len - 70) / n;
+      const sr = S.sr, dist = district(S, sr.between([60, 90]), sr.between([90, 130])), n = 3, step = (S.len - 70) / n;
       avenueRoad(S, []); furniture(S, [], { noTrees: true });
       for (const s of [-1, 1]) buildingRow(S, s, dist, [], 0, { shops: true });
       for (let i = 0; i < n; i++) {
@@ -367,6 +367,56 @@
       for (let dc = S.d0 + 50; dc < S.d1 - 40; dc += 48) S.gate(dc, S.lane(dc).lx, S.lane(dc).y);
       farTowers(S, 90, 190, 6);
     } };
+
+  // ---------- v056 : TRAVERSEE D'IMMEUBLE (vitres brisées) et PUITS A ESCALIERS ----------
+  // VITRES : deux immeubles successifs traversés de part en part : on casse une vitre à l'entrée, on vole dans les bureaux éclairés, on casse la vitre de sortie
+  city.scenes.vitres = { len: [230, 300], noDoor: true,
+    pin(T, sc) { const mid = (sc.d0 + sc.d1) / 2; return { lx: U.clamp(T.laneX0(mid), -5, 5), y: U.clamp(T.laneY0(mid), 14, 24), from: 40, to: sc.d1 - sc.d0 - 30 }; },
+    build(S) {
+      const sr = S.sr, dist = district(S, sr.between([50, 70]), sr.between([70, 100]));
+      avenueRoad(S, []); furniture(S, [], { noTrees: true });
+      for (const s of [-1, 1]) buildingRow(S, s, dist, [], 0, { shops: true, skip: (cx) => cx > S.d0 + 50 });
+      const hh = S.R * 2 + 4, hw = S.R + 3.5, depth = 36, H = 64;
+      for (const dc of [S.d0 + 70, S.d0 + 70 + depth + 60]) {
+        if (dc + depth > S.d1 - 20) continue;
+        const L = S.lane(dc + depth / 2), yc = U.clamp(L.y, hh / 2 + 1.5, 28), v = S.vol(dc) + 8, tint = sr.pick(dist.tints), lo = yc - hh / 2, hi = yc + hh / 2;
+        S.item(dc, () => {
+          S.wall(dc, -v, v, 0, H, 3, dist.mat, tint, { lx: L.lx, yc, w: 2 * hw, h: hh });                       // façade d'entrée
+          S.wall(dc + depth, -v, v, 0, H, 3, dist.mat, tint, { lx: L.lx, yc, w: 2 * hw, h: hh });               // façade de sortie
+          for (const z of [dc, dc + depth]) S.b.glass(S.at(z + (z === dc ? 0.2 : -0.2), L.lx, yc), [2 * hw, hh, 0.3], [0, S.yaw(z), 0]);   // vitres à briser
+          const mid = dc + depth / 2;
+          S.bx(mid, L.lx, hi + 0.6, 2 * hw + 2, 1.2, depth - 3, 'concreteDark', '#c8c8c4');                  // plafond
+          S.bx(mid, L.lx, lo - 0.6, 2 * hw + 2, 1.2, depth - 3, 'concreteDark', '#a8a8a4');                  // plancher
+          S.bx(mid, L.lx, hi - 0.15, 2 * hw, 0.25, depth - 4, 'emis:#fff2d0', undefined, false);              // néons de plafond
+          for (const s of [-1, 1]) { S.bx(mid, L.lx + s * (hw + 0.6), (lo + hi) / 2, 1.2, hh, depth - 3, 'concrete', '#c0c0bc');
+            for (let k = 0; k < 3; k++) S.bx(dc + 8 + k * 10, L.lx + s * (hw - 1.4), (lo + hi) / 2, 0.9, hh - 0.4, 0.9, 'col:#8a8a88', undefined, false); }   // poteaux de bureau
+          S.bx(dc, L.lx, hi + 1.6, 2 * hw + 4, 0.8, 3.4, 'hazard', undefined, false); S.bx(dc + depth, L.lx, hi + 1.6, 2 * hw + 4, 0.8, 3.4, 'hazard', undefined, false);
+        });
+        S.reserve(dc + depth / 2, 0, 2 * v, depth + 6); S.gate(dc - 6, L.lx, yc); S.gate(dc + depth / 2, L.lx, yc); S.gate(dc + depth + 6, L.lx, yc);
+      }
+      farTowers(S, 80, 170, 4);
+    } };
+  // CHUTE A ESCALIERS : le puits est bordé d'escaliers de secours en zigzag (paliers saillants à éviter) ; on tombe entre les volées
+  function stairs(S, half) {
+    let k = 0;
+    for (let dc = S.d0 + 50; dc < S.d1 - 30; dc += 15, k++) S.item(dc, (r) => {
+      const L = S.lane(dc), s = k % 2 === 0 ? 1 : -1, x = L.lx + s * (half - 1.6), y = L.y + (k % 4 < 2 ? 0 : 0);
+      S.bx(dc, x, L.y - 4 + (r() * 2 - 1), 3.2, 0.5, 6.5, 'metal', '#8a8e94');                                    // palier
+      S.bx(dc, x - s * 1.4, L.y - 3.3, 0.12, 1.1, 6.5, 'col:#2a2a2e', undefined, false);                       // garde-corps
+      S.bxr(dc + 7.5, x, L.y - 7, 2.6, 0.25, 11, 'metal', '#9a9ea4', s * 33, 0, false);                         // volée de marches (décor)
+      S.bxr(dc + 7.5, x - s * 1.3, L.y - 6.4, 0.1, 1.0, 11, 'col:#2a2a2e', undefined, s * 33, 0, false);
+      S.gate(dc, L.lx, L.y);
+    });
+  }
+  city.scenes.chute_escaliers = { len: [260, 320], noDoor: true,
+    pin(T, sc) { const mid = (sc.d0 + sc.d1) / 2; return { lx: U.clamp(T.laneX0(mid), -4, 4), y: 66, y2: 12, from: 62, to: sc.d1 - sc.d0 - 20 }; },
+    build(S) {
+      const dist = district(S, S.sr.between([100, 130]), S.sr.between([130, 180])), half = S.R + 6.5;
+      shaft(S, half, 200, dist); stairs(S, half);
+      farTowers(S, 110, 200, 3);
+    } };
+  city.notFirst = ['toits'];
+  city.early = ['chute', 'vitres', 'chute_escaliers', 'slalom', 'cheminee'];
 
   // ============================================================== METRO
   const H = 24;

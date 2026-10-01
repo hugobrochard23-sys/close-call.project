@@ -41,6 +41,7 @@
     const { sc, zone } = at, def = Z.defs[zone];
     if (SKIP[zone] || !THEME[zone]) return null;
     if (def && def.signature === sc.name) return null;
+    if (def && def.scenes[sc.name] && def.scenes[sc.name].noDoor) return null;   // v056 : scènes déjà percées
     if (d < sc.d0 + 28 || d > sc.d1 - 28) return null;
     if (Z.pinAt(T, d).length) return null;
     return at;
