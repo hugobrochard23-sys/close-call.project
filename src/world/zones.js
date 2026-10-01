@@ -44,7 +44,23 @@
     eau:    ['port', 'city', 'forest'],
     usine:  ['city', 'port', 'metro', 'forest', 'mini', 'tour'],
   };
+  // v040 : parcours fixe en jeu normal (zones ouvertes, dans l'ordre du cycle) ; l'ordre aléatoire ne sert plus qu'aux tests (allowed = null)
+  const CYCLE = ['city', 'forest', 'usine', 'port', 'eau', 'city', 'tour', 'sky', 'chute', 'metro', 'mini'];
   Z.order = function (seed, allowed, n) {
+    if (allowed) {
+      const seq = ['city'];
+      for (let i = 0, guard = 0; seq.length < n && guard < 4000; i++, guard++) {
+        const z = CYCLE[i % CYCLE.length], last = seq[seq.length - 1];
+        if (!allowed.includes(z) || z === last) continue;
+        if (!NEXT[last].includes(z) && z !== last) seq.push('city');
+        seq.push(z);
+      }
+      while (seq.length < n) seq.push(seq[seq.length - 1]);
+      return seq.slice(0, n);
+    }
+    return Z.randomOrder(seed, allowed, n);
+  };
+  Z.randomOrder = function (seed, allowed, n) {
     const r = G.stream(seed, 'zorder'), ok = (id) => !allowed || allowed.includes(id), out = ['city'];
     while (out.length < n) {
       const cur = out[out.length - 1], last2 = out.slice(-3);

@@ -156,7 +156,7 @@
       const far = Math.abs((k + 0.5) * L - dist);
       if (col.cells && col.cells.inst) col.cells.inst.visible = far < 340;   // v038g : pas de dessin des écrous au-delà du brouillard
       if (far > L * 0.5 + 60) { if (col.specials.length) this.spin(col, dt); continue; }   // hors de portée : on ne teste rien
-      this.rings(game, run, ch, p);
+      this.rings(game, run, ch, p); this.doors(game, run, ch, p);
       const cs = col.cells;
       if (cs) {
         const a = cs.arr, M2 = C.magnet * C.magnet; let moved = false;
@@ -201,6 +201,20 @@
         const dx = p.x - q.p[0], dy = p.y - q.p[1];
         if (dx * dx + dy * dy < q.rad * q.rad * 1.1) { q.passed = true; G.got++; game.onRing(q, G); }
         else { q.missed = true; G.dead = true; }
+      }
+    }
+  };
+  // portes serrées : on franchit le plan de la porte → PARFAIT si le centre est tenu, sinon simple passage
+  Collect.doors = function (game, run, ch, p) {
+    if (!ch.doors || !ch.doors.length) return;
+    const pz = this._pz; if (pz === undefined) return;
+    for (const q of ch.doors) {
+      if (q.passed) continue;
+      if (!q.p) q.p = run.T.at(q.d, q.lx, q.y);
+      if (pz > q.p[2] && p.z <= q.p[2]) {
+        q.passed = true;
+        const dx = p.x - q.p[0], dy = p.y - q.p[1];
+        game.onDoor(Math.abs(dx) < q.w * 0.3 && Math.abs(dy) < q.h * 0.3);
       }
     }
   };

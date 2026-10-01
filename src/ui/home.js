@@ -321,20 +321,20 @@
     const { W, HH, T, u } = L, bh = Math.min(u * 0.2, HH * 0.11), y0 = T + HH - bh, tw = W / tabs.length;
     const g = ctx.createLinearGradient(0, y0, 0, y0 + bh); g.addColorStop(0, PIX ? 'rgba(28,35,66,1)' : 'rgba(24,34,56,0.94)'); g.addColorStop(1, PIX ? 'rgba(28,35,66,1)' : 'rgba(8,12,22,0.97)');
     ctx.fillStyle = g; ctx.fillRect(0, y0, W, bh); ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillRect(0, y0, W, 2);
-    const px = Math.min.apply(null, tabs.map((t) => ui.fitPx([t.label], tw * 0.92, bh * 0.05)));
+    const px = Math.min.apply(null, tabs.map((t) => ui.fitPx([t.label], tw * 0.92, 1.5)));
     tabs.forEach((t, i) => {
       const cx = tw * (i + 0.5), r = bh * 0.3;
       if (t.active) {
         const lift = bh * 0.28;
         rr(ctx, cx - tw * 0.46, y0 - lift, tw * 0.92, bh + lift, bh * 0.2); ctx.fillStyle = PIX ? '#ffd23a' : grad(ctx, y0 - lift, y0 + bh, '#ffe860', '#ffb800'); ctx.fill(); ctx.strokeStyle = PIX ? '#fff0a0' : '#fff8c0'; ctx.lineWidth = PIX ? 3 : 2; ctx.stroke();
-        TABICON[t.icon](ctx, cx, y0 - lift + bh * 0.42, r * 1.25);
+        TABICON[t.icon](ctx, cx, y0 - lift - bh * 0.02, r * 1.0);   // l'icône sort de la case, vers le haut
         text(ui, ctx, t.label, cx, y0 + bh * 0.6, px, PIX ? '#10142a' : '#ffffff', { align: 'center', outline: PIX ? null : '#8a5200' });
       } else {
         const on = inRect(ui, cx - tw / 2, y0, tw, bh);
         if (on) { rr(ctx, cx - tw * 0.45, y0 + 4, tw * 0.9, bh - 8, bh * 0.2); ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fill(); }
-        TABICON[t.icon](ctx, cx, y0 + bh * 0.36, r);
-        text(ui, ctx, t.label, cx, y0 + bh * 0.68, px, '#e6edf8', { align: 'center', outline: '#05080e' });
-        hit(ui, cx - tw / 2, y0, tw, bh, t.action);
+        TABICON[t.icon](ctx, cx, y0 + bh * 0.12, r * 0.85);   // idem : l'icône dépasse du haut de la barre
+        text(ui, ctx, t.label, cx, y0 + bh * 0.68, px, '#e6edf8', { align: 'center', outline: PIX ? null : '#05080e' });
+        hit(ui, cx - tw / 2, y0 - bh * 0.4, tw, bh * 1.4, t.action);
       }
     });
     return bh;
@@ -396,18 +396,10 @@
     if (lvl >= 4) tabsList.push({ icon: 'star', label: 'DEFIS', action: () => { ui.overlay = 'defi'; } });
     if (lvl >= 5) tabsList.push({ icon: 'shop', label: 'BOUTIQUE', action: () => { ui.overlay = 'shop'; } });
     const barH = tabsList.length ? tabBar(ui, ctx, L, tabsList) : 0;
-    const m = prog.tracked();
-    if (m) {
-      const mw = W - margin * 2, mh = u * 0.115, mx = margin, my = T + HH - barH - mh - u * 0.06;
-      const on = inRect(ui, mx, my, mw, mh);
-      pill(ctx, mx, my, mw, mh, on ? 'rgba(255,255,255,0.2)' : 'rgba(8,12,20,0.78)', 'rgba(255,255,255,0.35)', mh * 0.3);
-      ICON.target(ctx, mx + mh * 0.5, my + mh * 0.5, mh * 0.27, ORANGE);
-      const tx = mx + mh * 1.0, mp = ui.fitPx([prog.missionText(m)], mw - mh * 1.1 - mh * 1.7, mh * 0.04);
-      text(ui, ctx, prog.missionText(m), tx, my + mh * 0.14, mp, '#ffffff', {});
-      meter(ctx, tx, my + mh * 0.62, mw - mh * 1.1 - mh * 1.7, mh * 0.16, m.progress / m.target, '#ffa040', '#ff6a10');
-      text(ui, ctx, m.progress + '/' + m.target, mx + mw - mh * 0.3, my + mh * 0.14, mp, '#dfe6f0', { align: 'right' });
-      text(ui, ctx, '+' + m.xp + ' XP', mx + mw - mh * 0.3, my + mh * 0.54, mp, CY, { align: 'right' });
-      hit(ui, mx, my, mw, mh, () => { ui.overlay = 'quests'; });
+    // v040 : plus de mission affichée sur l'accueil (elle reste dans l'onglet MISSION) ; aux 3 premiers vols, le but en trois lignes
+    if ((prog.P.launches || 0) < 3) {
+      const base = T + HH - barH - u * 0.2, lines2 = [['TOUCHE LA ROQUETTE', '#f4f1e8'], ['PASSE LES TROUS', '#ffd23a'], ['VISE LES RESERVOIRS', '#ffd23a']];
+      lines2.forEach(([g2, c2], i) => text(ui, ctx, g2, W / 2, base + i * u * 0.075 - u * 0.075, ui.fitPx([g2], W * 0.86, u * 0.005), c2, { align: 'center' }));
     }
     if (!touch) text(ui, ctx, 'ESPACE OU CLIC : LANCER    F1 : TOUCHES', W / 2, T + HH - barH - u * 0.035, ui.fitPx(['ESPACE OU CLIC : LANCER    F1 : TOUCHES'], W * 0.8, u * 0.0032), '#8a96a8', { align: 'center' });
     
@@ -432,6 +424,7 @@
       ctx.strokeStyle = 'rgba(11,14,20,0.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(sx, fy, fr, 0, 6.283); ctx.stroke();
       const msg = touch ? 'TOUCHE POUR LANCER' : 'CLIC OU ESPACE POUR LANCER';
       text(ui, ctx, msg, W / 2, sy + u * 0.47, ui.fitPx([msg], W * 0.84, u * 0.0058), '#ffffff', { align: 'center', outline: '#0b0e14' });
+      for (const [i, g2] of ['PASSE LES TROUS', 'VISE LES RESERVOIRS'].entries()) text(ui, ctx, g2, W / 2, sy + u * (0.56 + i * 0.065), ui.fitPx([g2], W * 0.8, u * 0.0046), '#ffd23a', { align: 'center' });
     }
   };
 
@@ -586,8 +579,12 @@
     text(ui, ctx, U.formatInt(shown), colA.x, y, spx, '#ffffff', { align: 'center', outline: '#0b0e14' }); y += spx * 7 + S(14);
     const rk = r.newRecord ? 'NOUVEAU RECORD !' : 'MEILLEUR  ' + U.formatInt(r.best), rp = fitq(rk, colA.w, 2.8), pulse = r.newRecord ? 0.75 + 0.25 * Math.sin(t * 8) : 1;
     ctx.globalAlpha = al(1.1, 0.3) * pulse;
-    text(ui, ctx, rk, colA.x, y, rp, r.newRecord ? GOLD : '#c8d0dc', { align: 'center' }); ctx.globalAlpha = 1;
-    y += rp * 7 + S(P ? 40 : 26);
+    text(ui, ctx, rk, colA.x, y, rp, r.newRecord ? GOLD : '#c8d0dc', { align: 'center' });
+    y += rp * 7 + S(8);
+    if (!r.newRecord && r.best > r.score) { const mq = "IL T'A MANQUE " + U.formatInt(r.best - r.score), mpx2 = fitq(mq, colA.w, 3.2); text(ui, ctx, mq, colA.x, y, mpx2, GOLD, { align: 'center' }); y += mpx2 * 7 + S(8); }
+    if (r.cause) { const cq = 'TOUCHE : ' + r.cause, cpx2 = fitq(cq, colA.w, 2.2); text(ui, ctx, cq, colA.x, y, cpx2, RED, { align: 'center' }); y += cpx2 * 7 + S(4); }
+    ctx.globalAlpha = 1;
+    y += S(P ? 26 : 16);
     // -- XP : niveau + barre qui se remplit (et monte de niveau)
     const tBar = 1.3, dur0 = U.clamp(0.7 + r.gained / 140, 0.8, 2.2);
     const segs = [{ from: absXp(prog, r.before.level, r.before.xp), to: absXp(prog, r.after.level, r.after.xp), t0: tBar, dur: dur0 }];
@@ -635,7 +632,7 @@
       ctx.restore();
     }
     // -- boutons ancrés en bas : XP x2 (publicité), REJOUER
-    const ready = t > 0.9, xpDone = t > segs[0].t0 + segs[0].dur;
+    const ready = t > 0.6, xpDone = t > segs[0].t0 + segs[0].dur;
     const bw2 = P ? W * 0.9 : colB.w, bxb = P ? W * 0.05 : colB.x - colB.w / 2;
     const adOk = game.ads && game.ads.enabled() && !r.xpDoubled && r.gained >= 25 && !game.testMode;
     const bh1 = Math.max(S(72), 60 * ui.pixelRatio()), bh0 = Math.max(S(54), 48 * ui.pixelRatio());
@@ -657,7 +654,9 @@
       hit(ui, x, yRe, w, bh1, () => { const go = () => game.goHome({ autoLaunch: false }); game.ads ? game.ads.beforeContinue(go) : go(); });
     }
     // taper ailleurs : termine les animations d'un coup
-    ui.buttons.push({ x: 0, y: T, w: W, h: HH, action: () => { r.t = Math.max(r.t, 6); } });
+    // dès le 3e vol : toucher n'importe où relance tout de suite (sauf le bouton pub, plus haut dans la liste)
+    if ((prog.P.launches || 0) >= 2 && ready) ui.buttons.push({ x: 0, y: T, w: W, h: HH, action: () => { const go = () => game.goHome({ autoLaunch: false }); game.ads ? game.ads.beforeContinue(go) : go(); } });
+    else ui.buttons.push({ x: 0, y: T, w: W, h: HH, action: () => { r.t = Math.max(r.t, 6); } });
   };
 
   // XP ×2 : la publicité a été regardée jusqu'au bout → même gain ajouté, barre qui repart

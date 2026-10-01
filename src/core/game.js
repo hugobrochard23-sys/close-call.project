@@ -401,6 +401,7 @@
     }
 
     // v033 : partie CLASSIQUE terminée (crash) → v034 : score, XP, niveau, missions (Progress.endRun), puis écran de récompenses
+    causeOf(k) { return { wall: 'MUR', hazard: 'LASER', cable: 'CABLE', missile: 'MISSILE', drone: 'DRONE', train: 'RAME', mover: 'OBSTACLE', crane: 'GRUE', press: 'PRESSE', arm: 'BRAS ROBOT', ball: 'BOULE', whale: 'BALEINE', heli: 'HELICO', train2: 'TRAIN', altitude: 'TROP HAUT', outOfBounds: 'CHUTE', stalled: 'PLUS D ESSENCE' }[k] || 'OBSTACLE'; }
     finishEndless() {
       const run = this.endlessRun, S = this.save, dist = Math.round(run.dist);
       this.ui.overlay = null;
@@ -427,6 +428,21 @@
       const col = CC.CONFIG.hud.colors, nm = /PROXIMITY/.test(label) ? 'FROLE' : /SKIM/.test(label) ? 'RASE-MOTTES' : /COLD/.test(label) ? 'COLD IMPACT' : 'VIRAGE';
       this.feed(nm + '  +' + v, /COLD/.test(label) ? col.yellow : col.white);
       run.stats.close++; this.progress.event('close');
+    }
+
+    // v040 : porte serrée franchie. PARFAIT (centre tenu) enchaîne une série : plus la série est longue, plus la porte rapporte (et un peu d'essence) ;
+    // un passage au bord casse la série.
+    onDoor(perfect) {
+      const run = this.endlessRun; if (!run) return;
+      run.stats.doors = (run.stats.doors || 0) + 1;
+      run.doorChain = perfect ? (run.doorChain || 0) + 1 : 0;
+      const ch = run.doorChain, v = Math.round(run.addBonus(perfect ? 40 * (1 + Math.min(ch, 9) * 0.25) : 15));
+      run.addFuel(perfect ? 1.2 : 0.3);
+      const col = CC.CONFIG.hud.colors;
+      this.feed(perfect ? 'PARFAIT' + (ch > 1 ? '  X' + ch : '') + '  +' + v : 'PASSE  +' + v, perfect ? '#ffd23a' : '#f4f1e8');
+      this.audio.play('door', null, Math.min(ch, 8));
+      if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('fire');
+      this.cellBump = Math.max(this.cellBump, perfect ? 1 : 0.4);
     }
 
     // v034 : journal du HUD (3 lignes courtes sous le score)
@@ -812,7 +828,7 @@
         case 'CRASHED':
           this.impactT += dt;
           if (this.endlessRun) {   // v033 : une seule vie ; v034 : une chance de continuer (publicité récompensée) avant l'écran de fin
-            if (this.impactT > 1.1) { if (this.canRevive()) this.beginRevive(); else this.finishEndless(); }
+            if (this.impactT > 0.9) { if (this.canRevive()) this.beginRevive(); else this.finishEndless(); }
             break;
           }
           if (this.level.mode === 'targets') this.runTime += dt;
@@ -973,7 +989,7 @@
         const k = keys.shift(); if (k) { try { this.builderMat = this.builderMat || new CC.LevelBuilder(this.scene, this.world, { seed: 1, env: { sky: {} }, routes: [] }); this.builderMat.mat(k); } catch (e) { /* texture inconnue */ } } else { this.warmDone = true; if (this.builderMat) { this.scene.remove(this.builderMat.root); this.builderMat = null; } }
       }
       if (this.fadeIn > 0) this.fadeIn = Math.max(0, this.fadeIn - dt);
-      if (!this.paused && this.state !== 'BOOT') this.safe(() => this.update(dt));
+      if (!this.paused && this.state !== 'BOOT') this.safe(() => this.update(this.endlessRun && this.state === 'CRASHED' && this.impactT < 0.3 ? dt * 0.4 : dt));   // v040 : ralenti sur la collision
       else { this.input.poll(0); this.rig.update(0); }
       try { this.render(performance.now() / 1000); this.renderErr = 0; }
       catch (e) { (window.__errs || (window.__errs = [])).push(String(e && e.stack || e).slice(0, 300)); if (this.testMode) throw e; if ((this.renderErr = (this.renderErr || 0) + 1) === 20) this.recoverBlack('exception'); }

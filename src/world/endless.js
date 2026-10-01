@@ -155,7 +155,7 @@
 
     // cibles en route, sur la colonne vertébrale (il faut parfois plonger vers le sol pour les prendre)
     const nextT = (from) => from + r.between(cfg.targetGap);
-    if (T.nextTarget === undefined) T.nextTarget = 90;
+    if (T.nextTarget === undefined) T.nextTarget = 330;   // v040 : le premier réservoir vient APRES la première porte (tutoriel lisible)
     const tgt = [];
     while (T.nextTarget < d1) {
       const d = T.nextTarget;
@@ -169,9 +169,17 @@
     }
 
     // sol, passages entre zones, scènes (src/world/zones*.js)
-    const ctx = { game, b, T, r, d0, d1, gates, busy, reserved, ZONES, special: null, rings: [], glows: [] };
+    const ctx = { game, b, T, r, d0, d1, gates, busy, reserved, ZONES, special: null, rings: [], glows: [], doors: [] };
     CC.Zones.build(ctx);
 
+    // v040 : ligne du RECORD — un portique jaune en travers de la route à la distance du meilleur vol
+    { const gd = game.progress && game.progress.P && game.progress.P.bestDist;
+      if (gd && gd > d0 + 6 && gd < d1 - 6 && gd > 300) {
+        const hf = T.half(gd) + 4, yw = T.yawAcross(gd);
+        for (const sgn of [-1, 1]) b.box({ p: T.at(gd, sgn * hf, 15), s: [1.2, 30, 1.2], r: [0, yw, 0], mat: 'basic:#ffd23a', collide: false, shadow: false });
+        b.box({ p: T.at(gd, 0, 30), s: [2 * hf, 1.4, 1.2], r: [0, yw, 0], mat: 'basic:#ffd23a', collide: false, shadow: false });
+        b.box({ p: T.at(gd, 0, 0.12), s: [2 * hf, 0.1, 1.6], r: [0, yw, 0], mat: 'basic:#ffd23a', collide: false, shadow: false });
+      } }
     for (const t of tgt) {
       const d = t.d, type = st === 0 || t.zone === 'mini' ? 'fuel' : r.pick(['fuel', 'fuel', 'truck']), lx = t.lx, p = T.at(d, lx, 0);
       b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0), { unarmed: true });
@@ -219,7 +227,7 @@
     const route = k < 0 ? [] : nodes.map((g) => T.at(g.d, g.lx, g.y));
     for (const t of b.targets) t.updateObb();
     const collect = k < 0 || !CC.Collect ? null : CC.Collect.build(game, T, b, nodes, d0, d1, r, ctx.special);
-    return { k, builder: b, boxes, targets: b.targets, entities: b.entities, route, tanks, collect, rings: ctx.rings.map((q) => Object.assign({ passed: false, missed: false }, q)) };
+    return { k, builder: b, boxes, targets: b.targets, entities: b.entities, route, tanks, collect, rings: ctx.rings.map((q) => Object.assign({ passed: false, missed: false }, q)), doors: ctx.doors.map((q) => Object.assign({ passed: false }, q)) };
   }
 
   /* Un obstacle à la distance d. Retourne la longueur de couloir occupée (0 = rien posé). */

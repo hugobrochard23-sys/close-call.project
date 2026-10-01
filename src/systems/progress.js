@@ -138,6 +138,7 @@
       P.runs++; P.stats.dist += dist; P.stats.time += Math.floor(info.time);
       P.stats.targets += r.targets || 0; P.stats.cells += r.cells || 0; P.stats.boosts += r.boosts || 0; P.stats.close += r.close || 0; P.stats.gold += r.gold || 0;
       if (score > P.best) P.best = score;
+      if (dist > (P.bestDist || 0)) P.bestDist = dist;   // v040 : distance record (repère « fantôme » sur la route)
       const after = { level: P.level, xp: P.xp, need: this.need(P.level) };
       const newWorlds = this.unlockedWorlds().filter((w) => !worldsBefore.includes(w));
       // missions terminées → remplacées

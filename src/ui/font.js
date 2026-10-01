@@ -155,7 +155,7 @@
   };
   // v038j : habillage PIXEL — la police 5×7 en pixels CARRES (cw = 1) à taille entière devient la police de toute l'interface du CLASSIQUE
   Font.skinPixel = false;
-  const snap = (px) => (px >= 1 ? Math.floor(px) : px);   // taille de police = 8 × snap(px) : multiples de 8 (nets) ; jamais plus large que demandé
+  const snap = (px) => (px >= 1 ? Math.floor(px * 2) / 2 : px);   // taille de police = 8 × snap(px) : multiples de 8 (nets) ; jamais plus large que demandé
   const PS = '"Press Start 2P", monospace';
   Font.measure = function (text, px, pixel) {
     if (pixel) return Font.measurePixel(text, px);

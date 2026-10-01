@@ -94,10 +94,13 @@
       // ---- pastille du score (centre) ; ×2 collé à gauche quand actif
       const px = pillH * 0.075, sc = U.formatInt(run.score), sw = Math.max(F.measure('0.000', px), F.measure(sc, px)), pw = sw + pillH * 1.0;
       let bump = 1 + 0.1 * Math.min(1, game.cellBump);
+      // v040 : plus de rectangle derrière le score — gros chiffres blancs (jaune si record battu) ; sous eux, une fine barre « vers le record »
+      const spx2 = px * 1.35;
       ctx.save(); ctx.translate(W / 2, top + pillH / 2); ctx.scale(bump, bump); ctx.translate(-W / 2, -(top + pillH / 2));
-      Home.pill(ctx, W / 2 - pw / 2, top, pw, pillH, broke ? 'rgba(90,70,0,0.72)' : 'rgba(10,16,28,0.66)', broke ? '#ffd23a' : 'rgba(255,255,255,0.35)');
-      F.draw(ctx, sc, W / 2, top + pillH / 2 - px * 3.6, px, broke ? '#ffe45a' : '#ffffff', { align: 'center', outline: '#0a0e16' });
+      F.draw(ctx, sc, W / 2, top + pillH / 2 - spx2 * 3.6, spx2, broke ? '#ffd23a' : '#f4f1e8', { align: 'center' });
       ctx.restore();
+      if (rec > 0) { const bw = Math.min(W * 0.46, pw * 1.5), bh2 = Math.max(4, pillH * 0.1); Home.meter(ctx, W / 2 - bw / 2, top + pillH + bh2, bw, bh2, Math.min(1, run.score / rec), '#ffd23a', '#ffd23a'); }
+      if ((run.doorChain || 0) >= 2) F.draw(ctx, 'X' + run.doorChain, W / 2 + F.measure(sc, spx2) / 2 + px * 5, top + pillH / 2 - px * 3.6, px * 1.2, '#ffd23a', { align: 'left' });
       if (run.multT > 0) {
         const mh = pillH * 0.8, mw = pillH * 1.5, mx = W / 2 - pw / 2 - mw - pillH * 0.15, my = top + (pillH - mh) / 2;
         Home.pill(ctx, mx, my, mw, mh, '#c020a8', '#ffb0f0');
@@ -109,12 +112,13 @@
       const gh = Math.min(H * 0.34, 300), gwid = Math.max(16, pillH * 0.42), gxx = W - gwid - Math.max(14, W * 0.045), gy = top + pillH + H * 0.03;
       this.drawFuelBar(game, rk, gxx, gy, gwid, gh);
       // ---- une ligne de journal, sous le score
-      const fpx = pillH * 0.05, f = game.hudFeed[0], fy = top + pillH + H * 0.012;
+      const fpx = pillH * 0.05, f = game.hudFeed[0], fy = top + pillH + H * 0.012 + Math.max(4, pillH * 0.1) * 3;
       if (broke) { if (Math.floor(performance.now() / 350) % 2 === 0) F.draw(ctx, 'NOUVEAU RECORD', W / 2, fy, fpx * 1.15, '#ffe45a', { align: 'center', outline: '#0a0e16' }); }
       else if (f) {
         const a = f.t < 0.12 ? f.t / 0.12 : 1 - U.clamp((f.t - 1.2) / 0.6, 0, 1);
         if (a > 0) { ctx.globalAlpha = a; F.draw(ctx, f.text, W / 2, fy - (1 - Math.min(1, f.t * 6)) * fpx * 3, fpx * 1.1, f.color, { align: 'center', outline: '#0a0e16' }); ctx.globalAlpha = 1; }
       }
+      if (s === 'CRASHED' && game.crashKind) { const lbl = 'TOUCHE : ' + game.causeOf(game.crashKind), lp = Math.min(px * 1.5, W * 0.92 / Math.max(1, F.measure(lbl, 1))); F.draw(ctx, lbl, W / 2, H * 0.3, lp, '#ff4258', { align: 'center' }); }
       // ---- mission accomplie (bandeau)
       for (const t of game.progress.toasts) {
         const a = Math.min(1, t.t * 6, (2.4 - t.t) * 3), bh = pillH * 1.7, y = H * 0.27, bw = Math.min(W * 0.86, pillH * 9);
@@ -216,22 +220,30 @@
     /* v030 : tutoriel du premier vol (écran tactile, jusqu'au premier niveau terminé) : trois consignes courtes, une à la
      * fois, dans un cartouche en haut de l'écran (hors de la trajectoire), avec un pictogramme animé du geste. */
     drawTutorial(game, W, H) {
-      if (game.settings.tutorialDone || (game.settings.tutorialFlights || 0) > 3 || game.state !== 'FLIGHT' || game.paused) return;
-      const t = game.flightTime || 0, steps = [['GLISSE POUR DIRIGER', 'drag'], ['MAINTIENS : BOOST', 'hold'], ['DOIGT SUR LE BORD : VIRAGE', 'edge']];
-      const i = Math.floor(t / 3.2);
-      if (i >= steps.length) return;
-      const [label, kind] = steps[i], k = (t % 3.2) / 3.2, a = Math.min(1, k * 6, (1 - k) * 6);
+      if ((game.progress.P.launches || 0) > 3 || game.state !== 'FLIGHT' || game.paused) return;
+      const rk = game.rocket, run = game.endlessRun, t = game.flightTime || 0;
+      let label = null, kind = 'drag';
+      if (t < 2.2) { label = 'GLISSE POUR DIRIGER'; kind = 'drag'; }
+      else if (!rk.thrusting && t < 6) { label = 'MAINTIENS : BOOST'; kind = 'hold'; }
+      else if (run) {
+        const d = run.dist;
+        if (CC.Zones.nextDoor && CC.Zones.nextDoor(run.T, d)) { label = 'PASSE PAR LE TROU'; kind = 'door'; }
+        else if (game.targets.some((q) => q.alive && q.type === 'fuel' && q.pos && q.pos.z < rk.pos.z && rk.pos.z - q.pos.z < 330)) { label = 'VISE LE RESERVOIR'; kind = 'fuel'; }
+        else if (rk.fuel / rk.fuelMax < 0.35) { label = 'RELACHE LE BOOST'; kind = 'hold'; }
+      }
+      if (!label) return;
       const ctx = this.ctx, px = this.refH * 0.0042, w = CC.Font.measure(label, px, !this.modern) + px * 14, h = px * 16, x = W / 2 - w / 2, y = H * 0.23;
-      ctx.globalAlpha = a;
-      CC.Home.pill(ctx, x, y, w, h, 'rgba(29,43,83,0.95)', '#fff1e8');   // v038i : cartouche de verre arrondi
-      // pictogramme : doigt (rond) qui glisse, reste posé (anneau qui grossit), ou se place au bord
-      const cx = x + px * 6, cy = y + h / 2, r = px * 2.2;
-      ctx.fillStyle = '#f4f4f4';
-      const ox = kind === 'drag' ? Math.sin(k * Math.PI * 4) * px * 2.5 : kind === 'edge' ? px * 2.5 : 0;
-      ctx.beginPath(); ctx.arc(cx + ox, cy, r, 0, Math.PI * 2); ctx.fill();
-      if (kind === 'hold') { ctx.strokeStyle = '#fdfd02'; ctx.beginPath(); ctx.arc(cx, cy, r + px * (1 + 2 * ((k * 3) % 1)), 0, Math.PI * 2); ctx.stroke(); }
-      this.text(label, x + px * 11, y + h / 2 - px * 3.5, 0.0042, '#f4f4f4', {});
-      ctx.globalAlpha = 1;
+      CC.Home.pill(ctx, x, y, w, h, 'rgba(28,35,66,0.97)', '#46548f');
+      const cx = x + px * 6, cy = y + h / 2, r = px * 2.2, k = (t % 3.2) / 3.2;
+      if (kind === 'door') CC.Home.icon.target(ctx, cx, cy, r * 1.3, '#ffd23a');
+      else if (kind === 'fuel') CC.Home.icon.flame(ctx, cx, cy, r * 1.3, '#ffd23a');
+      else {
+        ctx.fillStyle = '#f4f1e8';
+        const ox = kind === 'drag' ? Math.sin(k * Math.PI * 4) * px * 2.5 : 0;
+        ctx.beginPath(); ctx.arc(cx + ox, cy, r, 0, Math.PI * 2); ctx.fill();
+        if (kind === 'hold') { ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = Math.max(2, px * 0.6); ctx.beginPath(); ctx.arc(cx, cy, r + px * (1 + 2 * ((k * 3) % 1)), 0, Math.PI * 2); ctx.stroke(); }
+      }
+      this.text(label, x + px * 11, y + h / 2 - px * 3.5, 0.0042, '#f4f1e8', {});
     }
 
     // Jauge d'essence (v009) : longueur du cadre proportionnelle au réservoir du niveau, remplissage = essence restante.
@@ -343,6 +355,7 @@
             ctx.stroke();
           }
           ctx.lineCap = 'butt';
+          if (t.type === 'fuel' && CC.Home.icon && CC.Home.icon.flame) CC.Home.icon.flame(ctx, sx, sy - r * 2.6, r * 1.1, '#ffd23a');
           if (CC.Home.skin !== 'pixel') { ctx.fillStyle = 'rgba(4,8,16,0.9)'; ctx.beginPath(); ctx.arc(sx, sy, lw * 1.9, 0, 6.283); ctx.fill(); }
           ctx.fillStyle = '#ff4258'; ctx.beginPath(); ctx.arc(sx, sy, lw * 1.1, 0, 6.283); ctx.fill();
           continue;

@@ -46,6 +46,11 @@
     return at;
   }
 
+  // prochaine porte serrée devant d (à moins de 260 m) — sert au tutoriel
+  Z.nextDoor = function (T, d) {
+    for (const q of list(T, d + 300)) if (q > d && q < d + 260 && valid(T, q)) return q;
+    return null;
+  };
   Z.tight = function (ctx) {
     const T = ctx.T, cfg = C(), d0 = ctx.d0, d1 = ctx.d1;
     for (const d of list(T, d1 + 20)) {
@@ -54,6 +59,7 @@
       if (ctx.busy.some((q) => Math.abs(q - d) < 34) || ctx.rings.some((q) => Math.abs(q.d - d) < 40) || ctx.reserved.some((q) => Math.abs(q.d - d) < q.dd / 2 + 6)) continue;
       const { sc, zone } = at, th = THEME[zone], st = U.clamp(Math.floor(d / cfg.stageLen), 0, 3);
       const S = new Z.Scene(ctx, { name: 'tight', d0: d - 10, d1: d + 10, zone, zi: sc.zi, key: 't' + Math.round(d), stage: st });
+      let yc0 = 0, wd0 = 8, hd0 = 8;
       const Ln = S.lane(d), v = T.vol(d) + (zone === 'usine' || zone === 'eau' ? 3 : zone === 'city' || zone === 'tour' || zone === 'chute' ? 46 : 26), hole = cfg.tight.hole[st];   // v038b : le panneau déborde largement sur les côtés (on n'en voit plus le bord)
       S.item(d, (r) => {
         const shape = r.weighted({ win: 3, slit: 1.6, slot: 1.6 });
@@ -61,12 +67,13 @@
         if (shape === 'slit') { w = Math.min(2 * v - 4, hole * 3.4); h = hole * 0.62; } else if (shape === 'slot') { w = hole * 0.62; h = hole * 2.0 + 4; }
         const lo = (zone === 'chute' || zone === 'tour' || zone === 'sky') ? Math.max(0, Ln.y - 52) : 0, top = (zone === 'usine' ? 76 : Ln.y + (zone === 'city' || zone === 'tour' || zone === 'chute' ? 150 : 80)), yc = Math.max(Ln.y, lo + h / 2 + 0.4);
         const tint = r.pick(th.tints), dd = 4;
-        S.wall(d, -v, v, lo, top, dd, th.mat, tint, { lx: Ln.lx, yc, w, h });
+        S.wall(d, -v, v, lo, top, dd, th.mat, tint, { lx: Ln.lx, yc, w, h }); yc0 = yc; wd0 = w; hd0 = h;
         // bordure du trou : bandes hachurées en haut et en bas, rails lumineux sur les côtés (lisibles de loin)
         S.bx(d, Ln.lx, yc + h / 2 + 0.3, w + 1.6, 0.6, dd + 0.4, 'hazard', undefined, false, { shadow: false });
         if (yc - h / 2 > lo + 0.6) S.bx(d, Ln.lx, yc - h / 2 - 0.3, w + 1.6, 0.6, dd + 0.4, 'hazard', undefined, false, { shadow: false });
         for (const s of [-1, 1]) S.bx(d, Ln.lx + s * (w / 2 + 0.35), yc, 0.5, h + 0.8, dd + 0.4, 'basic:#ffc63a', undefined, false, { shadow: false });
       });
+      (ctx.doors || (ctx.doors = [])).push({ d, lx: Ln.lx, y: yc0, w: wd0, h: hd0 });
       S.gate(d - 26, T.laneX(d - 26), T.laneY(d - 26)); S.gate(d, Ln.lx, Math.max(Ln.y, 1)); S.gate(d + 16, T.laneX(d + 16), T.laneY(d + 16));
       ctx.busy.push(d);
     }

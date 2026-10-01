@@ -344,6 +344,7 @@
         case 'clank': this.noiseHit(2400, 'bandpass', 6, param === 'far' ? 0.12 : 0.25, 0.14); this.tone('square', 190, 120, 0.08, 0.14); this.tone('triangle', 1300, 900, 0.05, 0.3, 0.05); break;
         case 'press': this.tone('sine', 62, 28, param === 'far' ? 0.3 : 0.75, 0.4); this.noiseHit(1500, 'lowpass', 0.8, param === 'far' ? 0.25 : 0.55, 0.3); this.noiseHit(6500, 'highpass', 0.7, 0.14, 0.5, 1.2); break;
         case 'jetPass': this.sweep(380, 2700, 'bandpass', 0.8, param === 'far' ? 0.12 : 0.3, 0.7); this.sweep(2700, 480, 'bandpass', 0.8, param === 'far' ? 0.1 : 0.25, 1.0, 0.55); break;
+        case 'door': { const k = Math.min(8, param || 0), f = 520 * Math.pow(1.0595, k * 2); this.tone('square', f, f * 1.5, 0.08, 0.1); this.tone('square', f * 1.5, f * 2, 0.05, 0.12, 0.07); break; }
         case 'splash': this.sweep(2600, 260, 'bandpass', 0.9, 0.3, 0.55); this.sweep(900, 140, 'lowpass', 0.8, 0.22, 0.7); break;
         case 'whale': this.tone('sine', 70, 175, 0.22, 1.5); this.tone('sine', 180, 88, 0.18, 1.7, 0.9); this.tone('sine', 140, 140, 0.05, 2.4, 0.2); break;
         case 'bubble': for (let k = 0; k < 3; k++) this.tone('sine', 500 + Math.random() * 400, 900 + Math.random() * 500, 0.04, 0.07, k * 0.11); break;
