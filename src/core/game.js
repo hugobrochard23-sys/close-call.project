@@ -994,6 +994,7 @@
     }
 
     start() {
+      try { document.fonts.load('16px "Press Start 2P"'); } catch (e) { /* police chargée à la demande */ }
       if (this.testMode) { this.initTestHarness(); return; }
       this.quality = new CC.Quality(this);
       this.quality.apply(this.quality.initial());

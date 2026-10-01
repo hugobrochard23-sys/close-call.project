@@ -155,16 +155,26 @@
   };
   // v038j : habillage PIXEL — la police 5×7 en pixels CARRES (cw = 1) à taille entière devient la police de toute l'interface du CLASSIQUE
   Font.skinPixel = false;
-  const snap = (px) => (px >= 3 ? Math.floor(px) : Math.max(1, Math.floor(px * 2) / 2));   // jamais plus large que la taille demandée (les mises en page s'appuient sur measure(texte, 1) × px)
+  const snap = (px) => (px >= 1 ? Math.floor(px) : px);   // taille de police = 8 × snap(px) : multiples de 8 (nets) ; jamais plus large que demandé
+  const PS = '"Press Start 2P", monospace';
   Font.measure = function (text, px, pixel) {
     if (pixel) return Font.measurePixel(text, px);
-    if (Font.skinPixel) { const p = snap(px); return String(text).length * Font.advance * p - 2 * p; }
+    if (Font.skinPixel) { const p = snap(px); return String(text).length * 8 * p; }
     return wAt100(String(text).toUpperCase()) * (px * FS / 100);
   };
   Font.draw = function (ctx, segments, x, y, px, color, opts) {
     opts = opts || {};
     if (opts.pixel) return Font.drawPixel(ctx, segments, x, y, px, color, opts);
-    if (Font.skinPixel) return Font.drawPixel(ctx, segments, x, y, snap(px), color, Object.assign({}, opts, { cw: 1, skew: 0, outline: null, bold: true, shadow: true }));
+    if (Font.skinPixel) {   // v040 : PRESS START 2P (police arcade, 8×8) — aplat + ombre dure d'un pixel de la couleur du fond, aucun contour
+      if (typeof segments === 'string') segments = [{ t: segments, c: color }];
+      const p = snap(px), size = 8 * p, total = segments.reduce((n, s) => n + s.t.length, 0), width = total * size;
+      let cx = x; if (opts.align === 'center') cx = x - width / 2; else if (opts.align === 'right') cx = x - width;
+      ctx.save(); if (opts.alpha !== undefined) ctx.globalAlpha = opts.alpha;
+      ctx.font = size + 'px ' + PS; ctx.textBaseline = 'alphabetic';
+      const base = Math.round(y + px * 7.2 + size * 0.0), sh = Math.max(1, Math.round(size / 8));
+      for (const sg of segments) { const t = sg.t.toUpperCase(); if ((sg.c || color) !== '#10142a') { ctx.fillStyle = 'rgba(16,20,42,0.85)'; ctx.fillText(t, Math.round(cx + sh), base + sh); } ctx.fillStyle = sg.c || color; ctx.fillText(t, Math.round(cx), base); cx += t.length * size; }
+      ctx.restore(); return width;
+    }
     if (typeof segments === 'string') segments = [{ t: segments, c: color }];
     const size = px * FS, widths = segments.map((s) => wAt100(s.t.toUpperCase()) * size / 100);
     let width = 0; for (const w of widths) width += w;

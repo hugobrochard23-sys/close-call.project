@@ -138,14 +138,14 @@
     fuelPixel(game, rk, x, y, w, h, k, c1, c2, boosting, low, blink, fuel) {
       const ctx = this.ctx, C = CC.CONFIG.hud.colors, Home = CC.Home, st = Home.stair, R = Math.round;
       const u = Math.max(2, R(w * 0.11)), c = Math.max(2, R(w * 0.2));
-      st(ctx, x - u, y - u, w + 2 * u, h + 2 * u, c); ctx.fillStyle = '#3a4f8e'; ctx.fill();
+      st(ctx, x - u, y - u, w + 2 * u, h + 2 * u, c); ctx.fillStyle = '#46548f'; ctx.fill();
       st(ctx, x, y, w, h, c); ctx.fillStyle = low && blink ? '#8a2018' : '#5f574f'; ctx.fill();
       ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fillRect(R(x + u * 0.5), R(y + c * 2), u, R(h - c * 4));
       const ix = R(x + u * 1.7), iw = R(w - u * 3.4), iy = R(y + u * 1.7), ih = R(h - u * 1.7 - w * 0.95);
       ctx.fillStyle = '#0a0f1a'; ctx.fillRect(ix, iy, iw, ih);
       const fh = R(ih * k);
       if (fh > 0) { ctx.fillStyle = c2; ctx.fillRect(ix, iy + ih - fh, iw, fh); ctx.fillStyle = c1; ctx.fillRect(ix, iy + ih - fh, R(iw * 0.55), fh); ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(ix, iy + ih - fh, iw, u); }
-      ctx.fillStyle = '#1d2b53'; for (let i = 1; i < 4; i++) ctx.fillRect(ix, R(iy + ih * i / 4 - u / 2), iw, u);
+      ctx.fillStyle = '#1c2342'; for (let i = 1; i < 4; i++) ctx.fillRect(ix, R(iy + ih * i / 4 - u / 2), iw, u);
       Home.icon.flame(ctx, x + w / 2, y + h - w * 0.5, w * 0.36, blink ? '#ffffff' : (low ? '#ff5a3a' : boosting ? '#ffe45a' : '#7fe0ff'));
       if (rk.active && fuel <= 0) CC.Font.draw(ctx, 'PANNE', x + w / 2, y - w * 1.0, w * 0.075, '#ffffff', { align: 'center', outline: '#ff3b2e' });
       const T = game.input.touch, left = T && T.reboostUntil ? (T.reboostUntil - performance.now()) / CC.CONFIG.input.touch.reboostMs : 0;
@@ -159,11 +159,11 @@
       const free = rk.active && rk.freeBoost, low = k < 0.25 && !free, blink = low && Math.floor(performance.now() / 220) % 2 === 0;
       const b = Math.max(2, R(w * 0.16));
       x = R(x); y = R(y); w = R(w); h = R(h);
-      ctx.fillStyle = blink ? '#ff004d' : '#fff1e8'; ctx.fillRect(x, y, w, h);                        // cadre
-      ctx.fillStyle = '#1d2b53'; ctx.fillRect(x + b, y + b, w - 2 * b, h - 2 * b);                       // fond
+      ctx.fillStyle = blink ? '#ff4258' : '#f4f1e8'; ctx.fillRect(x, y, w, h);                        // cadre
+      ctx.fillStyle = '#10142a'; ctx.fillRect(x + b, y + b, w - 2 * b, h - 2 * b);                       // fond
       const ih = h - 2 * b, fh = R(ih * k);
-      if (fh > 0) { ctx.fillStyle = free ? '#29adff' : (low ? '#ff004d' : '#ffa300'); ctx.fillRect(x + b, y + b + ih - fh, w - 2 * b, fh); }
-      if (rk.active && fuel <= 0) CC.Font.draw(ctx, 'PANNE', x + w / 2, y - w * 1.0, w * 0.075, '#ff004d', { align: 'center' });
+      if (fh > 0) { ctx.fillStyle = free ? '#4fb4ff' : (low ? '#ff4258' : '#ff8a2a'); ctx.fillRect(x + b, y + b + ih - fh, w - 2 * b, fh); }
+      if (rk.active && fuel <= 0) CC.Font.draw(ctx, 'PANNE', x + w / 2, y - w * 1.0, w * 0.075, '#ff4258', { align: 'center' });
     }
 
     // rayons qui filent du centre : lignes fines déterministes qui avancent vers les bords
@@ -337,14 +337,14 @@
           // v038i : repère en crochets d'angle arrondis (contour sombre + rouge vif) et point central
           const lw = Math.max(2, H / 330), k = r * 0.62;
           ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-          for (const [col, w] of (CC.Home.skin === 'pixel' ? [['#ff004d', lw * 1.4]] : [['rgba(4,8,16,0.9)', lw * 2.1], ['#ff3b2e', lw]])) {
+          for (const [col, w] of (CC.Home.skin === 'pixel' ? [['#ff4258', lw * 1.4]] : [['rgba(4,8,16,0.9)', lw * 2.1], ['#ff3b2e', lw]])) {
             ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath();
             for (const [ax, ay] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { ctx.moveTo(sx + ax * r, sy + ay * (r - k)); ctx.lineTo(sx + ax * r, sy + ay * r); ctx.lineTo(sx + ax * (r - k), sy + ay * r); }
             ctx.stroke();
           }
           ctx.lineCap = 'butt';
           if (CC.Home.skin !== 'pixel') { ctx.fillStyle = 'rgba(4,8,16,0.9)'; ctx.beginPath(); ctx.arc(sx, sy, lw * 1.9, 0, 6.283); ctx.fill(); }
-          ctx.fillStyle = '#ff004d'; ctx.beginPath(); ctx.arc(sx, sy, lw * 1.1, 0, 6.283); ctx.fill();
+          ctx.fillStyle = '#ff4258'; ctx.beginPath(); ctx.arc(sx, sy, lw * 1.1, 0, 6.283); ctx.fill();
           continue;
         }
         let x = p.x, y = p.y;

@@ -24,8 +24,8 @@
       const col = hot ? CC.CONFIG.hud.colors.yellow : (opts.color || '#f4f4f4');
       if (opts.primary && (opts.box || touch)) {   // v038i : bouton principal épais, vert, brillant (REPRENDRE, ...)
         const pxl = CC.Home.skin === 'pixel';
-        CC.Home.button3d(ctx, bx, by, w, h + Math.max(2, px) * 0.4, pxl ? (hot ? '#ffff7a' : '#fdfd02') : (hot ? '#4dff7a' : '#00e436'), pxl ? '#e6d800' : '#009e3a', pxl ? '#a89a00' : '#00632a');
-        this.text(ctx, label, x, y - px * 0.2, px, pxl ? '#1d2b53' : '#ffffff', { align: 'center', outline: pxl ? null : '#00501f' });
+        CC.Home.button3d(ctx, bx, by, w, h + Math.max(2, px) * 0.4, pxl ? (hot ? '#fff0a0' : '#ffd23a') : (hot ? '#4dff7a' : '#00e436'), pxl ? '#ffd23a' : '#009e3a', pxl ? '#c9961a' : '#00632a');
+        this.text(ctx, label, x, y - px * 0.2, px, pxl ? '#10142a' : '#ffffff', { align: 'center', outline: pxl ? null : '#00501f' });
         return;
       }
       if ((opts.box || touch) && opts.box !== false) {

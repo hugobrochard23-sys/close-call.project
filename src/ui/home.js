@@ -13,7 +13,7 @@
   const C = () => CC.CONFIG.hud.colors;
   // v039 : palette réduite en habillage pixel — blanc, jaune (seul accent), orange (essence), rouge (danger), bleu nuit (fonds)
   const PXL = (new URLSearchParams(location.search).get('skin') || CC.CONFIG.hud.skin || 'pixel') === 'pixel';
-  const CY = PXL ? '#fff1e8' : '#39d4ff', GOLD = PXL ? '#fdfd02' : '#ffd23a', GREEN = PXL ? '#fdfd02' : '#56ff5a', RED = PXL ? '#ff004d' : '#ff3b2e', ORANGE = PXL ? '#ffa300' : '#ff7c1f', MAG = PXL ? '#fff1e8' : '#ff5be0', INK = '#0b0e14';
+  const CY = PXL ? '#f4f1e8' : '#39d4ff', GOLD = PXL ? '#ffd23a' : '#ffd23a', GREEN = PXL ? '#ffd23a' : '#56ff5a', RED = PXL ? '#ff4258' : '#ff3b2e', ORANGE = PXL ? '#ffd23a' : '#ff7c1f', MAG = PXL ? '#f4f1e8' : '#ff5be0', INK = '#10142a';   // palette « nuit + jaune »
 
   const Home = {};
 
@@ -112,7 +112,7 @@
   const solid2 = (c) => {
     const m = typeof c === 'string' && c.match(/^rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)$/);
     if (!m) return c;
-    const a = Math.min(1, +m[4] * 1.15), base = [22, 34, 58];
+    const a = Math.min(1, +m[4] * 1.15), base = [28, 35, 66];
     return 'rgb(' + [1, 2, 3].map((i) => Math.round(+m[i] * a + base[i - 1] * (1 - a))).join(',') + ')';
   };
   function pixPill(ctx, x, y, w, h, fill, stroke, r) {
@@ -123,46 +123,31 @@
     ctx.fillStyle = 'rgba(255,255,255,0.16)'; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), u);
     ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(Math.round(x), Math.round(y + h - u * 1.5), Math.round(w), Math.round(u * 1.5));
     ctx.restore();
-    stair(ctx, x + u * 0.5, y + u * 0.5, w - u, h - u, Math.max(1, c - 1)); ctx.strokeStyle = (stroke && stroke !== 'rgba(255,255,255,0.35)') ? stroke : '#4b63a8'; ctx.lineWidth = u; ctx.stroke();   // liseré de couleur (bleu arcade par défaut)
+    stair(ctx, x + u * 0.5, y + u * 0.5, w - u, h - u, Math.max(1, c - 1)); ctx.strokeStyle = (stroke && stroke !== 'rgba(255,255,255,0.35)' && stroke !== 'rgba(255,255,255,0.3)') ? stroke : '#46548f'; ctx.lineWidth = u; ctx.stroke();   // liseré de couleur (bleu arcade par défaut)
   }
-  function pixButton3d(ctx, x, y, w, h, c1, c2, lip, pulse) {
+  function pixButton3d(ctx, x, y, w, h, c1, c2, lip, pulse) {   // bouton principal : aplat jaune, liseré clair en haut, lèvre sombre dessous
     const u = Math.max(2, Math.round(h * 0.055)), c = Math.max(2, Math.round(h * 0.09)), hh = h - 2 * u;
     ctx.save(); if (pulse && pulse !== 1) { ctx.translate(x + w / 2, y + h / 2); ctx.scale(pulse, pulse); ctx.translate(-(x + w / 2), -(y + h / 2)); }
-    stair(ctx, x, y + 2 * u, w, hh, c); ctx.fillStyle = lip; ctx.fill();
-    stair(ctx, x, y, w, hh, c); ctx.fillStyle = c2; ctx.fill();
+    stair(ctx, x, y + 2 * u, w, hh, c); ctx.fillStyle = '#c9961a'; ctx.fill();
+    stair(ctx, x, y, w, hh, c); ctx.fillStyle = '#ffd23a'; ctx.fill();
     ctx.save(); stair(ctx, x, y, w, hh, c); ctx.clip();
-    ctx.fillStyle = c1; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(hh * 0.55));
-    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), u);
-    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(Math.round(x + 3 * c), Math.round(y + u + 1), Math.round(Math.min(w * 0.22, 6 * c)), u);
+    ctx.fillStyle = '#fff0a0'; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), u);
+    ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(Math.round(x), Math.round(y + hh - 2 * u), Math.round(w), 2 * u);
     ctx.restore(); ctx.restore();
   }
-  function pixMeter(ctx, x, y, w, h, k, c1, c2) {
-    const u = Math.max(2, Math.round(h * 0.16)), c = Math.max(1, Math.round(h * 0.25));
-    stair(ctx, x - u, y - u, w + 2 * u, h + 2 * u, c); ctx.fillStyle = '#3a4f8e'; ctx.fill();
-    stair(ctx, x, y, w, h, c); ctx.fillStyle = '#16233b'; ctx.fill();
-    const f = Math.max(0, Math.min(1, k)) * w;
-    if (f > 1) {
-      ctx.save(); stair(ctx, x, y, w, h, c); ctx.clip();
-      const fw = Math.round(Math.max(f, h * 0.7));
-      ctx.fillStyle = c2; ctx.fillRect(Math.round(x), Math.round(y), fw, Math.round(h));
-      ctx.fillStyle = c1; ctx.fillRect(Math.round(x), Math.round(y), fw, Math.round(h * 0.55));
-      ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillRect(Math.round(x), Math.round(y), fw, Math.max(1, Math.round(h * 0.14)));
-      ctx.fillStyle = 'rgba(0,0,0,0.2)'; for (let t = h * 1.1; t < fw; t += h * 1.1) ctx.fillRect(Math.round(x + t), Math.round(y), Math.max(1, Math.round(h * 0.1)), Math.round(h));
-      ctx.restore();
-    }
+  function pixMeter(ctx, x, y, w, h, k, c1, c2) {   // barre : cadre de liseré, fond sombre, remplissage jaune plat
+    const u = Math.max(2, Math.round(h * 0.2));
+    x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h);
+    ctx.fillStyle = '#46548f'; ctx.fillRect(x - u, y - u, w + 2 * u, h + 2 * u);
+    ctx.fillStyle = '#10142a'; ctx.fillRect(x, y, w, h);
+    const f = Math.round(Math.max(0, Math.min(1, k)) * w);
+    if (f > 0) { ctx.fillStyle = '#ffd23a'; ctx.fillRect(x, y, f, h); }
   }
-  function pixBadge(ctx, x, y, size, level, ui) {
-    const u = Math.max(2, Math.round(size * 0.05)), c = Math.max(2, Math.round(size * 0.1));
-    stair(ctx, x, y + u * 1.5, size, size, c); ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fill();
-    stair(ctx, x - u, y - u, size + 2 * u, size + 2 * u, c); ctx.fillStyle = '#ab5236'; ctx.fill();
-    stair(ctx, x, y, size, size, c); ctx.fillStyle = '#ffa300'; ctx.fill();
-    ctx.save(); stair(ctx, x, y, size, size, c); ctx.clip();
-    ctx.fillStyle = '#ffec27'; ctx.fillRect(Math.round(x), Math.round(y), Math.round(size), Math.round(size * 0.58));
-    ctx.fillStyle = '#fff6a8'; ctx.fillRect(Math.round(x), Math.round(y), Math.round(size), u);
-    ctx.restore();
-    text(ui, ctx, 'NIV', x + size / 2, y + size * 0.1, size * 0.026, '#ab5236', { align: 'center' });
+  function pixBadge(ctx, x, y, size, level, ui) {   // niveau : petit panneau, numéro jaune
+    pixPill(ctx, x, y, size, size, 'rgba(28,35,66,1)', '#46548f', size * 0.28);
+    text(ui, ctx, 'NIV', x + size / 2, y + size * 0.1, size * 0.026, '#8d97c4', { align: 'center' });
     const s2 = String(level), px = Math.min(size * 0.075, size * 0.66 / Math.max(1, F.measure(s2, 1)));
-    text(ui, ctx, s2, x + size / 2, y + size * 0.34, px, '#ffffff', { align: 'center' });
+    text(ui, ctx, s2, x + size / 2, y + size * 0.4, px, '#ffd23a', { align: 'center' });
   }
   let pill = glassPill, button3d = glassButton3d, meter = glassMeter, badge = glassBadge;
   if (PIX) { pill = pixPill; button3d = pixButton3d; meter = pixMeter; badge = pixBadge; }
@@ -266,6 +251,33 @@
     }
     ctx.fillStyle = '#0c1220'; ctx.fillRect(R(cx - u * 0.5), R(y0 + u * 3.7), u, R(u * 1.4));
   };
+  // v040 : icônes en GRILLE 11×11 (un pixel = un carré), couleurs de la palette ; remplace l'ancien rendu vectoriel pixelisé
+  const GR = {
+    rocket: ['.....r.....', '....rrr....', '...wwwww...', '...wwbww...', '...wwwww...', '...wwwww...', '..rwwwwwr..', '.rrwwwwwrr.', '.r.wwwww.r.', '...ooyoo...', '....y.y....'],
+    trophy: ['.#########.', '##.#####.##', '#..#####..#', '#..#####..#', '.##.###.##.', '...#####...', '....###....', '.....#.....', '.....#.....', '...#####...', '...#####...'],
+    star:   ['.....#.....', '.....#.....', '....###....', '###########', '.#########.', '..#######..', '..#######..', '.####.####.', '.###...###.', '.##.....##.', '.#.......#.'],
+    play:   ['...........', '.##........', '.####......', '.######....', '.########..', '.#########.', '.########..', '.######....', '.####......', '.##........', '...........'],
+    lock:   ['...#####...', '..##...##..', '..#.....#..', '..#.....#..', '.#########.', '.#########.', '.####.####.', '.####.####.', '.#########.', '.#########.', '...........'],
+    check:  ['...........', '..........#', '.........##', '........##.', '#......##..', '##....##...', '.##..##....', '..####.....', '...##......', '...........', '...........'],
+    home:   ['.....#.....', '....###....', '...#####...', '..#######..', '.#########.', '###########', '.###...###.', '.###...###.', '.###...###.', '.###...###.', '.#########.'],
+    cart:   ['..#........', '..#........', '..########.', '..#.#####..', '..#.#####..', '...#####...', '...#####...', '...........', '..##...##..', '..##...##..', '...........'],
+    flame:  ['.....#.....', '....##.....', '....###....', '...####.#..', '..######.#.', '..#######..', '.#########.', '.####.####.', '.###...###.', '..###.###..', '...#####...'],
+    nut:    ['...#####...', '..#######..', '.####.####.', '###.....###', '##.......##', '##.......##', '##.......##', '###.....###', '.####.####.', '..#######..', '...#####...'],
+    gear:   ['....###....', '.#..###..#.', '.####.####.', '..##...##..', '###.....###', '###.....###', '###.....###', '..##...##..', '.####.####.', '.#..###..#.', '....###....'],
+    target: ['...#####...', '..##...##..', '.#.......#.', '#..#####..#', '#..#...#..#', '#..#.#.#..#', '#..#...#..#', '#..#####..#', '.#.......#.', '..##...##..', '...#####...'],
+  };
+  const GCOL = { r: '#ff4258', w: '#f4f1e8', b: '#4fb4ff', o: '#8d97c4', y: '#ffd23a' };
+  function gridDraw(ctx, name, cx, cy, size, col) {
+    const g = GR[name]; if (!g) return;
+    const s = Math.max(1, Math.round(size / 11)), n = g.length, x0 = Math.round(cx - n * s / 2), y0 = Math.round(cy - n * s / 2);
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { const ch = g[y][x]; if (ch === '.') continue; ctx.fillStyle = ch === '#' ? col : (GCOL[ch] || col); ctx.fillRect(x0 + x * s, y0 + y * s, s, s); }
+  }
+  if (PIX) {
+    const alias = { gem: 'star', play: 'play', home: 'home' };
+    for (const k of Object.keys(GR)) ICON[k] = (ctx, cx, cy, r, col) => gridDraw(ctx, k, cx, cy, r * 2.3, col || '#f4f1e8');
+    ICON.gem = ICON.star;
+  }
+  Home.gridDraw = gridDraw;
   Home.pixDraw = pixDraw;
   Home.icon = ICON;
 
@@ -303,20 +315,20 @@
       ICON.nut(ctx, cx, cy + r * 0.45, r * 0.26, '#ffc820');
     },
   };
-  if (PIX) { const G2 = Object.assign({}, TABICON); for (const k of Object.keys(G2)) TABICON[k] = (ctx, cx, cy, r) => pixDraw(ctx, G2[k], 'tab' + k, cx, cy, r * 1.15, '', true, true); }
+  if (PIX) { TABICON.mission = (ctx, cx, cy, r) => gridDraw(ctx, 'target', cx, cy, r * 2.2, '#ffd23a'); TABICON.trophy = (ctx, cx, cy, r) => gridDraw(ctx, 'trophy', cx, cy, r * 2.2, '#f4f1e8'); TABICON.home = (ctx, cx, cy, r) => gridDraw(ctx, 'rocket', cx, cy, r * 2.2, '#f4f1e8'); TABICON.star = (ctx, cx, cy, r) => gridDraw(ctx, 'star', cx, cy, r * 2.2, '#ffd23a'); TABICON.shop = (ctx, cx, cy, r) => gridDraw(ctx, 'cart', cx, cy, r * 2.2, '#f4f1e8'); }
   // barre d'onglets du bas : MISSION · PROGRES · [ACCUEIL surélevé, jaune] · DEFIS · BOUTIQUE (comme les jeux mobiles)
   function tabBar(ui, ctx, L, tabs) {
     const { W, HH, T, u } = L, bh = Math.min(u * 0.2, HH * 0.11), y0 = T + HH - bh, tw = W / tabs.length;
-    const g = ctx.createLinearGradient(0, y0, 0, y0 + bh); g.addColorStop(0, 'rgba(24,34,56,0.94)'); g.addColorStop(1, 'rgba(8,12,22,0.97)');
+    const g = ctx.createLinearGradient(0, y0, 0, y0 + bh); g.addColorStop(0, PIX ? 'rgba(28,35,66,1)' : 'rgba(24,34,56,0.94)'); g.addColorStop(1, PIX ? 'rgba(28,35,66,1)' : 'rgba(8,12,22,0.97)');
     ctx.fillStyle = g; ctx.fillRect(0, y0, W, bh); ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillRect(0, y0, W, 2);
     const px = Math.min.apply(null, tabs.map((t) => ui.fitPx([t.label], tw * 0.92, bh * 0.05)));
     tabs.forEach((t, i) => {
       const cx = tw * (i + 0.5), r = bh * 0.3;
       if (t.active) {
         const lift = bh * 0.28;
-        rr(ctx, cx - tw * 0.46, y0 - lift, tw * 0.92, bh + lift, bh * 0.2); ctx.fillStyle = grad(ctx, y0 - lift, y0 + bh, '#ffe860', '#ffb800'); ctx.fill(); ctx.strokeStyle = '#fff8c0'; ctx.lineWidth = 2; ctx.stroke();
+        rr(ctx, cx - tw * 0.46, y0 - lift, tw * 0.92, bh + lift, bh * 0.2); ctx.fillStyle = PIX ? '#ffd23a' : grad(ctx, y0 - lift, y0 + bh, '#ffe860', '#ffb800'); ctx.fill(); ctx.strokeStyle = PIX ? '#fff0a0' : '#fff8c0'; ctx.lineWidth = PIX ? 3 : 2; ctx.stroke();
         TABICON[t.icon](ctx, cx, y0 - lift + bh * 0.42, r * 1.25);
-        text(ui, ctx, t.label, cx, y0 + bh * 0.6, px, '#ffffff', { align: 'center', outline: '#8a5200' });
+        text(ui, ctx, t.label, cx, y0 + bh * 0.6, px, PIX ? '#10142a' : '#ffffff', { align: 'center', outline: PIX ? null : '#8a5200' });
       } else {
         const on = inRect(ui, cx - tw / 2, y0, tw, bh);
         if (on) { rr(ctx, cx - tw * 0.45, y0 + 4, tw * 0.9, bh - 8, bh * 0.2); ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fill(); }
@@ -630,18 +642,18 @@
     const yRe = Y(0.975) - bh1 - (P ? S(8) : 0), yAd = yRe - S(12) - bh0;
     if (adOk && xpDone) {
       const on = inRect(ui, bxb, yAd, bw2, bh0), pl = 0.92 + 0.08 * Math.sin(t * 5);
-      if (PXL) pill(ctx, bxb, yAd, bw2, bh0, on ? 'rgba(60,84,140,0.95)' : 'rgba(29,43,83,0.95)', '#fff1e8', bh0 * 0.3); else Home.button3d(ctx, bxb, yAd, bw2, bh0, on ? '#fff27a' : '#ffec27', '#ffa300', '#ab5236', pl);
-      Home.icon.play(ctx, bxb + bh0 * 0.55, yAd + bh0 / 2 - bh0 * 0.03, bh0 * 0.2, PXL ? '#fdfd02' : '#ffffff');
+      if (PXL) pill(ctx, bxb, yAd, bw2, bh0, on ? 'rgba(46,56,104,0.97)' : 'rgba(28,35,66,0.97)', '#46548f', bh0 * 0.3); else Home.button3d(ctx, bxb, yAd, bw2, bh0, on ? '#fff27a' : '#ffec27', '#ffa300', '#ab5236', pl);
+      Home.icon.play(ctx, bxb + bh0 * 0.55, yAd + bh0 / 2 - bh0 * 0.03, bh0 * 0.2, PXL ? '#ffd23a' : '#ffffff');
       const lbl = 'XP X2', lpx = fitq(lbl, bw2 - bh0 * 1.2, 3.6);
       text(ui, ctx, lbl, bxb + bh0 * 1.0, yAd + bh0 / 2 - lpx * 3.6 - bh0 * 0.03, lpx, '#ffffff', { outline: '#0e4a80' });
-      text(ui, ctx, 'PUB', bxb + bw2 - bh0 * 0.4, yAd + bh0 / 2 - S(2.6) * 3.6 - bh0 * 0.03, S(2.6), PXL ? '#fdfd02' : '#d6f4ff', { align: 'right', outline: PXL ? null : '#0e4a80' });
+      text(ui, ctx, 'PUB', bxb + bw2 - bh0 * 0.4, yAd + bh0 / 2 - S(2.6) * 3.6 - bh0 * 0.03, S(2.6), PXL ? '#ffd23a' : '#d6f4ff', { align: 'right', outline: PXL ? null : '#0e4a80' });
       hit(ui, bxb, yAd, bw2, bh0, () => game.ads.rewarded(() => Home.doubleXp(game), null, 'xp'));
     }
     if (ready) {
       const on = inRect(ui, bxb, yRe, bw2, bh1, 0), pl = 1 + 0.02 * Math.sin(t * 5), w = bw2 * pl, x = bxb - (w - bw2) / 2;
-      if (PXL) Home.button3d(ctx, x, yRe, w, bh1, on ? '#ffff7a' : '#fdfd02', '#e6d800', '#a89a00', 1); else Home.button3d(ctx, x, yRe, w, bh1, on ? '#4dff7a' : '#00e436', '#009e3a', '#00632a', 1);
+      if (PXL) Home.button3d(ctx, x, yRe, w, bh1, on ? '#fff0a0' : '#ffd23a', '#ffd23a', '#c9961a', 1); else Home.button3d(ctx, x, yRe, w, bh1, on ? '#4dff7a' : '#00e436', '#009e3a', '#00632a', 1);
       const lpx = fitq('REJOUER', bw2 * 0.7, 5.2);
-      text(ui, ctx, 'REJOUER', bxb + bw2 / 2, yRe + bh1 / 2 - lpx * 3.6 - bh1 * 0.03, lpx, PXL ? '#1d2b53' : '#ffffff', { align: 'center', outline: PXL ? null : '#8a5200' });
+      text(ui, ctx, 'REJOUER', bxb + bw2 / 2, yRe + bh1 / 2 - lpx * 3.6 - bh1 * 0.03, lpx, PXL ? '#10142a' : '#ffffff', { align: 'center', outline: PXL ? null : '#8a5200' });
       hit(ui, x, yRe, w, bh1, () => { const go = () => game.goHome({ autoLaunch: false }); game.ads ? game.ads.beforeContinue(go) : go(); });
     }
     // taper ailleurs : termine les animations d'un coup
