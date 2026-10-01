@@ -163,9 +163,10 @@
       if (free) { c1 = '#c8ecff'; c2 = '#2a90ff'; glow = 'rgba(100,170,255,0.6)'; } else if (boosting) { c1 = '#fff6a0'; c2 = '#ffb020'; glow = 'rgba(255,210,70,0.75)'; } else if (low) { c1 = blink ? '#ffffff' : '#ff9a8a'; c2 = '#ff2a1a'; glow = 'rgba(255,60,40,0.7)'; }
       const r = w * 0.34, pulse = boosting ? 0.75 + 0.25 * Math.sin(performance.now() * 0.02) : 1;
       ctx.save();
-      // halo extérieur
-      ctx.shadowColor = glow; ctx.shadowBlur = w * (boosting ? 1.1 : 0.6) * pulse; ctx.fillStyle = '#2a303a'; Home.rr(ctx, x, y, w, h, r); ctx.fill();
-      ctx.shadowBlur = 0;
+      // halo extérieur (trois liserés translucides : pas de flou, redessiné à chaque image) puis contour sombre
+      for (let i = 3; i >= 1; i--) { ctx.strokeStyle = glow.replace(/[\d.]+\)$/, (0.16 * pulse) + ')'); ctx.lineWidth = w * 0.16 * i; Home.rr(ctx, x, y, w, h, r); ctx.stroke(); }
+      Home.rr(ctx, x - w * 0.05, y - w * 0.05, w * 1.1, h + w * 0.1, r + w * 0.05); ctx.fillStyle = Home.EDGE; ctx.fill();
+      ctx.fillStyle = '#2a303a'; Home.rr(ctx, x, y, w, h, r); ctx.fill();
       // corps métallique (dégradé horizontal) et liseré
       const mg = ctx.createLinearGradient(x, 0, x + w, 0); mg.addColorStop(0, '#4a525e'); mg.addColorStop(0.28, '#c4ccd8'); mg.addColorStop(0.55, '#7c8592'); mg.addColorStop(1, '#3c424c');
       ctx.fillStyle = mg; Home.rr(ctx, x, y, w, h, r); ctx.fill();
@@ -252,8 +253,7 @@
       const [label, kind] = steps[i], k = (t % 3.2) / 3.2, a = Math.min(1, k * 6, (1 - k) * 6);
       const ctx = this.ctx, px = this.refH * 0.0042, w = CC.Font.measure(label, px, !this.modern) + px * 14, h = px * 16, x = W / 2 - w / 2, y = H * 0.23;
       ctx.globalAlpha = a;
-      ctx.fillStyle = 'rgba(10,10,14,0.72)'; ctx.fillRect(x, y, w, h);
-      ctx.strokeStyle = '#fdfd02'; ctx.lineWidth = Math.max(1, px * 0.5); ctx.strokeRect(x, y, w, h);
+      CC.Home.pill(ctx, x, y, w, h, 'rgba(10,16,28,0.78)', 'rgba(111,226,255,0.8)');   // v038i : cartouche de verre arrondi
       // pictogramme : doigt (rond) qui glisse, reste posé (anneau qui grossit), ou se place au bord
       const cx = x + px * 6, cy = y + h / 2, r = px * 2.2;
       ctx.fillStyle = '#f4f4f4';
@@ -364,10 +364,17 @@
         if (!behind && Math.abs(p.x) < 1 && Math.abs(p.y) < 1) {
           // v023 : cible à l'écran → repère rouge permanent sur elle (il ne disparaît plus quand on fonce dessus)
           const sx = (p.x * 0.5 + 0.5) * W, sy = (-p.y * 0.5 + 0.5) * H, r = Math.max(5, H * 0.012);
-          ctx.lineWidth = Math.max(2, H / 360);
-          ctx.strokeStyle = '#1a1a1a'; ctx.strokeRect(sx - r - 1, sy - r - 1, 2 * r + 2, 2 * r + 2);
-          ctx.strokeStyle = '#ff1e1e'; ctx.strokeRect(sx - r, sy - r, 2 * r, 2 * r);
-          ctx.fillStyle = '#ff1e1e'; ctx.fillRect(sx - 2, sy - 2, 4, 4);
+          // v038i : repère en crochets d'angle arrondis (contour sombre + rouge vif) et point central
+          const lw = Math.max(2, H / 330), k = r * 0.62;
+          ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+          for (const [col, w] of [['rgba(4,8,16,0.9)', lw * 2.1], ['#ff3b2e', lw]]) {
+            ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath();
+            for (const [ax, ay] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { ctx.moveTo(sx + ax * r, sy + ay * (r - k)); ctx.lineTo(sx + ax * r, sy + ay * r); ctx.lineTo(sx + ax * (r - k), sy + ay * r); }
+            ctx.stroke();
+          }
+          ctx.lineCap = 'butt';
+          ctx.fillStyle = 'rgba(4,8,16,0.9)'; ctx.beginPath(); ctx.arc(sx, sy, lw * 1.9, 0, 6.283); ctx.fill();
+          ctx.fillStyle = '#ff3b2e'; ctx.beginPath(); ctx.arc(sx, sy, lw * 1.1, 0, 6.283); ctx.fill();
           continue;
         }
         let x = p.x, y = p.y;
@@ -375,9 +382,9 @@
         const m = Math.max(Math.abs(x), Math.abs(y)) || 1;
         x /= m; y /= m;
         const sx = (x * 0.5 + 0.5) * W, sy = (-y * 0.5 + 0.5) * H;
-        const s = Math.max(3, H * 0.0075);
-        ctx.fillStyle = '#ff1e1e';
-        ctx.fillRect(U.clamp(sx, s * 2, W - s * 3), U.clamp(sy, s * 2, H - s * 3), s, s);
+        const s = Math.max(5, H * 0.011), ex = U.clamp(sx, s * 2, W - s * 2), ey = U.clamp(sy, s * 2, H - s * 2), ang = Math.atan2(-y, x);   // v038i : flèche vers la cible hors champ
+        ctx.save(); ctx.translate(ex, ey); ctx.rotate(ang); ctx.beginPath(); ctx.moveTo(s, 0); ctx.lineTo(-s * 0.7, -s * 0.8); ctx.lineTo(-s * 0.35, 0); ctx.lineTo(-s * 0.7, s * 0.8); ctx.closePath();
+        ctx.fillStyle = '#ff3b2e'; ctx.fill(); ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(1.5, s * 0.22); ctx.strokeStyle = 'rgba(4,8,16,0.9)'; ctx.stroke(); ctx.restore();
       }
     }
   }

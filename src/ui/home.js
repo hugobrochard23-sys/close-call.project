@@ -29,47 +29,69 @@
     r = Math.min(r, h / 2, w / 2);
     ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
-  // pastille : fond translucide, reflet léger sur la moitié haute, liseré
+  /* v038i — STYLE « VERRE & ARCADE ». Choix (voir analysis/REFONTE_MOBILE.md) : pixel = daté et illisible en petit ; 100 % « bonbon » (Subway Surfers) =
+   * trop criard sur les nuits néon et les fonds marins ; 100 % futuriste (traits fins) = perd en lisibilité sur une scène 3D chargée et en tactilité.
+   * On garde donc : des capsules de verre sombre (lisibles sur tout fond), un CONTOUR SOMBRE extérieur + un liseré clair intérieur (le contour détache
+   * l'élément d'un décor éblouissant), une ombre portée nette (sans flou : peu coûteux, redessiné à chaque image), un reflet sur la moitié haute ;
+   * des boutons principaux épais et brillants avec une lèvre (on les « presse ») ; des pictogrammes pleins en dégradé, contour sombre ; un seul accent
+   * froid (cyan) pour l'interface, l'or pour la monnaie, le vert pour valider, le rouge pour l'alerte. */
+  const EDGE = 'rgba(4,8,16,0.95)';
+  const hexMix = (hex, to, t) => { const a = U.hexToRgb(hex), b = U.hexToRgb(to); return '#' + [0, 1, 2].map((i) => Math.round(a[i] + (b[i] - a[i]) * t).toString(16).padStart(2, '0')).join(''); };
+  const lighter = (c, t) => hexMix(c, '#ffffff', t === undefined ? 0.45 : t), darker = (c, t) => hexMix(c, '#000000', t === undefined ? 0.4 : t);
+  function drop(ctx, x, y, w, h, r, d, a) { rr(ctx, x, y + d, w, h, r); ctx.fillStyle = 'rgba(0,0,0,' + a + ')'; ctx.fill(); }
+  // pastille : verre sombre, contour extérieur, liseré intérieur (couleur d'accent), reflet haut
   function pill(ctx, x, y, w, h, fill, stroke, r) {
     r = r === undefined ? h / 2 : r;
+    const lw = Math.max(1.5, h * 0.045);
+    drop(ctx, x, y, w, h, r, h * 0.07, 0.3);
     rr(ctx, x, y, w, h, r); ctx.fillStyle = fill; ctx.fill();
-    const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, 'rgba(255,255,255,0.16)'); g.addColorStop(0.5, 'rgba(255,255,255,0.03)'); g.addColorStop(1, 'rgba(0,0,0,0.12)');
+    const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, 'rgba(255,255,255,0.2)'); g.addColorStop(0.48, 'rgba(255,255,255,0.04)'); g.addColorStop(1, 'rgba(0,0,0,0.16)');
     rr(ctx, x, y, w, h, r); ctx.fillStyle = g; ctx.fill();
-    if (stroke) { rr(ctx, x, y, w, h, r); ctx.strokeStyle = stroke; ctx.lineWidth = Math.max(1.5, h * 0.045); ctx.stroke(); }
+    rr(ctx, x - lw * 0.5, y - lw * 0.5, w + lw, h + lw, r + lw * 0.5); ctx.strokeStyle = EDGE; ctx.lineWidth = lw; ctx.stroke();
+    if (stroke) { rr(ctx, x + lw * 0.7, y + lw * 0.7, w - lw * 1.4, h - lw * 1.4, Math.max(0, r - lw * 0.7)); ctx.strokeStyle = stroke; ctx.lineWidth = Math.max(1, lw * 0.8); ctx.stroke(); }
   }
   // ancien nom conservé : rectangle arrondi (le paramètre `n` ne sert plus)
   function pxRect(ctx, x, y, w, h, fill, stroke, n, lw) { pill(ctx, x, y, w, h, fill || 'rgba(0,0,0,0)', stroke, Math.min(h * 0.26, 22)); }
-  // bouton 3D : lèvre sombre dessous, dégradé, reflet brillant, léger liseré clair
+  // bouton principal 3D : contour sombre, lèvre dessous, dégradé, grand reflet, liseré clair
   function button3d(ctx, x, y, w, h, c1, c2, lip, pulse) {
-    const r = h * 0.3, d = h * 0.09, hh = h - d;
+    const r = h * 0.3, d = h * 0.1, hh = h - d, lw = Math.max(2, h * 0.04);
     ctx.save(); if (pulse && pulse !== 1) { ctx.translate(x + w / 2, y + h / 2); ctx.scale(pulse, pulse); ctx.translate(-(x + w / 2), -(y + h / 2)); }
+    drop(ctx, x, y + d * 0.6, w, hh, r, d * 0.9, 0.3);
+    rr(ctx, x - lw, y - lw, w + 2 * lw, h + 2 * lw, r + lw); ctx.fillStyle = EDGE; ctx.fill();
     rr(ctx, x, y + d, w, hh, r); ctx.fillStyle = lip; ctx.fill();
     const g = ctx.createLinearGradient(0, y, 0, y + hh); g.addColorStop(0, c1); g.addColorStop(1, c2);
     rr(ctx, x, y, w, hh, r); ctx.fillStyle = g; ctx.fill();
-    const gl = ctx.createLinearGradient(0, y, 0, y + hh * 0.55); gl.addColorStop(0, 'rgba(255,255,255,0.55)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
-    rr(ctx, x + w * 0.02, y + hh * 0.05, w * 0.96, hh * 0.5, r * 0.8); ctx.fillStyle = gl; ctx.fill();
-    rr(ctx, x, y, w, hh, r); ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = Math.max(1.5, h * 0.03); ctx.stroke();
+    const gl = ctx.createLinearGradient(0, y, 0, y + hh * 0.55); gl.addColorStop(0, 'rgba(255,255,255,0.6)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
+    rr(ctx, x + w * 0.025, y + hh * 0.06, w * 0.95, hh * 0.46, r * 0.8); ctx.fillStyle = gl; ctx.fill();
+    rr(ctx, x + lw * 0.6, y + lw * 0.6, w - lw * 1.2, hh - lw * 1.2, Math.max(0, r - lw * 0.6)); ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = Math.max(1.2, lw * 0.6); ctx.stroke();
     ctx.restore();
   }
-  // jauge arrondie : rail sombre, remplissage en dégradé avec reflet
+  // jauge arrondie : rail sombre contouré, remplissage en dégradé avec reflet
   function meter(ctx, x, y, w, h, k, c1, c2) {
-    rr(ctx, x - 2, y - 2, w + 4, h + 4, h); ctx.fillStyle = 'rgba(4,8,16,0.85)'; ctx.fill();
+    const lw = Math.max(1.5, h * 0.12);
+    rr(ctx, x - lw, y - lw, w + 2 * lw, h + 2 * lw, h); ctx.fillStyle = EDGE; ctx.fill();
+    rr(ctx, x, y, w, h, h / 2); ctx.fillStyle = 'rgba(14,22,38,0.95)'; ctx.fill();
     const f = Math.max(0, Math.min(1, k)) * w;
     if (f > 1) {
-      const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, c1); g.addColorStop(1, c2);
+      const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, lighter(c1, 0.35)); g.addColorStop(0.5, c1); g.addColorStop(1, c2);
       rr(ctx, x, y, Math.max(f, h), h, h / 2); ctx.fillStyle = g; ctx.fill();
-      rr(ctx, x + h * 0.15, y + h * 0.12, Math.max(f, h) - h * 0.3, h * 0.32, h * 0.16); ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fill();
+      rr(ctx, x + h * 0.18, y + h * 0.12, Math.max(f, h) - h * 0.36, h * 0.3, h * 0.15); ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fill();
     }
   }
-  // badge de niveau : carré arrondi doré avec le numéro
+  // badge de niveau : carré arrondi doré contouré avec le numéro
   function badge(ctx, x, y, size, level, ui) {
-    const g = ctx.createLinearGradient(0, y, 0, y + size); g.addColorStop(0, '#ffe45a'); g.addColorStop(1, '#e08a00');
-    rr(ctx, x, y, size, size, size * 0.26); ctx.fillStyle = g; ctx.fill(); rr(ctx, x, y, size, size, size * 0.26); ctx.strokeStyle = '#fff6b0'; ctx.lineWidth = Math.max(2, size * 0.05); ctx.stroke();
+    const lw = Math.max(2, size * 0.04);
+    drop(ctx, x, y, size, size, size * 0.26, size * 0.06, 0.32);
+    rr(ctx, x - lw, y - lw, size + 2 * lw, size + 2 * lw, size * 0.26 + lw); ctx.fillStyle = EDGE; ctx.fill();
+    const g = ctx.createLinearGradient(0, y, 0, y + size); g.addColorStop(0, '#fff07a'); g.addColorStop(0.55, '#ffbe1a'); g.addColorStop(1, '#e07a00');
+    rr(ctx, x, y, size, size, size * 0.26); ctx.fillStyle = g; ctx.fill();
+    rr(ctx, x + size * 0.04, y + size * 0.04, size * 0.92, size * 0.4, size * 0.2); ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fill();
+    rr(ctx, x + lw * 0.7, y + lw * 0.7, size - lw * 1.4, size - lw * 1.4, size * 0.24); ctx.strokeStyle = '#fff6b0'; ctx.lineWidth = Math.max(1.5, size * 0.03); ctx.stroke();
     text(ui, ctx, 'NIV', x + size / 2, y + size * 0.1, size * 0.026, '#7a4a00', { align: 'center', outline: null });
     const s = String(level), px = Math.min(size * 0.075, size * 0.66 / Math.max(1, F.measure(s, 1)));
-    text(ui, ctx, s, x + size / 2, y + size * 0.36, px, '#ffffff', { align: 'center', outline: '#8a5200' });
+    text(ui, ctx, s, x + size / 2, y + size * 0.36, px, '#ffffff', { align: 'center', outline: '#6a3c00' });
   }
-  Home.rr = rr; Home.pill = pill; Home.button3d = button3d; Home.meter = meter; Home.badge = badge;
+  Home.rr = rr; Home.pill = pill; Home.button3d = button3d; Home.meter = meter; Home.badge = badge; Home.EDGE = EDGE; Home.lighter = lighter; Home.darker = darker;
   const F2 = F;
 
   const hit = (ui, x, y, w, h, action) => ui.buttons.push({ x, y, w, h, action });
@@ -80,45 +102,64 @@
   Home.bar = bar;
 
   // ---------- pictogrammes ----------
+  // pictogrammes v038i : formes pleines en dégradé (clair en haut, foncé en bas), contour sombre, petit reflet
+  const gfill = (ctx, y0, y1, col) => { const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, lighter(col, 0.5)); g.addColorStop(0.5, col); g.addColorStop(1, darker(col, 0.35)); return g; };
+  const solid = (ctx, cy, r, col, lw) => { ctx.fillStyle = gfill(ctx, cy - r, cy + r, col); ctx.fill(); ctx.lineJoin = 'round'; ctx.lineWidth = lw === undefined ? Math.max(1.5, r * 0.14) : lw; ctx.strokeStyle = EDGE; ctx.stroke(); };
   const ICON = {
     gear(ctx, cx, cy, r, col) {
-      ctx.fillStyle = col;
-      for (let i = 0; i < 8; i++) { ctx.save(); ctx.translate(cx, cy); ctx.rotate(i * Math.PI / 4); ctx.fillRect(-r * 0.15, -r, r * 0.3, r * 0.45); ctx.restore(); }
-      ctx.beginPath(); ctx.arc(cx, cy, r * 0.68, 0, 6.283); ctx.fill();
-      ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(cx, cy, r * 0.3, 0, 6.283); ctx.fill();
+      ctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const a = i * Math.PI / 4, w1 = Math.PI / 16, w2 = Math.PI / 11;
+        for (const [ang, rad] of [[a - w2, 0.78], [a - w1, 1], [a + w1, 1], [a + w2, 0.78]]) ctx.lineTo(cx + Math.cos(ang) * rad * r, cy + Math.sin(ang) * rad * r);
+      }
+      ctx.closePath(); solid(ctx, cy, r, col);
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.34, 0, 6.283); ctx.fillStyle = '#0c1220'; ctx.fill(); ctx.strokeStyle = EDGE; ctx.lineWidth = Math.max(1.5, r * 0.1); ctx.stroke();
     },
     target(ctx, cx, cy, r, col) {
-      ctx.strokeStyle = col; ctx.lineWidth = Math.max(2, r * 0.16);
-      for (const k of [1, 0.62]) { ctx.beginPath(); ctx.arc(cx, cy, r * k, 0, 6.283); ctx.stroke(); }
-      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(cx, cy, r * 0.22, 0, 6.283); ctx.fill();
-      ctx.fillRect(cx - r * 1.1, cy - r * 0.06, r * 0.5, r * 0.12); ctx.fillRect(cx + r * 0.6, cy - r * 0.06, r * 0.5, r * 0.12);
+      const lw = Math.max(2, r * 0.18);
+      for (const [pass, w] of [[EDGE, lw + Math.max(2, r * 0.12)], [col, lw]]) {
+        ctx.strokeStyle = pass; ctx.lineWidth = w; ctx.lineCap = 'butt';
+        for (const k of [1, 0.58]) { ctx.beginPath(); ctx.arc(cx, cy, r * k, 0, 6.283); ctx.stroke(); }
+        ctx.beginPath(); ctx.moveTo(cx - r * 1.2, cy); ctx.lineTo(cx - r * 0.7, cy); ctx.moveTo(cx + r * 0.7, cy); ctx.lineTo(cx + r * 1.2, cy); ctx.stroke();
+      }
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.2, 0, 6.283); solid(ctx, cy, r * 0.2, col, Math.max(1, r * 0.06));
     },
     rocket(ctx, cx, cy, r, col) {
-      ctx.fillStyle = col;
-      ctx.beginPath(); ctx.moveTo(cx + r, cy); ctx.lineTo(cx + r * 0.25, cy - r * 0.32); ctx.lineTo(cx - r * 0.7, cy - r * 0.32); ctx.lineTo(cx - r * 0.7, cy + r * 0.32); ctx.lineTo(cx + r * 0.25, cy + r * 0.32); ctx.closePath(); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(cx - r * 0.2, cy - r * 0.3); ctx.lineTo(cx - r * 0.75, cy - r * 0.85); ctx.lineTo(cx - r * 0.75, cy - r * 0.3); ctx.closePath(); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(cx - r * 0.2, cy + r * 0.3); ctx.lineTo(cx - r * 0.75, cy + r * 0.85); ctx.lineTo(cx - r * 0.75, cy + r * 0.3); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = INK; ctx.fillRect(cx - r * 0.05, cy - r * 0.1, r * 0.22, r * 0.2);
+      ctx.save(); ctx.translate(cx, cy);
+      for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(-r * 0.2, s * r * 0.3); ctx.lineTo(-r * 0.78, s * r * 0.9); ctx.lineTo(-r * 0.78, s * r * 0.3); ctx.closePath(); solid(ctx, 0, r, '#e0402c'); }
+      ctx.beginPath(); ctx.moveTo(r, 0); ctx.quadraticCurveTo(r * 0.5, -r * 0.42, -r * 0.2, -r * 0.34); ctx.lineTo(-r * 0.74, -r * 0.34); ctx.lineTo(-r * 0.74, r * 0.34); ctx.lineTo(-r * 0.2, r * 0.34); ctx.quadraticCurveTo(r * 0.5, r * 0.42, r, 0); ctx.closePath(); solid(ctx, 0, r * 0.5, col);
+      ctx.beginPath(); ctx.arc(r * 0.05, 0, r * 0.15, 0, 6.283); ctx.fillStyle = '#39b8ff'; ctx.fill(); ctx.strokeStyle = EDGE; ctx.lineWidth = Math.max(1, r * 0.07); ctx.stroke();
+      ctx.restore();
     },
     nut(ctx, cx, cy, r, col) {   // écrou hexagonal doré (la monnaie : les MATERIAUX)
-      const hex = (rr) => { ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } ctx.closePath(); };
-      hex(r); ctx.fillStyle = '#7a4a00'; ctx.fill();
-      const g = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r); g.addColorStop(0, '#fff3a0'); g.addColorStop(0.5, '#ffc820'); g.addColorStop(1, '#c87800');
-      hex(r * 0.88); ctx.fillStyle = g; ctx.fill(); hex(r * 0.88); ctx.strokeStyle = '#fff8c8'; ctx.lineWidth = Math.max(1, r * 0.08); ctx.stroke();
-      ctx.beginPath(); ctx.arc(cx, cy, r * 0.36, 0, 6.283); ctx.fillStyle = '#5a3400'; ctx.fill();
+      const hex = (rad) => { ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; ctx.lineTo(cx + Math.cos(a) * rad, cy + Math.sin(a) * rad); } ctx.closePath(); };
+      hex(r); ctx.fillStyle = '#6a3c00'; ctx.fill(); ctx.lineJoin = 'round'; ctx.strokeStyle = EDGE; ctx.lineWidth = Math.max(1.5, r * 0.16); ctx.stroke();
+      const g = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r); g.addColorStop(0, '#fff6b0'); g.addColorStop(0.45, '#ffc820'); g.addColorStop(1, '#c87800');
+      hex(r * 0.86); ctx.fillStyle = g; ctx.fill(); hex(r * 0.86); ctx.strokeStyle = 'rgba(255,248,200,0.9)'; ctx.lineWidth = Math.max(1, r * 0.07); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.36, 0, 6.283); ctx.fillStyle = '#5a3400'; ctx.fill(); ctx.strokeStyle = EDGE; ctx.lineWidth = Math.max(1, r * 0.08); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.22, 0, 6.283); ctx.fillStyle = '#1c1000'; ctx.fill();
     },
     gem(ctx, cx, cy, r, col) {
-      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r * 0.8, cy - r * 0.15); ctx.lineTo(cx, cy + r); ctx.lineTo(cx - r * 0.8, cy - r * 0.15); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx - r * 0.8, cy - r * 0.15); ctx.lineTo(cx - r * 0.05, cy - r * 0.05); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r * 0.8, cy - r * 0.15); ctx.lineTo(cx, cy + r); ctx.lineTo(cx - r * 0.8, cy - r * 0.15); ctx.closePath(); solid(ctx, cy, r, col);
+      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.moveTo(cx, cy - r * 0.92); ctx.lineTo(cx - r * 0.7, cy - r * 0.15); ctx.lineTo(cx - r * 0.05, cy - r * 0.05); ctx.closePath(); ctx.fill();
     },
     flame(ctx, cx, cy, r, col) {
-      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.quadraticCurveTo(cx + r * 0.9, cy - r * 0.1, cx + r * 0.55, cy + r * 0.55); ctx.quadraticCurveTo(cx, cy + r * 1.05, cx - r * 0.55, cy + r * 0.55); ctx.quadraticCurveTo(cx - r * 0.9, cy - r * 0.1, cx, cy - r); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.beginPath(); ctx.moveTo(cx, cy - r * 0.15); ctx.quadraticCurveTo(cx + r * 0.38, cy + r * 0.25, cx + r * 0.2, cy + r * 0.6); ctx.quadraticCurveTo(cx, cy + r * 0.8, cx - r * 0.2, cy + r * 0.6); ctx.quadraticCurveTo(cx - r * 0.38, cy + r * 0.25, cx, cy - r * 0.15); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.quadraticCurveTo(cx + r * 0.9, cy - r * 0.1, cx + r * 0.55, cy + r * 0.55); ctx.quadraticCurveTo(cx, cy + r * 1.05, cx - r * 0.55, cy + r * 0.55); ctx.quadraticCurveTo(cx - r * 0.9, cy - r * 0.1, cx, cy - r); ctx.closePath(); solid(ctx, cy, r, col, Math.max(1, r * 0.1));
+      ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.moveTo(cx, cy - r * 0.15); ctx.quadraticCurveTo(cx + r * 0.38, cy + r * 0.25, cx + r * 0.2, cy + r * 0.6); ctx.quadraticCurveTo(cx, cy + r * 0.8, cx - r * 0.2, cy + r * 0.6); ctx.quadraticCurveTo(cx - r * 0.38, cy + r * 0.25, cx, cy - r * 0.15); ctx.fill();
     },
-    play(ctx, cx, cy, r, col) { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(cx - r * 0.6, cy - r * 0.8); ctx.lineTo(cx + r * 0.9, cy); ctx.lineTo(cx - r * 0.6, cy + r * 0.8); ctx.closePath(); ctx.fill(); },
-    check(ctx, cx, cy, r, col) { ctx.strokeStyle = col; ctx.lineWidth = Math.max(2, r * 0.28); ctx.lineCap = 'square'; ctx.beginPath(); ctx.moveTo(cx - r * 0.7, cy); ctx.lineTo(cx - r * 0.15, cy + r * 0.55); ctx.lineTo(cx + r * 0.8, cy - r * 0.6); ctx.stroke(); },
-    lock(ctx, cx, cy, r, col) { ctx.fillStyle = col; ctx.fillRect(cx - r * 0.7, cy - r * 0.05, r * 1.4, r * 0.95); ctx.strokeStyle = col; ctx.lineWidth = Math.max(2, r * 0.22); ctx.beginPath(); ctx.arc(cx, cy - r * 0.15, r * 0.45, Math.PI, 0); ctx.stroke(); },
-    home(ctx, cx, cy, r, col) { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r, cy); ctx.lineTo(cx + r * 0.65, cy); ctx.lineTo(cx + r * 0.65, cy + r * 0.85); ctx.lineTo(cx - r * 0.65, cy + r * 0.85); ctx.lineTo(cx - r * 0.65, cy); ctx.lineTo(cx - r, cy); ctx.closePath(); ctx.fill(); },
+    play(ctx, cx, cy, r, col) { ctx.beginPath(); ctx.moveTo(cx - r * 0.6, cy - r * 0.85); ctx.lineTo(cx + r * 0.95, cy); ctx.lineTo(cx - r * 0.6, cy + r * 0.85); ctx.closePath(); solid(ctx, cy, r, col); },
+    check(ctx, cx, cy, r, col) {
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      for (const [c, w] of [[EDGE, Math.max(3, r * 0.5)], [col, Math.max(2, r * 0.3)]]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(cx - r * 0.7, cy); ctx.lineTo(cx - r * 0.15, cy + r * 0.55); ctx.lineTo(cx + r * 0.8, cy - r * 0.6); ctx.stroke(); }
+      ctx.lineCap = 'butt';
+    },
+    lock(ctx, cx, cy, r, col) {
+      ctx.lineCap = 'round';
+      for (const [c, w] of [[EDGE, Math.max(3, r * 0.4)], [lighter(col, 0.25), Math.max(2, r * 0.22)]]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.arc(cx, cy - r * 0.15, r * 0.45, Math.PI, 0); ctx.stroke(); }
+      rr(ctx, cx - r * 0.72, cy - r * 0.05, r * 1.44, r * 1.0, r * 0.2); solid(ctx, cy, r * 0.6, col);
+      ctx.fillStyle = '#0c1220'; ctx.beginPath(); ctx.arc(cx, cy + r * 0.36, r * 0.14, 0, 6.283); ctx.fill(); ctx.lineCap = 'butt';
+    },
+    home(ctx, cx, cy, r, col) { ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r, cy); ctx.lineTo(cx + r * 0.65, cy); ctx.lineTo(cx + r * 0.65, cy + r * 0.85); ctx.lineTo(cx - r * 0.65, cy + r * 0.85); ctx.lineTo(cx - r * 0.65, cy); ctx.lineTo(cx - r, cy); ctx.closePath(); solid(ctx, cy, r, col); },
   };
   Home.icon = ICON;
 
@@ -336,7 +377,7 @@
     // décors
     const wy = Y(0.12) + bs + HH * 0.03;
     text(ui, ctx, 'DECORS', W * 0.07, wy, u * 0.0062, '#9fb0c8', {});
-    const ids = Object.keys(cfg.worlds), n = ids.length, rw = W * 0.86, rh = Math.min(u * 0.085, HH * 0.052);
+    const ids = Object.keys(cfg.worlds), n = ids.length, rw = W * 0.86, rh = Math.min(u * 0.075, HH * 0.044);
     ids.forEach((id, i) => {
       const y = wy + HH * 0.03 + i * (rh + HH * 0.008), open = S.level >= cfg.worlds[id];
       pxRect(ctx, W * 0.07, y, rw, rh, 'rgba(12,18,30,0.8)', open ? 'rgba(86,255,90,0.6)' : 'rgba(159,176,200,0.25)', Math.round(rh * 0.14));
@@ -348,7 +389,7 @@
     // statistiques
     const sy = wy + HH * 0.03 + n * (rh + HH * 0.008) + HH * 0.02;
     const st = [['VOLS', S.runs], ['MEILLEUR SCORE', U.formatInt(S.best)], ['DISTANCE TOTALE', U.formatInt(S.stats.dist) + ' M'], ['CIBLES', S.stats.targets], ['ECLATS', S.stats.cells]];
-    const sp = ui.fitPx(['DISTANCE TOTALE   000.000 M'], rw, u * 0.0056);
+    const sp = Math.min(ui.fitPx(['DISTANCE TOTALE   000.000 M'], rw, u * 0.0056), Math.max(1, (Y(0.935) - u * 0.07 - sy) / (st.length * 11)));   // v038i : les statistiques ne passent plus sous le bouton RETOUR
     st.forEach((r2, i) => { const y = sy + i * sp * 11; text(ui, ctx, r2[0], W * 0.07, y, sp, '#9fb0c8', {}); text(ui, ctx, String(r2[1]), W * 0.93, y, sp, '#ffffff', { align: 'right' }); });
     backButton(ui, ctx, L, ui.key('RETOUR', 'ESC'), () => { ui.overlay = null; });
   };

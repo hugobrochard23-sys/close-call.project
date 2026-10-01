@@ -90,11 +90,11 @@
     postfx: { vignette: 0.42, vignetteColor: '#1a2a4a', halftone: 0.35, lift: '#04060c', saturation: 0.95 },
   }) });
   E('miniRoom', { label: 'PIECE', dark: 0.05, vis: 0.9, skyline: '#e8dcc8', make: (r) => ({
-    sky: { top: '#f0e4cc', horizon: '#f6ecd8', bottom: '#d8c8a8' },
-    fog: { color: '#e8dcc4', near: 140, far: r.between([640, 760]) },
-    hemi: { sky: '#fff2d8', ground: '#9a8a70', intensity: 0.85 }, ambient: { color: '#fff4e0', intensity: 0.34 },
-    sun: { color: '#ffe8c0', intensity: 0.7, dir: [0.35, 0.8, 0.45] },
-    postfx: { vignette: 0.5, vignetteColor: '#2a1a0a', halftone: 0.35, lift: '#0a0604', saturation: 1.0 },
+    sky: { top: '#d8c8a8', horizon: '#e0d2b4', bottom: '#b8a88a' },
+    fog: { color: '#cdbf9f', near: 140, far: r.between([640, 760]) },
+    hemi: { sky: '#f2e2c4', ground: '#6e5f48', intensity: 0.5 }, ambient: { color: '#f0e0c4', intensity: 0.14 },
+    sun: { color: '#ffe0b0', intensity: 0.4, dir: [0.35, 0.8, 0.45] },
+    postfx: { vignette: 0.55, vignetteColor: '#2a1a0a', halftone: 0.35, lift: '#0a0604', saturation: 1.0, bloomThreshold: 0.9, bloomStrength: 0.2 },
   }) });
 
   E('neonNight', { label: 'NUIT NEON', dark: 0.75, vis: 0.6, skyline: '#2a1650', make: (r) => ({

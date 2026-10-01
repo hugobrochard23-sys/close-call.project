@@ -167,7 +167,7 @@ CC.CONFIG = {
     vignette: 0.55, vignetteRadius: 0.78, vignetteSoftness: 0.55,
     chromatic: 0.0045,
     halftone: 0.35, halftoneCell: 3.0,
-    bloomThreshold: 0.72, bloomStrength: 0.55,
+    bloomThreshold: 0.8, bloomStrength: 0.4,           // v038i : halo plus discret (la scène du monde miniature était éblouissante)
     grain: 0.025,
     lift: '#000000',             // relèvement des ombres : valeurs par niveau calibrées par tools/calibrate_color.js (v006)
     saturation: 1.0,

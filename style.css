@@ -15,8 +15,10 @@ body.cc-touch { touch-action: none; align-items: flex-start; justify-content: fl
 .cc-pause {
   position: fixed; z-index: 5; box-sizing: border-box; touch-action: none;
   top: calc(env(safe-area-inset-top, 0px) + 10px); left: calc(env(safe-area-inset-left, 0px) + 10px);
-  width: 52px; height: 52px; border-radius: 15px;
-  background: linear-gradient(#5ab8ff, #1f7fd6); border: 3px solid rgba(255,255,255,0.9); box-shadow: 0 3px 0 #0e4f94, 0 4px 10px rgba(0,0,0,0.35);
+  width: 52px; height: 52px; border-radius: 16px;
+  /* v038i : verre sombre, liseré cyan, contour sombre, ombre nette (même langage que les pastilles du HUD) */
+  background: linear-gradient(rgba(60,84,128,0.92), rgba(14,22,40,0.94)); border: 2.5px solid rgba(111,226,255,0.9);
+  box-shadow: 0 0 0 2px rgba(4,8,16,0.95), 0 4px 0 rgba(4,8,16,0.55), inset 0 6px 8px rgba(255,255,255,0.14);
 }
 /* deux barres de pause, dessinées en CSS (aucune image à charger) */
 .cc-pause::before, .cc-pause::after { content: ''; position: absolute; top: 13px; width: 8px; height: 20px; border-radius: 2px; background: #fff; box-shadow: 0 1px 0 rgba(0,0,0,0.25); }

@@ -140,3 +140,20 @@ fin froid, menu pause anglais (remplacé par un menu français à gros boutons, 
 - La boutique conserve son fonctionnement (paiement Stripe ou minute de publicité) : les niveaux ne débloquent volontairement **aucun**
   cosmétique payant.
 - Le pilote automatique ne connaît pas les drones (banc de test seulement).
+
+## v038i — Style d'interface « Verre & Arcade »
+
+Trois pistes comparées :
+
+| Piste | Pour | Contre |
+|---|---|---|
+| Pixel / rétro | cohérent avec les voxels d'origine | daté, illisible en petit, ne va pas avec le rendu 3D lissé |
+| 100 % « bonbon » (type Subway Surfers) | très tactile et intuitif | criard sur les nuits néon et les fonds marins, enfantin face à un missile |
+| 100 % futuriste (traits fins, néon) | cohérent avec le thème | perd en lisibilité sur une scène chargée, peu tactile |
+
+Retenu : un hybride.
+- **En vol** : capsules de verre sombre (lisibles sur tout fond), contour sombre extérieur + liseré clair intérieur, ombre portée nette sans flou, reflet haut. Accent unique cyan, or pour la monnaie, vert pour valider, rouge pour l'alerte.
+- **Menus** : boutons principaux épais, brillants, avec lèvre (REPRENDRE, REJOUER) ; boutons secondaires en verre.
+- **Contours** : oui pour les petits éléments (pastilles, icônes, repères de cible, jauge) car ils détachent l'élément d'un décor éblouissant ou très clair ; non sur les grands panneaux (inutile, alourdit).
+- **Pictogrammes** : formes pleines en dégradé, contour sombre, petit reflet ; repères de cible en crochets d'angle arrondis, flèche pour les cibles hors champ.
+- **Performance** : aucun flou d'ombre dans le canvas du HUD (redessiné à chaque image).

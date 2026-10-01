@@ -22,6 +22,11 @@
       if (hot) this.hover = idx;
       this.buttons.push({ x: bx, y: by, w, h, action });
       const col = hot ? CC.CONFIG.hud.colors.yellow : (opts.color || '#f4f4f4');
+      if (opts.primary && (opts.box || touch)) {   // v038i : bouton principal épais, vert, brillant (REPRENDRE, ...)
+        CC.Home.button3d(ctx, bx, by, w, h + Math.max(2, px) * 0.4, hot ? '#9dffa0' : '#74f06a', '#1fae3c', '#0f6a24');
+        this.text(ctx, label, x, y - px * 0.2, px, '#ffffff', { align: 'center', outline: '#0b5a1c' });
+        return;
+      }
       if ((opts.box || touch) && opts.box !== false) {
         const pad = Math.max(2, px);
         CC.Home.pill(ctx, bx, by + pad * 0.5, w, h - pad, hot ? 'rgba(255,255,255,0.22)' : (opts.fill || 'rgba(20,30,50,0.72)'), opts.color || 'rgba(244,244,244,0.6)', Math.min((h - pad) * 0.3, 22));   // v034 : bouton arrondi
@@ -325,7 +330,7 @@
         this.text(ctx, t, W / 2, T + HH * 0.145, this.fitPx([t], W * 0.9, HH * 0.0028), CC.CONFIG.hud.colors.yellow, { align: 'center' });
       }
       const top = T + HH * 0.2, gap = Math.min(HH * 0.085, (HH * 0.74) / rows.length), bpx = this.fitPx(rows.map((r) => r[0]), W * 0.78, gap * 0.07);
-      rows.forEach((r, i) => this.button(ctx, r[0], W / 2, top + i * gap, bpx, r[1], { hitW: W * 0.86, box: true, color: r[2] }));
+      rows.forEach((r, i) => this.button(ctx, r[0], W / 2, top + i * gap, bpx, r[1], { hitW: W * 0.86, box: true, color: r[2], primary: i === 0 }));
     }
 
     // v030 : GRAPHICS : AUTO (niveau choisi par le jeu, affiché entre parenthèses) → HIGH → MEDIUM → LOW → AUTO
