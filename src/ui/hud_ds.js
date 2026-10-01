@@ -21,7 +21,6 @@
     DS.text(ctx, ds, x0, cy, fs, T.white, { weight: 700, stroke: 'rgba(4,18,34,0.85)' });
     DS.text(ctx, 'm', x0 + nw + 6 * k, cy + fs * 0.13, fs * 0.5, T.cyanL, { weight: 700, stroke: 'rgba(4,18,34,0.85)' });
     ctx.restore();
-    DS.text(ctx, 'SCORE ' + fmtD(run.score), cx, cy + 34 * k, 15 * k, T.text2, { align: 'center', weight: 700, ls: 1.2, stroke: 'rgba(4,18,34,0.75)' });
     const kf = U.clamp((rk.active ? rk.fuel : rk.fuelMax) / (rk.fuelMax || 1), 0, 1), free = rk.active && rk.freeBoost, fc = free ? { c1: T.cyanL, c2: T.blue } : DS.fuelColors(kf, now);
     // --- anneau BOOST (bas centre)
     if (alive) {

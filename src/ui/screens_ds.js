@@ -30,6 +30,7 @@
   //   ACCUEIL
   // ============================================================================================================
   Home.drawHome = function (ui, ctx, game, W, H) {
+    DS.release3d();
     const L = Home.layout(ui, W, H), { T: top, HH } = L, k = DS.kOf(L), prog = game.progress, P = prog.P, m = 12 * k;
     const arm = game.state === 'LAUNCH' ? U.clamp(1 - game.launchT / 0.3, 0, 1) : 1;   // l'interface s'efface dès que la charge commence
     if (arm <= 0) return;
@@ -42,7 +43,7 @@
     DS.avatar(ctx, m, ay, as); hit(ui, m, ay, as, as, () => { ui.overlay = 'garage'; });
     DS.level(ctx, m + as + 8 * k, ay + 2 * k, 96 * k, 46 * k, prog.level, U.clamp(prog.xp / prog.need(prog.level), 0, 1), k);
     DS.currency(ui, ctx, W - m - 50 * k, ay + 8 * k, 34 * k, P.materials || 0, k);
-    DS.iconButton(ui, ctx, W - m - 22 * k, ay + 25 * k, 42 * k, 'gear', () => { ui.overlay = 'msettings'; }, { k, shadow: false });
+    DS.iconButton(ui, ctx, W - m - 22 * k, ay + 25 * k, 42 * k, 'gear', () => { ui.overlay = 'msettings'; }, { k, shadow: false, color: '#FFFFFF' });
     // --- bas : navigation, MISSIONS, PLAY (de bas en haut)
     const lvl = prog.level, items = [];
     if (lvl >= 2) items.push({ id: 'garage', icon: 'garage', label: 'GARAGE' });
@@ -126,11 +127,11 @@
     backdrop(ctx, L);
     let y = header(ui, ctx, L, k, 'GARAGE', game);
     // vitrine : fusée sur un plateau
-    const sh = Math.min(200 * k, (L.HH - 76 * k - 4 * 80 * k - 120 * k) ); DS.panel(ctx, x0, y, cw, sh, { k, accent: T.cyan, glow: true });
+    const sh = Math.min(210 * k, (L.HH - 76 * k - 4 * 80 * k - 120 * k) ); DS.panel(ctx, x0, y, cw, sh, { k, accent: T.cyan, glow: true });
     ctx.save(); rrClip(ctx, x0, y, cw, sh, 16 * k);
     const g = ctx.createRadialGradient(W / 2, y + sh * 0.7, 0, W / 2, y + sh * 0.7, cw * 0.55); g.addColorStop(0, 'rgba(24,200,255,0.3)'); g.addColorStop(1, 'rgba(24,200,255,0)'); ctx.fillStyle = g; ctx.fillRect(x0, y, cw, sh);
-    ctx.beginPath(); ctx.ellipse(W / 2, y + sh * 0.86, cw * 0.32, 12 * k, 0, 0, 6.2832); ctx.fillStyle = 'rgba(10,50,80,0.9)'; ctx.fill(); ctx.strokeStyle = T.cyan; ctx.lineWidth = 2 * k; ctx.stroke();
-    DS.rocket(ctx, W / 2, y + sh * 0.5 + Math.sin(t * 1.6) * 3 * k, 190 * k, -0.28);
+    ctx.beginPath(); ctx.ellipse(W / 2, y + sh * 0.9, cw * 0.3, 10 * k, 0, 0, 6.2832); ctx.fillStyle = 'rgba(10,50,80,0.7)'; ctx.fill(); ctx.strokeStyle = 'rgba(24,200,255,0.7)'; ctx.lineWidth = 2 * k; ctx.stroke();
+    if (!DS.rocket3d(ctx, game, x0, y, cw, sh * 0.92, t)) DS.rocket(ctx, W / 2, y + sh * 0.5 + Math.sin(t * 1.6) * 3 * k, 190 * k, -0.28);
     ctx.restore();
     y += sh + 12 * k;
     // améliorations
