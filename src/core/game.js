@@ -112,7 +112,11 @@
       u.top.value.set(env.sky.top); u.horizon.value.set(env.sky.horizon); u.bottom.value.set(env.sky.bottom);
       u.sunCol.value.set(env.sky.sunColor || '#000000'); u.sunDir.value.fromArray(env.sun.dir).normalize(); u.sunSize.value = env.sky.sunSize || 900;
       this.stars.visible = !!env.sky.stars;
-      this.scene.fog.color.set(env.fog.color); this.scene.fog.near = env.fog.near; this.scene.fog.far = env.fog.far;
+      // v038 : distance de vue limitée en CLASSIQUE (perfs téléphone) : brouillard calé dessus, objets qui émergent en fondu
+      let fNear = env.fog.near, fFar = env.fog.far; const vd = CC.CONFIG.render.viewDist;
+      if (this.level && this.level.endless && vd) { fFar = Math.min(fFar, vd); fNear = Math.min(fNear, fFar * 0.28); }
+      this.fogBase = { near: fNear, far: fFar, color: new THREE.Color(env.fog.color) }; this.postTintBase = (env.postfx && env.postfx.tint) || '#ffffff';
+      this.scene.fog.color.set(env.fog.color); this.scene.fog.near = fNear; this.scene.fog.far = fFar;
       this.renderer.setClearColor(env.fog.color);
       this.hemi.color.set(env.hemi.sky); this.hemi.groundColor.set(env.hemi.ground); this.hemi.intensity = env.hemi.intensity;
       this.ambient.color.set(env.ambient.color); this.ambient.intensity = env.ambient.intensity;
@@ -832,6 +836,7 @@
       this.audio.updateRocket(rk, dt);
       this.audio.updateWorld(this, dt);
       if (this.endlessRun && this.state === 'FLIGHT') this.audio.updateAmbient(dt);
+      this.updateWater(dt);
       this.flash = Math.max(0, this.flash - dt * 7);
       // v034 : intensité du boost pour le HUD (traits de vitesse) et l'aberration chromatique ; journal du HUD ; sursaut du compteur
       const boostOn = this.state === 'FLIGHT' && rk.active && rk.thrusting && !rk.freeBoost ? 1 : 0;
@@ -868,6 +873,13 @@
       this.sky.position.copy(this.camera.position);
       if (this.horizon) this.horizon.update(this);
       this.guardRender();
+      if (this.fogBase) {   // v038 : sous l'eau, le brouillard se resserre et vire au bleu-vert
+        const k = this.uwK || 0, f = this.scene.fog, B = this.fogBase;
+        f.near = B.near + (5 - B.near) * k; f.far = B.far + (170 - B.far) * k;
+        if (k > 0.01 || this._uwWas) { f.color.copy(B.color).lerp(this._uwC || (this._uwC = new THREE.Color('#0a5666')), k * 0.9); this.renderer.setClearColor(f.color); }
+        this._uwWas = k > 0.01;
+        if (this.postParams) this.postParams.tint = k > 0.02 ? '#' + new THREE.Color('#ffffff').lerp(new THREE.Color('#a4e6f2'), k).getHexString() : this.postTintBase;
+      }
       if (this.settings.postfx && this.postParams) {
         this.postParams.flash = this.flash * 0.85; this.postParams.flashColor = this.flashColor || '#ffffff';
         if (this.postChroma === undefined || this.postParamsRef !== this.postParams) { this.postParamsRef = this.postParams; this.postChroma = this.postParams.chromatic; }
@@ -877,6 +889,24 @@
         this.renderer.setRenderTarget(null);
         this.renderer.render(this.scene, this.camera);
       }
+    }
+
+    // v038 : EAU — la surface est à −3,6 m (monde) dans la zone PROFONDEUR et ses rampes ; on la traverse : éclaboussure, brouillard bleu serré, teinte
+    updateWater(dt) {
+      const run = this.endlessRun, rk = this.rocket;
+      let under = false;
+      if (run && this.state === 'FLIGHT' && rk.active) {
+        const tr = CC.Zones.trans(run.T, Math.max(0, run.dist));
+        under = (tr.z0 === 'eau' || tr.z1 === 'eau') && rk.pos.y < -3.6;
+        if (under !== !!this.wasUnder && this.wasUnder !== undefined) {
+          const p = new V(rk.pos.x, -3.6, rk.pos.z);
+          this.effects.ring(p, new V(0, 1, 0), 1.5, 30, 1.0, '#d8f6ff', 0.9); this.effects.dustKick(p, new V(0, 1, 0), 2.2);
+          this.audio.play('splash'); this.flash = Math.max(this.flash, 0.28); this.flashColor = '#bff4ff';
+          if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('warn');
+        }
+        this.wasUnder = under;
+      } else this.wasUnder = undefined;
+      this.uwK = (this.uwK || 0) + ((under ? 1 : 0) - (this.uwK || 0)) * U.damp(under ? 7 : 4, dt);
     }
 
     // v036b : garde-fou contre l'écran noir — une valeur non finie (NaN) dans le post-traitement, le brouillard ou le boost noircit

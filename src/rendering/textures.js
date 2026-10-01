@@ -9,7 +9,7 @@
     facadeDark: [12, 14], storefront: [8, 4.2], brick: [2.6, 2.6], planks: [2, 2], grass: [4, 4], rock: [6, 6], hazard: [1.2, 1.2],
     metal: [2, 2], tankGreen: [2, 2], camo: [3, 3], blueFloor: [2, 2], cream: [2, 2], bark: [1.2, 2.4],
     houseWall: [2, 2], roofBrown: [1.5, 1.5], white: [2, 2], dirt: [4, 4], rail: [1, 1], asphalt: [4, 4],
-    sand: [4, 4], water: [6, 6], corrugated: [2.4, 2.6], chainlink: [2, 2],   // v032 : générateur de missions
+    sand: [4, 4], water: [6, 6], waterSurf: [8, 8], corrugated: [2.4, 2.6], chainlink: [2, 2],   // v032 : générateur de missions
   };
 
   function make(name, w, h, draw) {

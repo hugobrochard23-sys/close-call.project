@@ -209,8 +209,8 @@
 
   // ============================================================== PROFONDEUR
   function seaLife(S, big) {
-    L.fleet(S, { model: 'fish', n: 50, lx: [-44, 44], y: [4, 52], speed: [6, 12], scale: [0.9, 1.6], tint: ['#ffb02b', '#2be8ff', '#ff6ad8', '#9af0ff', '#ffe28a'], wave: 2, sound: null });
-    L.motes(S, { n: 140, lx: [-46, 46], y: [2, 54], color: '#d8f8ff', size: 0.55, drift: [0, 2.2, 0], sway: 1.2, opacity: 0.6 });
+    L.fleet(S, { model: 'fish', n: 14, lx: [-44, 44], y: [4, 52], speed: [6, 12], scale: [0.9, 1.6], tint: ['#ffb02b', '#2be8ff', '#ff6ad8', '#9af0ff', '#ffe28a'], wave: 2, sound: null });
+    L.motes(S, { n: 60, lx: [-46, 46], y: [2, 54], color: '#d8f8ff', size: 0.55, drift: [0, 2.2, 0], sway: 1.2, opacity: 0.6 });
     if (big) L.fleet(S, { model: 'sub', n: 1, lx: [-30, 30], y: [14, 40], speed: [6, 9], dir: 1, scale: [1, 1], sound: { name: 'shipHorn', range: 160, every: 30, param: 'far' } });
     // rayons de lumière : bandes verticales pâles depuis la surface
     for (let i = 0; i < 6; i++) { const dc = S.d0 + S.sr() * S.len, lx = S.sr.between([-44, 44]); S.item(dc, () => S.bx(dc, lx, 40, S.sr.between([3, 8]), 100, 0.4, 'basic:#2a7a8a', undefined, false, { r: [0, S.yaw(dc), 0] })); }
@@ -257,7 +257,7 @@
   } };
   eau.scenes.banc = { len: [190, 250], build(S) {
     // respiration : eau ouverte, énormes bancs, une baleine qui traverse lentement (obstacle mobile très lisible), méduses
-    L.fleet(S, { model: 'fish', n: 120, lx: [-46, 46], y: [6, 56], speed: [8, 14], scale: [1.0, 1.8], tint: ['#ffb02b', '#2be8ff', '#ff6ad8', '#9af0ff', '#ffe28a'], wave: 4 });
+    L.fleet(S, { model: 'fish', n: 20, lx: [-46, 46], y: [6, 56], speed: [8, 14], scale: [1.0, 1.8], tint: ['#ffb02b', '#2be8ff', '#ff6ad8', '#9af0ff', '#ffe28a'], wave: 4 });
     L.fleet(S, { model: 'jelly', n: 8, lx: [-44, 44], y: [8, 56], speed: [1, 3], scale: [1.6, 3], bob: 3, tint: ['#ff9ae8', '#9ab8ff'] });
     const dc = S.mid, Ln = S.lane(dc); S.item(dc, (r) => L.sweeper(S, { model: 'whale', d: dc, lx: 0, y: Ln.y + (r() < 0.5 ? 16 : -16) + 10, mode: 'across', amp: 34, period: 22, phase: r() * 6.28, size: [14, 12, 44], cause: 'whale', sound: { name: 'whale', range: 120 } }));
   } };

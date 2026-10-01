@@ -33,14 +33,14 @@
   Z.PROFILE = PROFILE;
   // zones voisines autorisées (le sol ne saute jamais de la base aérienne au métro)
   const NEXT = {
-    city:   ['forest', 'metro', 'port', 'tour', 'mini', 'usine', 'eau'],
-    forest: ['city', 'port', 'mini', 'tour', 'usine'],
+    city:   ['forest', 'metro', 'port', 'tour', 'mini', 'usine', 'eau', 'sky'],
+    forest: ['city', 'port', 'mini', 'tour', 'usine', 'sky'],
     metro:  ['city', 'port', 'forest', 'mini', 'usine'],
-    port:   ['city', 'eau', 'metro', 'forest', 'usine', 'tour'],
-    sky:    ['chute', 'city', 'port'],
+    port:   ['city', 'eau', 'metro', 'forest', 'usine', 'tour', 'sky'],
+    sky:    ['chute', 'city', 'port', 'forest'],
     mini:   ['city', 'forest', 'port'],
     chute:  ['city', 'port', 'forest', 'metro', 'eau'],
-    tour:   ['sky'],
+    tour:   ['sky', 'chute'],
     eau:    ['port', 'city', 'forest'],
     usine:  ['city', 'port', 'metro', 'forest', 'mini', 'tour'],
   };
@@ -52,7 +52,7 @@
       if (!cand.length) cand = NEXT[cur].filter((z) => ok(z) && z !== cur);
       if (!cand.length) cand = ['city'];
       // les zones rarement vues sont préférées (chaque partie fait le tour)
-      const w = {}; for (const z of cand) w[z] = 1 + 2 * (out.indexOf(z) < 0 ? 1 : 0) + (z === 'usine' || z === 'eau' ? 3 : 0);   // v037 : usine et profondeur reviennent plus souvent
+      const w = {}; for (const z of cand) w[z] = 1 + 6 * (out.indexOf(z) < 0 ? 1 : 0);   // v038 : une zone pas encore vue dans la partie est très fortement préférée (toutes les zones tournent)
       out.push(r.weighted(w));
     }
     return out;
@@ -335,7 +335,11 @@
     const T = ctx.T, b = ctx.b, m = (d + e) / 2, tr = Z.trans(T, m), zone = tr.t < 0.5 ? tr.z0 : tr.z1, inRamp = tr.k && T.elev(tr.k) !== T.elev(tr.k - 1);
     const y0 = T.base(d), y1 = T.base(e), ym = (y0 + y1) / 2, pitch = Math.atan2(y1 - y0, e - d) * DEG, len = (e - d) + 1.6, W = 2 * (T.vol(m) + 30);
     const slab = (yoff, w, th, mat, tint, extra) => b.box(Object.assign({ p: [T.cx(m), ym + yoff, -m], s: [w, th, len], r: [pitch, 0, 0], mat, tint, ground: true }, extra || {}));
-    if (inRamp) { slab(-1, 300, 2, Math.abs(T.elev(tr.k) - T.elev(tr.k - 1)) > 100 ? 'rock' : 'concreteDark', '#b8b8b8'); return; }
+    if (inRamp) {
+      slab(-1, 300, 2, Math.abs(T.elev(tr.k) - T.elev(tr.k - 1)) > 100 ? 'rock' : 'concreteDark', '#b8b8b8');
+      if (tr.z0 === 'eau' || tr.z1 === 'eau') b.box({ p: [T.cx(m), -3.6, -m], s: [2 * (T.vol(m) + 90), 0.2, len], mat: 'waterSurf', collide: false, shadow: false });   // v038 : la même surface d'eau sur la rampe qui y plonge
+      return;
+    }
     if (zone === 'city') {
       slab(-1, 300, 2, 'asphalt', '#ffffff');
       for (const s of [-1, 1]) b.box({ p: [T.cx(m) + s * (T.vol(m) - 4.4), ym + 0.15, -m], s: [9, 0.36, len], r: [pitch, 0, 0], mat: 'concrete', tint: '#d8d8d4', collide: false, shadow: false });
@@ -360,7 +364,7 @@
       if (rr() < 0.3) b.box({ p: [T.cx(m) + (rr() - 0.5) * 240, ym - 0.03, -m], s: [rr() * 50 + 30, 0.1, len * 0.8], mat: 'basic:#6f8f5a', collide: false, shadow: false });
     } else if (zone === 'eau') {
       slab(-1, 2 * (T.vol(m) + 60), 2, 'sand', '#8aa8a0');
-      b.box({ p: [T.cx(m), -3.6, -m], s: [2 * (T.vol(m) + 80), 0.4, len], mat: 'water', collide: false, shadow: false });      // la surface, vue d'en dessous
+      b.box({ p: [T.cx(m), -3.6, -m], s: [2 * (T.vol(m) + 90), 0.2, len], mat: 'waterSurf', collide: false, shadow: false });      // v038 : la surface, translucide (vue d'en dessous comme d'au-dessus)
     } else if (zone === 'usine') {
       slab(-1, 2 * (T.vol(m) + 8), 2, 'concreteDark', '#b0aca0');
       for (const s of [-1, 1]) b.box({ p: [T.cx(m) + s * (T.vol(m) - 6), ym + 0.06, -m], s: [1.0, 0.1, len], r: [pitch, 0, 0], mat: 'hazard', collide: false, shadow: false });
@@ -434,6 +438,7 @@
         sd.build(S);
       }
     }
+    if (Z.tight) Z.tight(ctx);   // v038 : portes serrées (src/world/tight.js)
     if (CC.Life && CC.Life.flushGlows) CC.Life.flushGlows(ctx);
   };
   // zones de l'ancien système (forêt) : décor par côtés + structures, bornés à la scène
