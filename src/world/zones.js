@@ -336,23 +336,23 @@
     const y0 = T.base(d), y1 = T.base(e), ym = (y0 + y1) / 2, pitch = Math.atan2(y1 - y0, e - d) * DEG, len = (e - d) + 1.6, W = 2 * (T.vol(m) + 30);
     const slab = (yoff, w, th, mat, tint, extra) => b.box(Object.assign({ p: [T.cx(m), ym + yoff, -m], s: [w, th, len], r: [pitch, 0, 0], mat, tint, ground: true }, extra || {}));
     if (inRamp) {
-      slab(-1, 300, 2, Math.abs(T.elev(tr.k) - T.elev(tr.k - 1)) > 100 ? 'rock' : 'concreteDark', '#b8b8b8');
+      slab(-1, 900, 2, (T.zoneOrder[(tr.k - 1) % T.zoneOrder.length] === 'forest' || T.zoneOrder[tr.k % T.zoneOrder.length] === 'forest') ? 'rock' : 'concreteDark', '#8a8e96');   // v038e : rampe en béton gris (le rocher clair éblouissait)
       if (tr.z0 === 'eau' || tr.z1 === 'eau') b.box({ p: [T.cx(m), -3.6, -m], s: [2 * (T.vol(m) + 90), 0.2, len], mat: 'waterSurf', collide: false, shadow: false });   // v038 : la même surface d'eau sur la rampe qui y plonge
       return;
     }
     if (zone === 'city') {
-      slab(-1, 300, 2, 'asphalt', '#ffffff');
+      slab(-1, 900, 2, 'asphalt', '#ffffff');
       for (const s of [-1, 1]) b.box({ p: [T.cx(m) + s * (T.vol(m) - 4.4), ym + 0.15, -m], s: [9, 0.36, len], r: [pitch, 0, 0], mat: 'concrete', tint: '#d8d8d4', collide: false, shadow: false });
     } else if (zone === 'metro') {
       slab(-1, 2 * (T.vol(m) + 20), 2, 'concreteDark', '#a8acb0');
     } else if (zone === 'port') {
       const q = 17;    // le quai : bande centrale ; autour, l'eau
       slab(-1, 2 * q, 2, 'concrete', '#c8c8c4');
-      for (const s of [-1, 1]) b.box({ p: [T.cx(m) + s * (q + 120), ym - 3.6, -m], s: [240, 2, len], r: [pitch, 0, 0], mat: 'water', ground: true });
+      for (const s of [-1, 1]) b.box({ p: [T.cx(m) + s * (q + 120), ym - 3.6, -m], s: [900, 2, len], r: [pitch, 0, 0], mat: 'water', ground: true });
       for (const s of [-1, 1]) b.box({ p: [T.cx(m) + s * q, ym - 0.4, -m], s: [0.8, 1.6, len], r: [pitch, 0, 0], mat: 'concreteDark', collide: false, shadow: false });
     } else if (zone === 'sky') {
       const hw = 50;
-      slab(-2, 2 * hw, 4, 'concreteDark', '#b0b6c0');
+      slab(-2, 2 * hw, 4, 'concreteDark', '#8c929c');
       slab(-46, 2 * hw - 18, 88, 'rock', '#9aa0aa', { collide: true });              // le plateau sous la piste
       b.box({ p: [T.cx(m), ym - 120, -m], s: [2600, 2, len + 4], mat: 'basic:#e8eef8', collide: false, shadow: false });   // mer de nuages très loin au-dessous
     } else if (zone === 'chute' || zone === 'tour') {
@@ -371,7 +371,7 @@
     } else if (zone === 'mini') {
       slab(-1, 2 * (T.vol(m) + 14), 2, 'planks', '#e0c090', { tile: [18, 18] });
     } else {
-      slab(-1, 300, 2, Z.meta[zone] ? Z.meta[zone].ground : 'asphalt', Z.meta[zone] ? Z.meta[zone].groundTint : '#ffffff');
+      slab(-1, 900, 2, Z.meta[zone] ? Z.meta[zone].ground : 'asphalt', Z.meta[zone] ? Z.meta[zone].groundTint : '#ffffff');
     }
   }
 
@@ -384,13 +384,13 @@
       const sc = new Scene(ctx, { name: 'passage', d0: B - hw, d1: B + hw, zone: z1, zi: k, key: 'p' + k, stage: 0 });
       // tranchée ou vallée : deux murs continus dont le sommet reste au niveau le plus haut (+ marge)
       if (e0 !== e1 && z0 !== 'eau' && z1 !== 'eau') {
-        const top = Math.max(e0, e1) + 14, rock = Math.abs(e1 - e0) > 100 || z0 === 'forest' || z1 === 'forest';
+        const top = Math.max(e0, e1) + 90, rock = Math.abs(e1 - e0) > 100 || z0 === 'forest' || z1 === 'forest', forestSide = z0 === 'forest' || z1 === 'forest';   // v038e : parois plus hautes (on n'en voit plus le dessus)
         const step = 24;
         for (let d = B - hw; d < B + hw; d += step) {
           const dm = d + step / 2; if (!sc.inClip(dm)) continue;
           for (const s of [-1, 1]) {
             const lx = s * (T.vol(dm) + 4), h = top - T.base(dm) + 8, yb = T.base(dm) - 4;
-            b.box({ p: T.at(dm, lx + s * 10, 0).map((v, i) => (i === 1 ? yb + h / 2 : v)), s: [20, h, step + 1.5], r: [0, T.yawAcross(dm), 0], mat: rock ? { side: 'rock', top: 'rock' } : { side: 'concreteDark', top: 'concrete' }, tint: rock ? (e1 > e0 ? '#b8c0cc' : '#b09078') : '#b8b8b8' });
+            b.box({ p: T.at(dm, lx + s * 10, 0).map((v, i) => (i === 1 ? yb + h / 2 : v)), s: [20, h, step + 1.5], r: [0, T.yawAcross(dm), 0], mat: rock ? (forestSide ? { side: 'rock', top: 'rock' } : (e1 > e0 ? 'col:#a4b0c4' : 'col:#b6a694')) : { side: 'concreteDark', top: 'concrete' }, tint: rock ? (forestSide ? (e1 > e0 ? '#b8c0cc' : '#b09078') : undefined) : '#b8b8b8' });   // v038e : parois claires et unies (le rocher sombre faisait des murs noirs)
           }
         }
       }

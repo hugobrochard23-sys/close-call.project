@@ -16,6 +16,22 @@
     return g;
   }
 
+  // v038g : découpe un lot en tranches de `L` m le long du couloir (z) : le test de visibilité écarte les tranches hors champ, et la passe d'ombres
+  // ne redessine plus tout un tronçon de 200 m pour une roquette qui n'en voit que 70
+  function splitBatch(b, L) {
+    const groups = new Map(), P = b.pos, I = b.idx;
+    for (let t = 0; t < I.length; t += 3) {
+      const a = I[t], c = I[t + 1], d = I[t + 2], cz = (P[a * 3 + 2] + P[c * 3 + 2] + P[d * 3 + 2]) / 3, seg = Math.floor(-cz / L);
+      let g = groups.get(seg); if (!g) { g = { pos: [], nor: [], uv: [], col: [], idx: [], shadow: b.shadow, map: new Map() }; groups.set(seg, g); }
+      for (const o of [a, c, d]) {
+        let n = g.map.get(o);
+        if (n === undefined) { n = g.pos.length / 3; g.map.set(o, n); g.pos.push(P[o * 3], P[o * 3 + 1], P[o * 3 + 2]); g.nor.push(b.nor[o * 3], b.nor[o * 3 + 1], b.nor[o * 3 + 2]); g.uv.push(b.uv[o * 2], b.uv[o * 2 + 1]); g.col.push(b.col[o * 3], b.col[o * 3 + 1], b.col[o * 3 + 2]); }
+        g.idx.push(n);
+      }
+    }
+    return [...groups.values()];
+  }
+
   /* v036 : toutes les couleurs unies ('col:#hex', 'basic:#hex') partagent UN lot de géométrie (blanc) et passent leur couleur en teinte par
    * sommet : un tronçon du mode CLASSIQUE passe de ~60 lots (donc ~60 appels de dessin, doublés par la passe d'ombres) à ~15. Rendu identique. */
   const _n1 = new THREE.Color(), _n2 = new THREE.Color();
@@ -183,14 +199,16 @@
     finish() {
       this.decorateBuildings();
       this.decorateSky();
-      for (const [key, b] of this.batches) {
-        if (!b.idx.length) continue;
-        const g = geometryFromBatch(b);
-        const mesh = new THREE.Mesh(g, this.mat(key));
-        mesh.castShadow = b.shadow && !key.startsWith('basic:') && key !== 'glass';
-        mesh.receiveShadow = !key.startsWith('basic:');
-        mesh.matrixAutoUpdate = false;
-        this.root.add(mesh);
+      for (const [key, b0] of this.batches) {
+        if (!b0.idx.length) continue;
+        for (const b of (this.segLen && b0.idx.length > 900 ? splitBatch(b0, this.segLen) : [b0])) {
+          const g = geometryFromBatch(b);
+          const mesh = new THREE.Mesh(g, this.mat(key));
+          mesh.castShadow = b.shadow && !key.startsWith('basic:') && key !== 'glass';
+          mesh.receiveShadow = !key.startsWith('basic:');
+          mesh.matrixAutoUpdate = false;
+          this.root.add(mesh);
+        }
       }
       this.batches.clear();
     }

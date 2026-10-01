@@ -124,7 +124,7 @@
         game.flyers = keep;
       }
       // ---- jauge d'essence verticale (bord droit, sous la pastille des éclats)
-      const gh = Math.min(H * 0.3, 260), gwid = Math.max(14, pillH * 0.36), gxx = W - gwid - Math.max(14, W * 0.045), gy = top + pillH + H * 0.03;
+      const gh = Math.min(H * 0.34, 300), gwid = Math.max(20, pillH * 0.56), gxx = W - gwid - Math.max(14, W * 0.045), gy = top + pillH + H * 0.03;
       this.drawFuelBar(game, rk, gxx, gy, gwid, gh);
       // ---- une ligne de journal, sous le score
       const fpx = pillH * 0.05, f = game.hudFeed[0], fy = top + pillH + H * 0.012;
@@ -152,24 +152,43 @@
       if (run.altT > 0 && s === 'FLIGHT' && Math.floor(run.altT * 6) % 2 === 0) F.draw(ctx, 'TROP HAUT !', W / 2, H * 0.3, px * 1.6, C.colors.red, { align: 'center', outline: '#0a0e16' });
     }
 
-    // jauge d'essence VERTICALE : capsule sombre, remplissage du bas vers le haut en 10 segments (2 s chacun), flamme en bas
+    // jauge d'essence VERTICALE v038f — une batterie : capsule métallique, fenêtre sombre à 4 compartiments, liquide cyan qui monte (reflet sur le dessus),
+    // halo de la couleur de l'état ; or pendant le boost, rouge qui clignote quand le réservoir est presque vide ; petite flamme dans le culot
     drawFuelBar(game, rk, x, y, w, h) {
       const ctx = this.ctx, C = CC.CONFIG.hud.colors, Home = CC.Home;
       const max = rk.fuelMax || 20, fuel = rk.active ? rk.fuel : max, k = U.clamp(fuel / max, 0, 1);
       const free = rk.active && rk.freeBoost, boosting = rk.active && rk.thrusting && !free, low = k < 0.25 && !free;
       const blink = low && Math.floor(performance.now() / 220) % 2 === 0;
-      let c1 = '#ffb020', c2 = '#ff6a10'; if (free) { c1 = '#7fd0ff'; c2 = '#2a90ff'; } else if (boosting) { c1 = '#fff27a'; c2 = '#ffb020'; } else if (low) { c1 = blink ? '#ffffff' : '#ff6a5a'; c2 = '#ff2a1a'; }
-      const r = w / 2, fh = h - w * 1.7;   // hauteur utile (la flamme occupe le bas)
-      if (boosting) { ctx.fillStyle = 'rgba(255,220,90,' + (0.25 + 0.15 * Math.sin(performance.now() * 0.02)) + ')'; Home.rr(ctx, x - 5, y - 5, w + 10, h + 10, r + 5); ctx.fill(); }
-      Home.pill(ctx, x, y, w, h, 'rgba(8,12,20,0.7)', low && blink ? '#ff3b2e' : 'rgba(255,255,255,0.4)');
-      const n = Math.round(max / 2), pad = w * 0.16, sh = (fh - pad) / n, iw = w - pad * 2;
-      for (let i = 0; i < n; i++) {
-        const sy = y + pad + (n - 1 - i) * sh, on = (i + 1) / n <= k + 1e-6 || (i / n < k && k < (i + 1) / n);
-        const part = on ? U.clamp((k - i / n) * n, 0, 1) : 0;
-        ctx.fillStyle = 'rgba(255,255,255,0.09)'; ctx.fillRect(x + pad, sy + sh * 0.12, iw, sh * 0.76);
-        if (part > 0) { const g = ctx.createLinearGradient(0, sy, 0, sy + sh); g.addColorStop(0, c1); g.addColorStop(1, c2); ctx.fillStyle = g; const hh = sh * 0.76 * part; ctx.fillRect(x + pad, sy + sh * 0.12 + sh * 0.76 - hh, iw, hh); }
+      let c1 = '#b4f4ff', c2 = '#18b4f0', glow = 'rgba(90,220,255,0.55)';
+      if (free) { c1 = '#c8ecff'; c2 = '#2a90ff'; glow = 'rgba(100,170,255,0.6)'; } else if (boosting) { c1 = '#fff6a0'; c2 = '#ffb020'; glow = 'rgba(255,210,70,0.75)'; } else if (low) { c1 = blink ? '#ffffff' : '#ff9a8a'; c2 = '#ff2a1a'; glow = 'rgba(255,60,40,0.7)'; }
+      const r = w * 0.34, pulse = boosting ? 0.75 + 0.25 * Math.sin(performance.now() * 0.02) : 1;
+      ctx.save();
+      // halo extérieur
+      ctx.shadowColor = glow; ctx.shadowBlur = w * (boosting ? 1.1 : 0.6) * pulse; ctx.fillStyle = '#2a303a'; Home.rr(ctx, x, y, w, h, r); ctx.fill();
+      ctx.shadowBlur = 0;
+      // corps métallique (dégradé horizontal) et liseré
+      const mg = ctx.createLinearGradient(x, 0, x + w, 0); mg.addColorStop(0, '#4a525e'); mg.addColorStop(0.28, '#c4ccd8'); mg.addColorStop(0.55, '#7c8592'); mg.addColorStop(1, '#3c424c');
+      ctx.fillStyle = mg; Home.rr(ctx, x, y, w, h, r); ctx.fill();
+      ctx.strokeStyle = low && blink ? '#ff5a4a' : 'rgba(150,230,255,0.9)'; ctx.lineWidth = Math.max(1.5, w * 0.07); Home.rr(ctx, x + ctx.lineWidth / 2, y + ctx.lineWidth / 2, w - ctx.lineWidth, h - ctx.lineWidth, r); ctx.stroke();
+      // fenêtre
+      const ix = x + w * 0.2, iw = w * 0.6, iy = y + w * 0.2, ih = h - w * 0.2 - w * 1.05, ir = iw * 0.28;
+      ctx.fillStyle = '#0a0f16'; Home.rr(ctx, ix, iy, iw, ih, ir); ctx.fill();
+      ctx.save(); Home.rr(ctx, ix, iy, iw, ih, ir); ctx.clip();
+      const fh = ih * k;
+      if (fh > 0.5) {
+        const g = ctx.createLinearGradient(0, iy + ih - fh, 0, iy + ih); g.addColorStop(0, c1); g.addColorStop(0.18, c2); g.addColorStop(1, c2);
+        ctx.fillStyle = g; ctx.fillRect(ix, iy + ih - fh, iw, fh);
+        ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(ix, iy + ih - fh, iw, Math.max(1.5, ih * 0.012));      // surface du liquide
+        ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(ix + iw * 0.14, iy + ih - fh, iw * 0.14, fh);          // reflet vertical
       }
-      Home.icon.flame(ctx, x + w / 2, y + h - w * 0.8, w * 0.52, blink ? '#ffffff' : (low ? '#ff3b2e' : c1));
+      // compartiments : 3 séparateurs sombres (4 quarts de réservoir)
+      ctx.fillStyle = '#0a0f16'; const sw = Math.max(2, ih * 0.034);
+      for (let i = 1; i < 4; i++) ctx.fillRect(ix, iy + ih * i / 4 - sw / 2, iw, sw);
+      ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(ix, iy, iw * 0.2, ih);                                      // vitre
+      ctx.restore();
+      // culot : petite flamme
+      Home.icon.flame(ctx, x + w / 2, y + h - w * 0.55, w * 0.34, blink ? '#ffffff' : (low ? '#ff5a3a' : boosting ? '#ffe45a' : '#7fe0ff'));
+      ctx.restore();
       if (rk.active && fuel <= 0) CC.Font.draw(ctx, 'PANNE', x + w / 2, y - w * 1.0, w * 0.075, '#ffffff', { align: 'center', outline: '#ff3b2e' });
       // fine barre jaune : reposer le doigt relance le boost aussitôt (tactile)
       const T = game.input.touch, left = T && T.reboostUntil ? (T.reboostUntil - performance.now()) / CC.CONFIG.input.touch.reboostMs : 0;

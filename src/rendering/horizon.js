@@ -7,6 +7,7 @@
  * des enseignes néon et les feux rouges des antennes. Une seule bande en mémoire à la fois (mobile) ; aucune géométrie de plus de 64 facettes. */
 (function () {
   const U = CC.U;
+  const SC = 0.36;                                       // v038g : l'anneau est réduit à 353 m de rayon (dans la distance de vue), mêmes angles
   const W = 3072, H = 384, R = 980, GROUND = 330;      // y du sol dans la bande (le bas est sous terre)
   const STYLE = { city: 'city', port: 'port', sky: 'peaks', forest: 'forest', chute: 'megacity', tour: 'city', eau: 'seabed' };
 
@@ -15,11 +16,13 @@
     const cs = document.createElement('canvas'); cs.width = W; cs.height = H; const g = cs.getContext('2d');
     let cg = null, gg = null;
     if (dark) { cg = document.createElement('canvas'); cg.width = W; cg.height = H; gg = cg.getContext('2d'); }
+    // v038e : les silhouettes sont dessinées en gris (clair = loin, plus sombre = proche) que la teinte du brouillard vient colorer : fini les masses noires
+    const sh = (al) => { const v = Math.round(255 * (1 - 0.42 * Math.min(1, al))).toString(16).padStart(2, '0'); return '#' + v + v + v; };
     const rects = [];
     const NEON = ['#ff3ad8', '#2be8ff', '#ffb02b', '#8a6aff', '#ff5a5a'];
     const tower = (x, w, h, a, lit) => {
       const top = GROUND - h;
-      g.globalAlpha = a; g.fillStyle = '#000'; g.fillRect(x, top, w, h);
+      g.globalAlpha = a; g.fillStyle = sh(a); g.fillRect(x, top, w, h);
       const k = rng();
       if (k < 0.3 && w > 8) { const w2 = w * rr(0.45, 0.7), h2 = h * rr(0.08, 0.2); g.fillRect(x + (w - w2) / 2, top - h2, w2, h2); if (rng() < 0.4) g.fillRect(x + w / 2 - 0.7, top - h2 - h * 0.12, 1.4, h * 0.12); rects.push([x, top - h2, w, h + h2, lit]); return; }
       if (k < 0.5) g.fillRect(x + w / 2 - 0.8, top - h * rr(0.1, 0.25), 1.6, h * 0.25);        // antenne
@@ -28,17 +31,17 @@
     };
     const towers = (hmin, hmax, wmin, wmax, a, gap, lit) => { for (let x = -20; x < W; x += 0) { const w = rr(wmin, wmax), h = rr(hmin, hmax) * (0.55 + 0.45 * Math.sin(x / 260 + seed)); if (rng() > 0.12) tower(x, w, Math.max(6, h), a, lit); x += w + rr(0, gap); } };
     const crane = (x, h, a, len) => {
-      g.globalAlpha = a; g.fillStyle = '#000'; g.fillRect(x, GROUND - h, 2.2, h); g.fillRect(x + 26, GROUND - h, 2.2, h); g.fillRect(x - 6, GROUND - h - 3, 40, 4);
+      g.globalAlpha = a; g.fillStyle = sh(a); g.fillRect(x, GROUND - h, 2.2, h); g.fillRect(x + 26, GROUND - h, 2.2, h); g.fillRect(x - 6, GROUND - h - 3, 40, 4);
       g.fillRect(x - 6 - len * 0.2, GROUND - h - 2, len, 2.2); g.beginPath(); g.moveTo(x + 14, GROUND - h - 3); g.lineTo(x - 6 - len * 0.2, GROUND - h - 14); g.lineTo(x - 6 - len * 0.2, GROUND - h - 2); g.closePath(); g.fill();
       g.fillRect(x + 4, GROUND - h * 0.5, 0.9, h * 0.5 - 3); g.fillRect(x + 1, GROUND - h * 0.5, 7, 6);
     };
-    const hills = (hmin, hmax, a, tooth, f) => { g.globalAlpha = a; g.fillStyle = '#000'; g.beginPath(); g.moveTo(0, H);
+    const hills = (hmin, hmax, a, tooth, f) => { g.globalAlpha = a; g.fillStyle = sh(a); g.beginPath(); g.moveTo(0, H);
       for (let x = 0; x <= W; x += 6) { const n = Math.sin(x / (170 * f) + seed) * 0.5 + Math.sin(x / (61 * f) + seed * 2) * 0.3 + Math.sin(x / (23 * f) + seed * 3) * 0.2; let y = GROUND - (hmin + (hmax - hmin) * (0.5 + 0.5 * n)); if (tooth) y -= (Math.floor(x / 5) % 2 ? 0 : tooth) * (0.6 + 0.4 * rng()); g.lineTo(x, y); }
       g.lineTo(W, H); g.closePath(); g.fill(); };
-    const peaks = (hmin, hmax, a, step) => { g.globalAlpha = a; g.fillStyle = '#000'; g.beginPath(); g.moveTo(0, H); let x = 0; while (x < W + 40) { const h = rr(hmin, hmax), w = rr(step * 0.6, step * 1.4); g.lineTo(x, GROUND - rr(hmin * 0.15, hmin * 0.4)); g.lineTo(x + w * 0.45, GROUND - h); g.lineTo(x + w * 0.55, GROUND - h * rr(0.82, 0.95)); x += w; } g.lineTo(W, H); g.closePath(); g.fill(); };
-    const pines = (hmin, hmax, a, w) => { g.fillStyle = '#000'; g.globalAlpha = a; for (let x = 0; x < W; x += rr(w * 0.5, w * 1.1)) { const h = rr(hmin, hmax); g.beginPath(); g.moveTo(x - w / 2, GROUND); g.lineTo(x, GROUND - h); g.lineTo(x + w / 2, GROUND); g.closePath(); g.fill(); } };
-    const ship = (x, a) => { g.globalAlpha = a; g.fillStyle = '#000'; const L = rr(70, 120); g.fillRect(x, GROUND - 14, L, 14); g.fillRect(x + L * 0.7, GROUND - 34, L * 0.22, 20); g.fillRect(x + L * 0.78, GROUND - 42, 6, 8); for (let i = 0; i < 6; i++) g.fillRect(x + 6 + i * 11, GROUND - 22, 9, 8); };
-    const stack = (x, h, a) => { g.globalAlpha = a; g.fillStyle = '#000'; g.fillRect(x, GROUND - h, 7, h); g.fillRect(x - 1, GROUND - h, 9, 3); };
+    const peaks = (hmin, hmax, a, step) => { g.globalAlpha = a; g.fillStyle = sh(a); g.beginPath(); g.moveTo(0, H); let x = 0; while (x < W + 40) { const h = rr(hmin, hmax), w = rr(step * 0.6, step * 1.4); g.lineTo(x, GROUND - rr(hmin * 0.15, hmin * 0.4)); g.lineTo(x + w * 0.45, GROUND - h); g.lineTo(x + w * 0.55, GROUND - h * rr(0.82, 0.95)); x += w; } g.lineTo(W, H); g.closePath(); g.fill(); };
+    const pines = (hmin, hmax, a, w) => { g.fillStyle = sh(a); g.globalAlpha = a; for (let x = 0; x < W; x += rr(w * 0.5, w * 1.1)) { const h = rr(hmin, hmax); g.beginPath(); g.moveTo(x - w / 2, GROUND); g.lineTo(x, GROUND - h); g.lineTo(x + w / 2, GROUND); g.closePath(); g.fill(); } };
+    const ship = (x, a) => { g.globalAlpha = a; g.fillStyle = sh(a); const L = rr(70, 120); g.fillRect(x, GROUND - 14, L, 14); g.fillRect(x + L * 0.7, GROUND - 34, L * 0.22, 20); g.fillRect(x + L * 0.78, GROUND - 42, 6, 8); for (let i = 0; i < 6; i++) g.fillRect(x + 6 + i * 11, GROUND - 22, 9, 8); };
+    const stack = (x, h, a) => { g.globalAlpha = a; g.fillStyle = sh(a); g.fillRect(x, GROUND - h, 7, h); g.fillRect(x - 1, GROUND - h, 9, 3); };
 
     g.clearRect(0, 0, W, H);
     if (style === 'city' || style === 'megacity') {
@@ -50,7 +53,7 @@
       hills(14, 50, 0.2, 0, 1.3); towers(14, 46, 14, 34, 0.3, 18, 0);
       for (let i = 0; i < 6; i++) crane(rr(0, W), rr(40, 90), 0.42, rr(50, 90));
       for (let i = 0; i < 4; i++) ship(rr(0, W), 0.5);
-      for (let x = 0; x < W; x += rr(40, 90)) { g.globalAlpha = 0.6; g.fillStyle = '#000'; g.fillRect(x, GROUND - rr(8, 22), rr(28, 60), 30); }
+      for (let x = 0; x < W; x += rr(40, 90)) { g.globalAlpha = 0.6; g.fillStyle = sh(0.6); g.fillRect(x, GROUND - rr(8, 22), rr(28, 60), 30); }
       for (let i = 0; i < 5; i++) stack(rr(0, W), rr(40, 80), 0.45);
     } else if (style === 'peaks') {
       peaks(60, 190, 0.22, 240); peaks(50, 150, 0.36, 180); peaks(30, 100, 0.55, 140);
@@ -58,7 +61,7 @@
       hills(40, 130, 0.22, 0, 1.6); hills(30, 90, 0.36, 0, 1.0); pines(18, 50, 0.46, 12); hills(14, 46, 0.55, 5, 0.6); pines(10, 32, 0.68, 9);
     } else if (style === 'seabed') {
       hills(40, 140, 0.3, 0, 1.5); hills(24, 80, 0.45, 0, 0.8);
-      for (let i = 0; i < 26; i++) { g.globalAlpha = 0.5; g.fillStyle = '#000'; const x = rr(0, W), h = rr(40, 160), w = rr(6, 18); g.beginPath(); g.moveTo(x, GROUND + 20); g.lineTo(x + w * 0.3, GROUND - h); g.lineTo(x + w * 0.7, GROUND - h * 0.9); g.lineTo(x + w, GROUND + 20); g.closePath(); g.fill(); }
+      for (let i = 0; i < 26; i++) { g.globalAlpha = 0.5; g.fillStyle = sh(0.5); const x = rr(0, W), h = rr(40, 160), w = rr(6, 18); g.beginPath(); g.moveTo(x, GROUND + 20); g.lineTo(x + w * 0.3, GROUND - h); g.lineTo(x + w * 0.7, GROUND - h * 0.9); g.lineTo(x + w, GROUND + 20); g.closePath(); g.fill(); }
     }
     // fenêtres, néons, feux d'antenne (nuit)
     if (gg) {
@@ -81,7 +84,7 @@
       this.matS = new THREE.MeshBasicMaterial({ color: '#8a96a8', transparent: true, depthWrite: false, side: THREE.BackSide, fog: false });
       this.matG = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, depthWrite: false, side: THREE.BackSide, fog: false, blending: THREE.AdditiveBlending, opacity: 0 });
       this.ring = new THREE.Mesh(geo, this.matS); this.glow = new THREE.Mesh(geo, this.matG);
-      for (const m of [this.ring, this.glow]) { m.frustumCulled = false; m.visible = false; game.scene.add(m); }
+      for (const m of [this.ring, this.glow]) { m.frustumCulled = false; m.visible = false; m.scale.setScalar(SC); game.scene.add(m); }
       this.ring.renderOrder = -6; this.glow.renderOrder = -5; this.base = 0;
       this.tint = new THREE.Color(); this.fog = new THREE.Color('#aab');
     }
@@ -100,7 +103,7 @@
       if (!env || !env.fog) return;
       this.fog.set(env.fog.color);
       const d = env.dark !== undefined ? env.dark : 0;
-      this.tint.copy(this.fog).multiplyScalar(d > 0.4 ? 0.5 : 0.62);
+      this.tint.copy(this.fog).multiplyScalar(d > 0.4 ? 0.62 : 0.84);   // v038e : silhouettes plus claires (brume), plus de masses noires
       this.matS.color.copy(this.tint);
       this.matG.opacity = this.darkOn ? 0.95 : 0;
     }
@@ -110,7 +113,7 @@
       if (!on) return;
       const cam = game.camera.position, b = run.T.base(Math.max(0, -game.rocket.pos.z));
       this.base += (b - this.base) * 0.05; if (Math.abs(this.base - b) > 300) this.base = b;
-      this.ring.position.set(cam.x, this.base + 220, cam.z); this.glow.position.copy(this.ring.position);   // la ligne de sol de la bande est à 90 m au-dessus de son bord bas
+      this.ring.position.set(cam.x, this.base + 220 * SC, cam.z); this.glow.position.copy(this.ring.position);   // la ligne de sol de la bande est à 90 m au-dessus de son bord bas
     }
   }
   CC.Horizon = Horizon;

@@ -40,11 +40,23 @@
     return t;
   }
 
+  // v038f : ECROU D'OR EN 3D — prisme hexagonal chanfreiné percé d'un trou (extrusion + biseau), matière brillante (Phong, reflet blanc chaud) ;
+  // il tourne sur lui-même (un InstancedMesh par tronçon : un seul appel de dessin)
+  function nutGeometry() {
+    const sh = new THREE.Shape(), R = 1;
+    for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3, x = Math.cos(a) * R, y = Math.sin(a) * R; if (i) sh.lineTo(x, y); else sh.moveTo(x, y); }
+    const hole = new THREE.Path(); hole.absarc(0, 0, 0.42, 0, Math.PI * 2, true); sh.holes.push(hole);
+    const g = new THREE.ExtrudeGeometry(sh, { depth: 0.42, bevelEnabled: true, bevelThickness: 0.14, bevelSize: 0.13, bevelSegments: 1, curveSegments: 8 });
+    g.center(); g.computeVertexNormals();
+    return g;
+  }
   let shared = null;
   function assets() {
     if (shared) return shared;
     const map = nutTexture();
     shared = {
+      nutGeo: nutGeometry(),
+      nutMat: new THREE.MeshPhongMaterial({ color: '#ffc21a', specular: '#fff4b0', shininess: 90, emissive: '#a86400', emissiveIntensity: 0.55 }),
       glow: glowTexture(),
       pts: new THREE.PointsMaterial({ map, size: CC.CONFIG.cells.size, sizeAttenuation: true, alphaTest: 0.35, transparent: false, depthWrite: true, color: '#ffffff' }),
       goldMat: new THREE.MeshLambertMaterial({ color: '#ffd23a', emissive: '#c88a00', emissiveIntensity: 0.9, flatShading: true }),
@@ -76,7 +88,7 @@
     const A = assets(), C = CC.CONFIG.cells, world = game.world, near = {};
     const root = new THREE.Group(); root.name = 'collect'; game.scene.add(root);
     // groupe à part (pas dans b.root : le LevelBuilder libérerait aussi les géométries partagées des bonus)
-    const c = { cells: null, specials: [], root, dispose() { game.scene.remove(root); if (c.cells) c.cells.pts.geometry.dispose(); } };
+    const c = { cells: null, specials: [], root, dispose() { game.scene.remove(root); if (c.cells) { c.cells.pts.geometry.dispose(); if (c.cells.inst) c.cells.inst.dispose(); } } };
     const okAt = (p, m) => { world.nearest(p, m + 1, near); return near.wall > m && near.ground > 1.2; };
     // traînées d'éclats
     const pos = [];
@@ -95,8 +107,10 @@
     T.nextCell = d;
     if (pos.length) {
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.computeBoundingSphere();
-      const pts = new THREE.Points(g, A.pts); pts.frustumCulled = false; root.add(pts);
-      c.cells = { pts, arr: g.attributes.position.array, n: pos.length / 3, alive: new Uint8Array(pos.length / 3).fill(1) };
+      const pts = new THREE.Points(g, A.pts); pts.frustumCulled = false; pts.visible = false; root.add(pts);   // v038f : les points ne servent plus que de données (positions) ; l'affichage est l'InstancedMesh d'écrous 3D
+      const n = pos.length / 3, inst = new THREE.InstancedMesh(A.nutGeo, A.nutMat, n); inst.frustumCulled = false; root.add(inst);
+      c.cells = { pts, inst, arr: g.attributes.position.array, n, alive: new Uint8Array(n).fill(1) };
+      Collect.sync(c.cells, 0);
     }
     // étoile dorée et multiplicateur : loin l'un de l'autre, sur la trajectoire sûre
     const special = (kind, cursor, every) => {
@@ -121,6 +135,17 @@
     return c;
   };
   const _v = new V();
+  // met à jour les écrous 3D : position (aimantée), rotation continue, léger rebond ; les ramassés disparaissent (échelle 0)
+  const _o = new THREE.Object3D();
+  Collect.sync = function (cs, t) {
+    const a = cs.arr, S = CC.CONFIG.cells.size * 0.5;
+    for (let i = 0; i < cs.n; i++) {
+      if (!cs.alive[i]) { _o.scale.setScalar(0); _o.position.set(0, -9999, 0); }
+      else { _o.position.set(a[i * 3], a[i * 3 + 1] + Math.sin(t * 2.4 + i) * 0.18, a[i * 3 + 2]); _o.rotation.set(0.18, t * 2.6 + i * 0.9, 0); _o.scale.setScalar(S * (1 + 0.06 * Math.sin(t * 5 + i))); }
+      _o.updateMatrix(); cs.inst.setMatrixAt(i, _o.matrix);
+    }
+    cs.inst.instanceMatrix.needsUpdate = true;
+  };
 
   /* Ramassage : appelé chaque image de vol. Ne teste que les tronçons proches de la roquette. */
   Collect.update = function (game, run, dt) {
@@ -129,7 +154,9 @@
     const A = shared; if (A) A.pts.size = C.size * (1 + 0.1 * Math.sin(performance.now() * 0.008));
     for (const [k, ch] of run.chunks) {
       const col = ch.collect; if (!col) continue;
-      if (Math.abs((k + 0.5) * L - dist) > L * 0.5 + 60) { if (col.specials.length) this.spin(col, dt); continue; }   // hors de portée : on ne teste rien
+      const far = Math.abs((k + 0.5) * L - dist);
+      if (col.cells && col.cells.inst) col.cells.inst.visible = far < 340;   // v038g : pas de dessin des écrous au-delà du brouillard
+      if (far > L * 0.5 + 60) { if (col.specials.length) this.spin(col, dt); continue; }   // hors de portée : on ne teste rien
       this.rings(game, run, ch, p);
       const cs = col.cells;
       if (cs) {
@@ -149,6 +176,7 @@
           game.onCollect('cell', _v.set(px, py, pz));
         }
         if (moved) cs.pts.geometry.attributes.position.needsUpdate = true;
+        Collect.sync(cs, performance.now() * 0.001);
       }
       this.spin(col, dt);
       for (const s of col.specials) {

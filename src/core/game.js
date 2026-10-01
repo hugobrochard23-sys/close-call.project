@@ -75,7 +75,7 @@
       window.addEventListener('resize', () => this.resize());
       // v036b : perte du contexte WebGL (mémoire du téléphone) : on laisse three.js le recréer et on redimensionne au retour
       this.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.glLost = true; (window.__blk || (window.__blk = [])).push({ reason: 'contextlost' }); });
-      this.canvas.addEventListener('webglcontextrestored', () => { this.glLost = false; this.resize(); if (this.quality) this.quality.apply('low'); });
+      this.canvas.addEventListener('webglcontextrestored', () => { this.glLost = false; this.resize(); if ((this.glLostN = (this.glLostN || 0) + 1) >= 2 && this.quality) this.quality.apply('low'); });
       this.resize();
     }
 
@@ -86,7 +86,7 @@
         uniforms: { top: { value: new THREE.Color() }, horizon: { value: new THREE.Color() }, bottom: { value: new THREE.Color() }, sunCol: { value: new THREE.Color() }, sunDir: { value: new V(0, 1, 0) }, sunSize: { value: 900 } },
       });
       this.sky = new THREE.Mesh(new THREE.SphereGeometry(1000, 24, 16), this.skyMat);
-      this.sky.renderOrder = -10; this.sky.frustumCulled = false;
+      this.sky.renderOrder = -10; this.sky.frustumCulled = false; this.sky.scale.setScalar(0.36);   // v038g : dôme de 360 m (la caméra en CLASSIQUE ne voit plus qu'à ~400 m)
       this.scene.add(this.sky);
       const sg = new THREE.BufferGeometry(), sp = [];
       const r = U.makeRng(5);
@@ -110,6 +110,7 @@
     applyEnvironment(env) {
       const u = this.skyMat.uniforms;
       u.top.value.set(env.sky.top); u.horizon.value.set(env.sky.horizon); u.bottom.value.set(env.sky.bottom);
+      if (this.level && this.level.endless) { u.bottom.value.set(env.fog.color); u.horizon.value.lerp(new THREE.Color(env.fog.color), 0.55); }   // v038e : sous l'horizon (la courbure découvre le ciel d'en bas) la couleur du brouillard : plus de noir
       u.sunCol.value.set(env.sky.sunColor || '#000000'); u.sunDir.value.fromArray(env.sun.dir).normalize(); u.sunSize.value = env.sky.sunSize || 900;
       this.stars.visible = !!env.sky.stars;
       // v038 : distance de vue limitée en CLASSIQUE (perfs téléphone) : brouillard calé dessus, objets qui émergent en fondu
@@ -117,6 +118,7 @@
       if (this.level && this.level.endless && vd) { fFar = Math.min(fFar, vd); fNear = Math.min(fNear, fFar * 0.28); }
       this.fogBase = { near: fNear, far: fFar, color: new THREE.Color(env.fog.color) }; this.postTintBase = (env.postfx && env.postfx.tint) || '#ffffff';
       this.scene.fog.color.set(env.fog.color); this.scene.fog.near = fNear; this.scene.fog.far = fFar;
+      { const far = this.level && this.level.endless && vd ? vd + 90 : CC.CONFIG.camera.far; if (this.camera.far !== far) { this.camera.far = far; this.camera.updateProjectionMatrix(); } }   // v038g : rien n'est dessiné au-delà du brouillard
       this.renderer.setClearColor(env.fog.color);
       this.hemi.color.set(env.hemi.sky); this.hemi.groundColor.set(env.hemi.ground); this.hemi.intensity = env.hemi.intensity;
       this.ambient.color.set(env.ambient.color); this.ambient.intensity = env.ambient.intensity;
@@ -934,24 +936,26 @@
         gl.readPixels(Math.floor(w * a), Math.floor(h * b), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
         mx = Math.max(mx, px[0] + px[1] + px[2]); if (mx > 8) break;
       }
-      if (mx > 8) { this.blk = 0; return; }
+      if (mx > 8) { this.blk = 0; if ((this.okRun = (this.okRun || 0) + 1) > 40) { this.blkStage = 0; this.okRun = 0; } return; }   // 20 s sans noir : un nouvel incident repart du palier 1
       if ((this.blk = (this.blk || 0) + 1) >= 3) { this.blk = 0; this.recoverBlack('black'); }
     }
     recoverBlack(reason) {
       const st = this.blkStage = (this.blkStage || 0) + 1, log = window.__blk || (window.__blk = []);
       log.push({ reason, stage: st, t: Math.round(this.telemetry.t), dist: this.endlessRun ? Math.round(this.endlessRun.dist) : 0, fps: Math.round(this.fps) });
       if (this.telemetry) this.telemetry.event('blackScreen', { reason, stage: st });
+      // v038h : on garde la qualité le plus longtemps possible : d'abord une simple remise à zéro des cibles de rendu, puis du contexte WebGL ; la qualité ne baisse qu'ensuite
       if (st === 1) {
-        if (this.quality) this.quality.apply('low');
         for (const rt of [this.postfx.rtScene, this.postfx.rtA, this.postfx.rtB]) rt.dispose();
+        if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; }
         if (this.level && this.level.env) this.applyEnvironment(this.level.env);
         this.flash = 0; this.boostK = 0; this.uwK = 0;
       } else if (st === 2) {
-        this.settings.postfx = false;
-      } else {
         this.renderer.forceContextLoss();
         setTimeout(() => { this.renderer.forceContextRestore(); this.resize(); }, 150);
-        this.blkStage = 0;
+      } else if (st === 3) {
+        if (this.quality) this.quality.apply('low');
+      } else {
+        this.settings.postfx = false;
       }
     }
 

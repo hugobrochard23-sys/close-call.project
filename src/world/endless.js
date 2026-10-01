@@ -146,6 +146,7 @@
     const world = game.world, nBoxes = world.boxes.length;
     const pseudo = { seed: (T.seed ^ (k * 7919)) >>> 0, env: { sky: { stars: true } }, routes: [] };   // pas de nuages par tronçon
     const b = new CC.LevelBuilder(game.scene, world, pseudo);
+    b.segLen = CC.CONFIG.render.segLen;   // v038g : lots découpés en tranches (visibilité et ombres)
     const gates = [];                                   // points de passage { d, lx, y } (pilote automatique, matériaux)
     const busy = [], reserved = [];
     const free = (d, m) => d > d0 + 8 && d < d1 - 8 && busy.every((q) => Math.abs(q - d) > m);
