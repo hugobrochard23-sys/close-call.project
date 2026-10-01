@@ -273,8 +273,7 @@
     const wv = S.sc.name === 'station' ? (dc) => S.vol(dc) + 13 : (dc) => S.vol(dc);
     S.wv = wv;
     shell(S, wv, { open: S.sc.name === 'puits' });
-    if (S.sc.first) mouth(S, S.d0 + 4);
-    if (S.sc.last) mouth(S, S.d1 - 4);
+    // v037 : plus de « bouche » murale aux extrémités (elle séparait les lieux comme un mur) ; mouth() n'est plus utilisée
   } };
   Z.defs.metro = metro;
   metro.scenes.tunnel = { len: [200, 280], build(S) {

@@ -13,6 +13,9 @@ CC.CONFIG = {
     shadows: true,
     launchFx: 0.16,              // CHOIX v024 : durée (s) du renflement qui parcourt le tube au tir
     shadowMapSize: 2048,
+    curve: 0.00012,              // v037 : courbure visuelle du monde (réglage unique ; 0 = aucune) : un sommet à d m de la caméra est abaissé de curve × d²
+    curveNear: 25,               // distance (m) en deçà de laquelle rien ne bouge
+    curveCap: 520,               // plafond de d (m) : l'horizon lointain ne plonge pas indéfiniment
     shadowRange: 70,             // demi-taille de la zone d'ombre autour de la roquette (m)
   },
 
@@ -90,7 +93,7 @@ CC.CONFIG = {
       edgeTurnRate: 1.8,         // v024 : virage (rad/s) quand le doigt est tout au bord
       pixelRatio: 1,             // fluidité : rendu à 1 pixel par point d'écran (au lieu de 1,5)
       shadowMapSize: 1024,       // fluidité : ombres 1024 au lieu de 2048
-      fovMinH: 62,               // debout : angle de vue horizontal minimal (°), la vue verticale s'élargit en conséquence
+      fovMinH: 66,               // debout : angle de vue horizontal minimal (°), la vue verticale s'élargit en conséquence
     },
   },   // maxPitchDeg : au lanceur seulement (v011) ; autoLevel : remise à plat de l'horizon en vol (1/s)
 
@@ -323,7 +326,7 @@ CC.CONFIG = {
     firstRunXp: 30,              // XP du tout premier vol
     levelBase: 300, levelStep: 200, levelMaterials: 200,   // XP pour passer du niveau n au suivant : base + step × (n − 1) ; matériaux offerts à chaque niveau   // XP pour passer du niveau n au suivant : base + step × (n − 1)
     missionSlots: 1,
-    worlds: { city: 1, forest: 2, usine: 2, port: 3, tour: 3, sky: 3, chute: 3, metro: 4, eau: 4, mini: 5 },   // niveau qui débloque chaque décor
+    worlds: { city: 1, forest: 2, usine: 2, port: 3, tour: 3, sky: 3, chute: 3, metro: 4, eau: 3, mini: 5 },   // niveau qui débloque chaque décor
     ranks: ['RECRUE', 'PILOTE', 'AS', 'CAPITAINE', 'MAJOR', 'COMMANDANT', 'LEGENDE'],
   },
 

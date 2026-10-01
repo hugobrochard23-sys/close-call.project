@@ -204,7 +204,7 @@
       let cx = C.crosshair.x * W, cy = C.crosshair.y * H;
       if (game.state === 'FLIGHT' && rk.active) {
         // v010 : la caméra suit la trajectoire, le réticule indique où la roquette est dirigée
-        const p = this._v.copy(rk.pos).addScaledVector(game.rig.aimDir, 60).project(game.camera);
+        const p = CC.Curve.apply(this._v.copy(rk.pos).addScaledVector(game.rig.aimDir, 60), game.camera).project(game.camera);
         if (p.z > 1) cross = false;
         else { cx = U.clamp((p.x * 0.5 + 0.5) * W, 0, W); cy = U.clamp((0.5 - p.y * 0.5) * H, 0, H); }
       }
@@ -311,7 +311,7 @@
       const ctx = this.ctx, cam = game.camera, lw = Math.max(2, H / 360);
       for (const m of game.missiles) {
         if (!m.alive || m.pos.distanceTo(rk.pos) > CC.CONFIG.aa.warnDist) continue;
-        const p = this._v.copy(m.pos).project(cam), behind = p.z > 1;
+        const p = CC.Curve.apply(this._v.copy(m.pos), cam).project(cam), behind = p.z > 1;
         if (!behind && Math.abs(p.x) < 0.95 && Math.abs(p.y) < 0.95) {
           const sx = (p.x * 0.5 + 0.5) * W, sy = (-p.y * 0.5 + 0.5) * H, r = Math.max(7, this.refH * 0.018), c = r * 0.45;
           ctx.strokeStyle = col.red; ctx.lineWidth = lw;
@@ -340,7 +340,7 @@
       const W = this.canvas.width, H = this.canvas.height, ctx = this.ctx, cam = game.camera;
       for (const t of game.targets) {
         if (!t.alive || t.guard) continue;   // v021 : pas de repère vers les tanks de garde
-        const p = this._v.copy(t.obb.c).project(cam);
+        const p = CC.Curve.apply(this._v.copy(t.obb.c), cam).project(cam);
         const behind = p.z > 1;
         if (!behind && Math.abs(p.x) < 1 && Math.abs(p.y) < 1) {
           // v023 : cible à l'écran → repère rouge permanent sur elle (il ne disparaît plus quand on fonce dessus)

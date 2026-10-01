@@ -455,7 +455,7 @@
     onSmash(pos, n) {
       const run = this.endlessRun; if (!run || n <= 0) return;
       run.stats.cells += n; run.addBonus(n * CC.CONFIG.score.cell * 0.5); run.addFuel(0.5 + n * 0.05); this.progress.event('cells', n);
-      const v = new V().copy(pos).project(this.camera), W = this.hudCanvas.width, H = this.hudCanvas.height;
+      const v = CC.Curve.apply(new V().copy(pos), this.camera).project(this.camera), W = this.hudCanvas.width, H = this.hudCanvas.height;
       const k = Math.min(16, Math.max(6, Math.round(n * 0.7))), sx = v.z > 1 ? W / 2 : (v.x * 0.5 + 0.5) * W, sy = v.z > 1 ? H * 0.45 : (0.5 - v.y * 0.5) * H;
       for (let i = 0; i < k; i++) { const a = U.fx() * 6.283, sp = (0.12 + U.fx() * 0.25) * Math.min(W, H); this.flyers.push({ x: sx, y: sy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 0.1 * H, t: -i * 0.035, val: n / k, rot: U.fx() * 6 }); }
       this.feed('MATERIAUX  +' + n, CC.CONFIG.hud.colors.yellow); this.cellBump = 1.4;
