@@ -68,17 +68,24 @@
   Font.cellW = 1.2;                 // largeur d'un pixel de police relative à sa hauteur
   Font.advance = 7;                 // avance monospace en pixels de police (5 + 2)
 
-  function glyphCanvas(ch, px, color, outline, cw) {
-    const key = ch + '|' + px.toFixed(2) + '|' + color + '|' + (outline || '') + '|' + (cw || '');
+  // v038k : version GRASSE d'un glyphe (chaque pixel devient un carré 2×2 : traits de 2 px, comme la police de la vidéo) — la largeur d'avance ne change pas
+  function boldRows(rows) {
+    const h = rows.length, w = rows[0].length, out = [];
+    for (let y = 0; y <= h; y++) { let r = ''; for (let x = 0; x <= w; x++) r += ((rows[y] && rows[y][x] === '#') || (rows[y] && rows[y][x - 1] === '#') || (rows[y - 1] && rows[y - 1][x] === '#') || (rows[y - 1] && rows[y - 1][x - 1] === '#')) ? '#' : '.'; out.push(r); }
+    return out;
+  }
+  function glyphCanvas(ch, px, color, outline, cw, bold, shadow) {
+    const key = ch + '|' + px.toFixed(2) + '|' + color + '|' + (outline || '') + '|' + (cw || '') + '|' + (bold ? 'b' : '') + (shadow ? 's' : '');
     let c = cache.get(key);
     if (c) return c;
-    const rows = G[ch] || G['?'];
+    let rows = G[ch] || G['?'];
+    if (bold) rows = boldRows(rows);
     const gw = rows[0].length;
     const pw = px * (cw || Font.cellW), ph = px;
-    const o = outline ? Math.max(1, Math.round(px * 0.55)) : 0;
+    const o = outline ? Math.max(1, Math.round(px * 0.55)) : 0, sh = shadow ? Math.max(1, Math.round(px)) : 0;
     c = document.createElement('canvas');
-    c.width = Math.ceil(gw * pw + o * 2 + 1);
-    c.height = Math.ceil(rows.length * ph + o * 2 + 1);
+    c.width = Math.ceil(gw * pw + o * 2 + sh + 1);
+    c.height = Math.ceil(rows.length * ph + o * 2 + sh + 1);
     const g = c.getContext('2d');
     const paint = (col, grow) => {
       g.fillStyle = col;
@@ -88,6 +95,7 @@
       }
     };
     if (outline) paint(outline, o);
+    if (shadow) { g.save(); g.translate(sh, sh); paint('rgba(0,0,0,0.5)', 0); g.restore(); }   // ombre dure d'un pixel : lisible sans contour
     paint(color, 0);
     c.glyphW = gw; c.o = o;
     if (cache.size > 4000) cache.clear();
@@ -120,8 +128,8 @@
       for (const raw of s.t) {
         const ch = raw === 'x' ? 'X' : raw.toUpperCase();
         if (ch !== ' ') {
-          const gc = glyphCanvas(ch, px, col, opts.outline === undefined ? CC.CONFIG.hud.colors.outline : opts.outline, opts.cw);
-          const gw = gc.glyphW * px * cwv;
+          const gc = glyphCanvas(ch, px, col, opts.outline === undefined ? CC.CONFIG.hud.colors.outline : opts.outline, opts.cw, opts.bold, opts.shadow);
+          const gw = Math.min(5, gc.glyphW) * px * cwv;
           const off = (5 * px * cwv - gw) / 2;   // centre les glyphes étroits dans la cellule
           ctx.drawImage(gc, Math.round(cx + off - gc.o), Math.round(y - gc.o));
         }
@@ -156,7 +164,7 @@
   Font.draw = function (ctx, segments, x, y, px, color, opts) {
     opts = opts || {};
     if (opts.pixel) return Font.drawPixel(ctx, segments, x, y, px, color, opts);
-    if (Font.skinPixel) return Font.drawPixel(ctx, segments, x, y, snap(px), color, Object.assign({}, opts, { cw: 1, skew: 0 }));
+    if (Font.skinPixel) return Font.drawPixel(ctx, segments, x, y, snap(px), color, Object.assign({}, opts, { cw: 1, skew: 0, outline: null, bold: true, shadow: true }));
     if (typeof segments === 'string') segments = [{ t: segments, c: color }];
     const size = px * FS, widths = segments.map((s) => wAt100(s.t.toUpperCase()) * size / 100);
     let width = 0; for (const w of widths) width += w;

@@ -23,8 +23,8 @@
       this.buttons.push({ x: bx, y: by, w, h, action });
       const col = hot ? CC.CONFIG.hud.colors.yellow : (opts.color || '#f4f4f4');
       if (opts.primary && (opts.box || touch)) {   // v038i : bouton principal épais, vert, brillant (REPRENDRE, ...)
-        CC.Home.button3d(ctx, bx, by, w, h + Math.max(2, px) * 0.4, hot ? '#9dffa0' : '#74f06a', '#1fae3c', '#0f6a24');
-        this.text(ctx, label, x, y - px * 0.2, px, '#ffffff', { align: 'center', outline: '#0b5a1c' });
+        CC.Home.button3d(ctx, bx, by, w, h + Math.max(2, px) * 0.4, hot ? '#4dff7a' : '#00e436', '#009e3a', '#00632a');
+        this.text(ctx, label, x, y - px * 0.2, px, '#ffffff', { align: 'center', outline: '#00501f' });
         return;
       }
       if ((opts.box || touch) && opts.box !== false) {

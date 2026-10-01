@@ -49,7 +49,7 @@
    * l'élément d'un décor éblouissant), une ombre portée nette (sans flou : peu coûteux, redessiné à chaque image), un reflet sur la moitié haute ;
    * des boutons principaux épais et brillants avec une lèvre (on les « presse ») ; des pictogrammes pleins en dégradé, contour sombre ; un seul accent
    * froid (cyan) pour l'interface, l'or pour la monnaie, le vert pour valider, le rouge pour l'alerte. */
-  const EDGE = 'rgba(4,8,16,0.95)';
+  const EDGE = PIX ? 'rgba(0,0,0,0)' : 'rgba(4,8,16,0.95)';   // v038k : en pixel, plus aucun contour noir
   const hexMix = (hex, to, t) => { const a = U.hexToRgb(hex), b = U.hexToRgb(to); return '#' + [0, 1, 2].map((i) => Math.round(a[i] + (b[i] - a[i]) * t).toString(16).padStart(2, '0')).join(''); };
   const lighter = (c, t) => hexMix(c, '#ffffff', t === undefined ? 0.45 : t), darker = (c, t) => hexMix(c, '#000000', t === undefined ? 0.4 : t);
   function drop(ctx, x, y, w, h, r, d, a) { rr(ctx, x, y + d, w, h, r); ctx.fillStyle = 'rgba(0,0,0,' + a + ')'; ctx.fill(); }
@@ -115,30 +115,28 @@
   };
   function pixPill(ctx, x, y, w, h, fill, stroke, r) {
     const u = Math.max(2, Math.round(h * 0.055)), c = Math.max(1, Math.round(Math.min(r === undefined ? h / 2 : r, h / 2) / 3.2));
-    stair(ctx, x, y + u * 1.5, w, h, c); ctx.fillStyle = 'rgba(0,0,0,0.38)'; ctx.fill();
-    stair(ctx, x - u, y - u, w + 2 * u, h + 2 * u, c + (u > c ? 0 : 0)); ctx.fillStyle = '#04060c'; ctx.fill();
+    stair(ctx, x, y + u * 1.5, w, h, c); ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fill();
     stair(ctx, x, y, w, h, c); ctx.fillStyle = solid2(fill); ctx.fill();
     ctx.save(); stair(ctx, x, y, w, h, c); ctx.clip();
-    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), u);
-    ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(Math.round(x), Math.round(y + h - u * 1.5), Math.round(w), Math.round(u * 1.5));
+    ctx.fillStyle = 'rgba(255,255,255,0.16)'; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), u);
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(Math.round(x), Math.round(y + h - u * 1.5), Math.round(w), Math.round(u * 1.5));
     ctx.restore();
-    if (stroke) { stair(ctx, x + u, y + u, w - 2 * u, h - 2 * u, Math.max(1, c - 1)); ctx.strokeStyle = stroke; ctx.lineWidth = Math.max(1, u * 0.7); ctx.stroke(); }
+    stair(ctx, x + u * 0.5, y + u * 0.5, w - u, h - u, Math.max(1, c - 1)); ctx.strokeStyle = (stroke && stroke !== 'rgba(255,255,255,0.35)') ? stroke : '#4b63a8'; ctx.lineWidth = u; ctx.stroke();   // liseré de couleur (bleu arcade par défaut)
   }
   function pixButton3d(ctx, x, y, w, h, c1, c2, lip, pulse) {
     const u = Math.max(2, Math.round(h * 0.055)), c = Math.max(2, Math.round(h * 0.09)), hh = h - 2 * u;
     ctx.save(); if (pulse && pulse !== 1) { ctx.translate(x + w / 2, y + h / 2); ctx.scale(pulse, pulse); ctx.translate(-(x + w / 2), -(y + h / 2)); }
-    stair(ctx, x - u, y - u, w + 2 * u, h + 2 * u, c); ctx.fillStyle = '#04060c'; ctx.fill();
     stair(ctx, x, y + 2 * u, w, hh, c); ctx.fillStyle = lip; ctx.fill();
     stair(ctx, x, y, w, hh, c); ctx.fillStyle = c2; ctx.fill();
     ctx.save(); stair(ctx, x, y, w, hh, c); ctx.clip();
     ctx.fillStyle = c1; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(hh * 0.55));
-    ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), u);
-    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(Math.round(x + 3 * c), Math.round(y + u + 1), Math.round(Math.min(w * 0.22, 6 * c)), u);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), u);
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(Math.round(x + 3 * c), Math.round(y + u + 1), Math.round(Math.min(w * 0.22, 6 * c)), u);
     ctx.restore(); ctx.restore();
   }
   function pixMeter(ctx, x, y, w, h, k, c1, c2) {
-    const u = Math.max(2, Math.round(h * 0.18)), c = Math.max(1, Math.round(h * 0.25));
-    stair(ctx, x - u, y - u, w + 2 * u, h + 2 * u, c); ctx.fillStyle = '#04060c'; ctx.fill();
+    const u = Math.max(2, Math.round(h * 0.16)), c = Math.max(1, Math.round(h * 0.25));
+    stair(ctx, x - u, y - u, w + 2 * u, h + 2 * u, c); ctx.fillStyle = '#3a4f8e'; ctx.fill();
     stair(ctx, x, y, w, h, c); ctx.fillStyle = '#16233b'; ctx.fill();
     const f = Math.max(0, Math.min(1, k)) * w;
     if (f > 1) {
@@ -147,22 +145,22 @@
       ctx.fillStyle = c2; ctx.fillRect(Math.round(x), Math.round(y), fw, Math.round(h));
       ctx.fillStyle = c1; ctx.fillRect(Math.round(x), Math.round(y), fw, Math.round(h * 0.55));
       ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillRect(Math.round(x), Math.round(y), fw, Math.max(1, Math.round(h * 0.14)));
-      ctx.fillStyle = 'rgba(0,0,0,0.22)'; for (let t = h * 1.1; t < fw; t += h * 1.1) ctx.fillRect(Math.round(x + t), Math.round(y), Math.max(1, Math.round(h * 0.1)), Math.round(h));
+      ctx.fillStyle = 'rgba(0,0,0,0.2)'; for (let t = h * 1.1; t < fw; t += h * 1.1) ctx.fillRect(Math.round(x + t), Math.round(y), Math.max(1, Math.round(h * 0.1)), Math.round(h));
       ctx.restore();
     }
   }
   function pixBadge(ctx, x, y, size, level, ui) {
     const u = Math.max(2, Math.round(size * 0.05)), c = Math.max(2, Math.round(size * 0.1));
-    stair(ctx, x, y + u * 1.5, size, size, c); ctx.fillStyle = 'rgba(0,0,0,0.38)'; ctx.fill();
-    stair(ctx, x - u, y - u, size + 2 * u, size + 2 * u, c); ctx.fillStyle = '#04060c'; ctx.fill();
-    stair(ctx, x, y, size, size, c); ctx.fillStyle = '#e08a00'; ctx.fill();
+    stair(ctx, x, y + u * 1.5, size, size, c); ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fill();
+    stair(ctx, x - u, y - u, size + 2 * u, size + 2 * u, c); ctx.fillStyle = '#ab5236'; ctx.fill();
+    stair(ctx, x, y, size, size, c); ctx.fillStyle = '#ffa300'; ctx.fill();
     ctx.save(); stair(ctx, x, y, size, size, c); ctx.clip();
-    ctx.fillStyle = '#ffc820'; ctx.fillRect(Math.round(x), Math.round(y), Math.round(size), Math.round(size * 0.58));
-    ctx.fillStyle = '#fff09a'; ctx.fillRect(Math.round(x), Math.round(y), Math.round(size), u);
+    ctx.fillStyle = '#ffec27'; ctx.fillRect(Math.round(x), Math.round(y), Math.round(size), Math.round(size * 0.58));
+    ctx.fillStyle = '#fff6a8'; ctx.fillRect(Math.round(x), Math.round(y), Math.round(size), u);
     ctx.restore();
-    text(ui, ctx, 'NIV', x + size / 2, y + size * 0.1, size * 0.026, '#7a4a00', { align: 'center', outline: null });
-    const s = String(level), px = Math.min(size * 0.075, size * 0.66 / Math.max(1, F.measure(s, 1)));
-    text(ui, ctx, s, x + size / 2, y + size * 0.34, px, '#ffffff', { align: 'center', outline: '#6a3c00' });
+    text(ui, ctx, 'NIV', x + size / 2, y + size * 0.1, size * 0.026, '#ab5236', { align: 'center' });
+    const s2 = String(level), px = Math.min(size * 0.075, size * 0.66 / Math.max(1, F.measure(s2, 1)));
+    text(ui, ctx, s2, x + size / 2, y + size * 0.34, px, '#ffffff', { align: 'center' });
   }
   let pill = glassPill, button3d = glassButton3d, meter = glassMeter, badge = glassBadge;
   if (PIX) { pill = pixPill; button3d = pixButton3d; meter = pixMeter; badge = pixBadge; }
@@ -180,7 +178,7 @@
   // ---------- pictogrammes ----------
   // pictogrammes v038i : formes pleines en dégradé (clair en haut, foncé en bas), contour sombre, petit reflet
   const gfill = (ctx, y0, y1, col) => { const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, lighter(col, 0.5)); g.addColorStop(0.5, col); g.addColorStop(1, darker(col, 0.35)); return g; };
-  const solid = (ctx, cy, r, col, lw) => { ctx.fillStyle = gfill(ctx, cy - r, cy + r, col); ctx.fill(); ctx.lineJoin = 'round'; ctx.lineWidth = lw === undefined ? Math.max(1.5, r * 0.14) : lw; ctx.strokeStyle = EDGE; ctx.stroke(); };
+  const solid = (ctx, cy, r, col, lw) => { ctx.fillStyle = gfill(ctx, cy - r, cy + r, col); ctx.fill(); ctx.lineJoin = 'round'; ctx.lineWidth = lw === undefined ? Math.max(1.5, r * 0.14) : lw; ctx.strokeStyle = PIX ? darker(col, 0.45) : EDGE; ctx.stroke(); };
   const ICON = {
     gear(ctx, cx, cy, r, col) {
       ctx.beginPath();
@@ -367,8 +365,9 @@
       text(ui, ctx, mat, mx + mw - mh * 0.35, by + bs * 0.5 + 2 - mpx * 3.6, mpx, '#ffffff', { align: 'right', outline: '#0a0e16' }); }
     // réglages (haut droite)
     const gr = u * 0.055, gx = W - margin - gr, gy = by + gr;
-    pxRect(ctx, gx - gr, gy - gr, 2 * gr, 2 * gr, inRect(ui, gx - gr, gy - gr, 2 * gr, 2 * gr) ? 'rgba(255,255,255,0.2)' : 'rgba(8,12,20,0.7)', '#9fb0c8', Math.round(gr * 0.28), 2);
-    ICON.gear(ctx, gx, gy, gr * 0.58, '#c8d4e6');
+    // v038k : l'engrenage est seul (pas de rectangle derrière), un peu plus grand ; il s'éclaire au survol
+    if (!PIX) pxRect(ctx, gx - gr, gy - gr, 2 * gr, 2 * gr, inRect(ui, gx - gr, gy - gr, 2 * gr, 2 * gr) ? 'rgba(255,255,255,0.2)' : 'rgba(8,12,20,0.7)', '#9fb0c8', Math.round(gr * 0.28), 2);
+    ICON.gear(ctx, gx, gy, gr * (PIX ? 0.95 : 0.58), inRect(ui, gx - gr, gy - gr, 2 * gr, 2 * gr) ? '#ffffff' : '#c2c3c7');
     hit(ui, gx - gr * 1.1, gy - gr * 1.1, gr * 2.2, gr * 2.2, () => { ui.overlay = 'msettings'; });
     // v038j : plus de titre sur l'accueil (le jeu s'ouvre sur la roquette) ; on garde seulement le record
     const ly = Y(P ? 0.135 : 0.03), best = prog.P.best;
@@ -627,7 +626,7 @@
     const yRe = Y(0.975) - bh1 - (P ? S(8) : 0), yAd = yRe - S(12) - bh0;
     if (adOk && xpDone) {
       const on = inRect(ui, bxb, yAd, bw2, bh0), pl = 0.92 + 0.08 * Math.sin(t * 5);
-      Home.button3d(ctx, bxb, yAd, bw2, bh0, on ? '#5ee0ff' : '#39c0f0', '#1a86d0', '#0e5a95', pl);
+      Home.button3d(ctx, bxb, yAd, bw2, bh0, on ? '#fff27a' : '#ffec27', '#ffa300', '#ab5236', pl);
       Home.icon.play(ctx, bxb + bh0 * 0.55, yAd + bh0 / 2 - bh0 * 0.03, bh0 * 0.2, '#ffffff');
       const lbl = 'XP X2', lpx = fitq(lbl, bw2 - bh0 * 1.2, 3.6);
       text(ui, ctx, lbl, bxb + bh0 * 1.0, yAd + bh0 / 2 - lpx * 3.6 - bh0 * 0.03, lpx, '#ffffff', { outline: '#0e4a80' });
@@ -636,7 +635,7 @@
     }
     if (ready) {
       const on = inRect(ui, bxb, yRe, bw2, bh1, 0), pl = 1 + 0.02 * Math.sin(t * 5), w = bw2 * pl, x = bxb - (w - bw2) / 2;
-      Home.button3d(ctx, x, yRe, w, bh1, on ? '#fff06a' : '#ffe040', '#ffb000', '#b87800', 1);
+      Home.button3d(ctx, x, yRe, w, bh1, on ? '#4dff7a' : '#00e436', '#009e3a', '#00632a', 1);
       const lpx = fitq('REJOUER', bw2 * 0.7, 5.2);
       text(ui, ctx, 'REJOUER', bxb + bw2 / 2, yRe + bh1 / 2 - lpx * 3.6 - bh1 * 0.03, lpx, '#ffffff', { align: 'center', outline: '#8a5200' });
       hit(ui, x, yRe, w, bh1, () => { const go = () => game.goHome({ autoLaunch: false }); game.ads ? game.ads.beforeContinue(go) : go(); });
