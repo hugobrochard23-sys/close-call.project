@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Direction artistique — aperçu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=Pixelify+Sans:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  /* ============ PALETTES (changer ici = changer tout le jeu) ============ */
+  :root, [data-pal="nuit"] {
+    --ink:#10142a; --panel:#1c2342; --line:#46548f; --text:#f4f1e8; --dim:#8d97c4;
+    --accent:#ffd23a; --accent-d:#c9961a; --accent-l:#fff0a0; --fuel:#ff8a2a; --danger:#ff4258;
+  }
+  [data-pal="acier"] {
+    --ink:#12171c; --panel:#222b33; --line:#4d5e6b; --text:#eef3f6; --dim:#8fa1ad;
+    --accent:#4fd8ff; --accent-d:#1f9cc4; --accent-l:#b8f0ff; --fuel:#ff8a2a; --danger:#ff4258;
+  }
+  [data-pal="braise"] {
+    --ink:#1a1210; --panel:#2e211c; --line:#6b4c3d; --text:#f6efe6; --dim:#b39a88;
+    --accent:#ff8a2a; --accent-d:#c25a0c; --accent-l:#ffc88a; --fuel:#ffd23a; --danger:#ff4258;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#0a0c16; color:var(--text); font-family: 'Silkscreen', monospace; padding: 16px 16px 60px; }
+  h1 { font-family:'Press Start 2P', monospace; font-size:15px; line-height:1.6; margin: 6px 0 4px; color:#fff; }
+  h2 { font-family:'Press Start 2P', monospace; font-size:11px; margin: 30px 0 12px; color:var(--accent); line-height:1.6; }
+  p, .note { font-size:12px; line-height:1.6; color:var(--dim); max-width: 760px; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .row { display:flex; flex-wrap:wrap; gap:14px; align-items:flex-start; }
+  .tabs { display:flex; gap:8px; margin: 10px 0 0; flex-wrap:wrap; }
+  .tabs button { font:inherit; font-size:12px; color:var(--text); background:#1c2342; border:2px solid #46548f; padding:10px 14px; cursor:pointer; }
+  .tabs button.on { background:var(--accent); color:#10142a; border-color:var(--accent-l); }
+  .sw { width:92px; }
+  .sw i { display:block; height:44px; border:2px solid #000; }
+  .sw b { display:block; font-size:10px; margin-top:4px; font-weight:400; }
+  .sw s { display:block; font-size:10px; text-decoration:none; color:var(--dim); }
+
+  /* ============ BRIQUES : coins en escalier, aplats, aucun contour noir ============ */
+  .px { position:relative; display:inline-block; background:var(--line);
+    clip-path: polygon(6px 0,calc(100% - 6px) 0,calc(100% - 6px) 3px,calc(100% - 3px) 3px,calc(100% - 3px) 6px,100% 6px,100% calc(100% - 6px),calc(100% - 3px) calc(100% - 6px),calc(100% - 3px) calc(100% - 3px),calc(100% - 6px) calc(100% - 3px),calc(100% - 6px) 100%,6px 100%,6px calc(100% - 3px),3px calc(100% - 3px),3px calc(100% - 6px),0 calc(100% - 6px),0 6px,3px 6px,3px 3px,6px 3px); }
+  .px > .in { display:block; margin:3px; background:var(--panel);
+    clip-path: polygon(3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px),0 3px,3px 3px); }
+  .px.acc { background:var(--accent-l); }
+  .px.acc > .in { background:var(--accent); color:#10142a; box-shadow: inset 0 -6px 0 var(--accent-d), inset 0 3px 0 rgba(255,255,255,.35); }
+  .px.red { background:#ff9aa6; } .px.red > .in { background:var(--danger); }
+  .pill { font-size:14px; padding:9px 16px; text-align:center; white-space:nowrap; }
+  .btn { font-size:16px; padding:15px 28px; text-align:center; letter-spacing:1px; }
+  .btn.big { font-size:20px; padding:20px 40px; }
+  .t-title { font-family:'Press Start 2P', monospace; }
+  canvas.ic { image-rendering: pixelated; display:block; }
+
+  /* ============ POLICES ============ */
+  .fontbox { background:#161b36; border:2px solid #2a3260; padding:14px 16px; min-width:260px; flex:1 1 260px; }
+  .fontbox .name { font-size:10px; color:var(--dim); margin-bottom:8px; font-family:system-ui,sans-serif; }
+  .f1 { font-family:'Press Start 2P', monospace; } .f2 { font-family:'Silkscreen', monospace; font-weight:700; } .f3 { font-family:'Pixelify Sans', monospace; font-weight:700; }
+  .big1 { font-size:26px; line-height:1.4; } .mid1 { font-size:13px; line-height:1.8; color:var(--dim); }
+  .f1.big1 { font-size:20px; }
+
+  /* ============ TELEPHONES ============ */
+  .phone { width:300px; height:620px; position:relative; overflow:hidden; background:#000; border:3px solid #2a3260; flex:0 0 auto; }
+  .scene { position:absolute; inset:0; image-rendering:pixelated;
+    background:
+      linear-gradient(180deg, #2a2257 0 34%, #5b3a78 34% 40%, #2a2257 40% 100%);
+  }
+  .scene canvas { width:100%; height:100%; image-rendering:pixelated; display:block; }
+  .abs { position:absolute; }
+  .tabbar { position:absolute; left:0; right:0; bottom:0; display:flex; height:66px; background:var(--panel); border-top:3px solid var(--line); }
+  .tab { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; font-size:8px; color:var(--dim); }
+  .tab.on { color:#10142a; background:var(--accent); box-shadow: inset 0 3px 0 var(--accent-l); }
+  .label { position:absolute; top:-26px; left:0; font-size:10px; color:var(--dim); font-family:system-ui,sans-serif; }
+  .col { position:relative; margin-top:30px; }
+  .fuelbar { position:absolute; right:14px; top:84px; width:22px; height:190px; background:var(--text); padding:4px; }
+  .fuelbar i { display:block; width:100%; height:100%; background:var(--ink); position:relative; }
+  .fuelbar i b { position:absolute; left:0; right:0; bottom:0; height:62%; background:var(--fuel); }
+  .barline { height:12px; background:var(--line); padding:2px; }
+  .barline i { display:block; height:100%; background:var(--ink); } .barline i b { display:block; height:100%; width:42%; background:var(--accent); }
+  .tut { position:absolute; left:50%; transform:translateX(-50%); }
+</style>
+</head>
+<body data-pal="nuit">
+<div class="wrap">
+  <h1>DIRECTION ARTISTIQUE — APERCU A VALIDER</h1>
+  <p>Une seule règle : <b style="color:var(--text)">un fond bleu nuit, du blanc pour le texte, UNE couleur d'accent</b>, de l'orange réservé à l'essence et du rouge réservé au danger. Aucun contour noir, aucun dégradé, aucun reflet : des aplats, des coins en escalier, un liseré plus clair que le fond. Choisis la palette, la police, et dis-moi ce qui ne va pas.</p>
+
+  <h2>1 · PALETTE (choisis)</h2>
+  <div class="tabs" id="pal">
+    <button data-p="nuit" class="on">A · NUIT + JAUNE</button>
+    <button data-p="acier">B · ACIER + CYAN</button>
+    <button data-p="braise">C · BRAISE + ORANGE</button>
+  </div>
+  <div class="row" style="margin-top:14px" id="sw"></div>
+
+  <h2>2 · POLICE (choisis)</h2>
+  <div class="row">
+    <div class="fontbox"><div class="name">1 — PRESS START 2P (le pixel arcade classique, très lisible, large)</div>
+      <div class="f1 big1">SCORE 12.450</div><div class="f1 mid1">REJOUER · MISSION · NIVEAU 4<br>ABCDEFGHIJKLM 0123456789</div></div>
+    <div class="fontbox"><div class="name">2 — SILKSCREEN GRAS (fine et compacte, bien pour les petits textes)</div>
+      <div class="f2 big1">SCORE 12.450</div><div class="f2 mid1">REJOUER · MISSION · NIVEAU 4<br>ABCDEFGHIJKLM 0123456789</div></div>
+    <div class="fontbox"><div class="name">3 — PIXELIFY SANS GRAS (pixel doux, la plus moderne)</div>
+      <div class="f3 big1">SCORE 12.450</div><div class="f3 mid1">REJOUER · MISSION · NIVEAU 4<br>ABCDEFGHIJKLM 0123456789</div></div>
+  </div>
+  <div class="tabs" id="fnt">
+    <button data-f="Press Start 2P" class="on">UTILISER 1</button><button data-f="Silkscreen">UTILISER 2</button><button data-f="Pixelify Sans">UTILISER 3</button>
+  </div>
+
+  <h2>3 · ICONES (grille 11×11, une couleur d'accent, sans contour)</h2>
+  <div class="row" id="icons" style="gap:18px"></div>
+  <p class="note" style="margin-top:10px">Chaque icône tient en 11×11 pixels, agrandie sans lissage. Pas d'ombre, pas de dégradé : on les reconnaît à la silhouette.</p>
+
+  <h2>4 · COMPOSANTS</h2>
+  <div class="row" style="align-items:center">
+    <span class="px pill"><span class="in" style="padding:9px 16px">12.450</span></span>
+    <span class="px acc btn"><span class="in" style="padding:15px 28px">REJOUER</span></span>
+    <span class="px btn"><span class="in" style="padding:15px 28px;color:var(--text)">RECOMMENCER</span></span>
+    <span class="px red btn"><span class="in" style="padding:15px 28px;color:#fff">QUITTER</span></span>
+    <div style="width:220px"><div class="barline"><i><b></b></i></div><div class="note" style="margin:6px 0 0">XP 126 / 300</div></div>
+    <div style="display:flex; gap:12px; align-items:flex-end; height:80px"><div class="fuelbar" style="position:static;height:80px;width:20px"><i><b style="height:62%"></b></i></div><span class="note">jauge d'essence : juste une barre qui descend</span></div>
+  </div>
+
+  <h2>5 · ECRANS</h2>
+  <div class="row" id="phones"></div>
+</div>
+
+<script>
+const pal = document.body;
+const G = {
+  rocket: ['.....r.....','....rrr....','...wwwww...','...wwbww...','...wwwww...','...wwwww...','..rwwwwwr..','.rrwwwwwrr.','.r.wwwww.r.','...ooyoo...','....y.y....'],
+  trophy: ['.#########.','##.#####.##','#..#####..#','#..#####..#','.##.###.##.','...#####...','....###....','.....#.....','.....#.....','...#####...','...#####...'],
+  star:   ['.....#.....','.....#.....','....###....','###########','.#########.','..#######..','..#######..','.####.####.','.###...###.','.##.....##.','.#.......#.'],
+  play:   ['...........','.##........','.####......','.######....','.########..','.#########.','.########..','.######....','.####......','.##........','...........'],
+  pause:  ['...........','.####.####.','.####.####.','.####.####.','.####.####.','.####.####.','.####.####.','.####.####.','.####.####.','.####.####.','...........'],
+  lock:   ['...#####...','..##...##..','..#.....#..','..#.....#..','.#########.','.#########.','.####.####.','.####.####.','.#########.','.#########.','...........'],
+  check:  ['...........','..........#','.........##','........##.','#......##..','##....##...','.##..##....','..####.....','...##......','...........','...........'],
+  home:   ['.....#.....','....###....','...#####...','..#######..','.#########.','###########','.###...###.','.###...###.','.###...###.','.###...###.','.#########.'],
+  cart:   ['..#........','..#........','..########.','..#.#####..','..#.#####..','...#####...','...#####...','...........','..##...##..','..##...##..','...........'],
+  flame:  ['.....#.....','....##.....','....###....','...####.#..','..######.#.','..#######..','.#########.','.####.####.','.###...###.','..###.###..','...#####...'],
+  nut:    ['...#####...','..#######..','.####.####.','###.....###','##.......##','##.......##','##.......##','###.....###','.####.####.','..#######..','...#####...'],
+  list:   ['...........','.##.#######','.##.#######','...........','.##.#######','.##.#######','...........','.##.#######','.##.#######','...........','...........'],
+};
+function px(grid, scale, cols){
+  const n=grid.length, c=document.createElement('canvas'); c.width=c.height=n; c.className='ic'; c.style.width=c.style.height=(n*scale)+'px';
+  const g=c.getContext('2d'); const css=getComputedStyle(document.body);
+  const col={'#':cols.main,'w':'#f4f1e8','r':'#ff4258','b':'#4fb4ff','o':'#8d97c4','y':'#ffd23a'};
+  grid.forEach((row,y)=>{[...row].forEach((ch,x)=>{ if(ch!=='.'){ g.fillStyle=col[ch]||cols.main; g.fillRect(x,y,1,1);} });});
+  return c;
+}
+const GEAR=['....###....','.#..###..#.','.####.####.','..##...##..','###.....###','###.....###','###.....###','..##...##..','.####.####.','.#..###..#.','....###....'];
+function gear(scale,color){ return px(GEAR,scale,{main:color}); }
+function target(scale,color){
+  const n=11,c=document.createElement('canvas'); c.width=c.height=n; c.className='ic'; c.style.width=c.style.height=(n*scale)+'px'; const g=c.getContext('2d'); g.fillStyle=color;
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++){ const d=Math.hypot(x-5,y-5); if((d<=5.2&&d>=4)||(d<=2.6&&d>=1.6)||d<=0.7||((Math.abs(x-5)<=0&&d>4.8)||(Math.abs(y-5)<=0&&d>4.8))) g.fillRect(x,y,1,1);} return c;
+}
+function mk(name,scale,color){ if(name==='gear')return gear(scale,color); if(name==='target')return target(scale,color); return px(G[name],scale,{main:color}); }
+const NAMES=['gear','target','rocket','trophy','star','play','pause','lock','check','home','cart','flame','nut','list'];
+const LABEL={gear:'REGLAGES',target:'MISSION',rocket:'ACCUEIL',trophy:'PROGRES',star:'DEFIS',play:'JOUER',pause:'PAUSE',lock:'VERROU',check:'FAIT',home:'MAISON',cart:'BOUTIQUE',flame:'ESSENCE',nut:'ECROU',list:'MENU'};
+function acc(){ return getComputedStyle(document.body).getPropertyValue('--accent').trim(); }
+function text(){ return getComputedStyle(document.body).getPropertyValue('--text').trim(); }
+
+function render(){
+  // palette
+  const names=[['--ink','FOND'],['--panel','PANNEAU'],['--line','LISERE'],['--text','TEXTE'],['--accent','ACCENT'],['--fuel','ESSENCE'],['--danger','DANGER']];
+  const cs=getComputedStyle(document.body);
+  document.getElementById('sw').innerHTML=names.map(([v,l])=>`<div class="sw"><i style="background:var(${v})"></i><b>${l}</b><s>${cs.getPropertyValue(v).trim()}</s></div>`).join('');
+  // icônes
+  const ic=document.getElementById('icons'); ic.innerHTML='';
+  NAMES.forEach(n=>{ const d=document.createElement('div'); d.style.cssText='text-align:center;width:78px'; const box=document.createElement('div'); box.className='px'; const inn=document.createElement('div'); inn.className='in'; inn.style.cssText='padding:12px 0;display:flex;justify-content:center'; inn.appendChild(mk(n,5,n==='flame'?cs.getPropertyValue('--fuel').trim():(n==='target'?cs.getPropertyValue('--accent').trim():text()))); box.appendChild(inn); d.appendChild(box); const l=document.createElement('div'); l.style.cssText='font-size:9px;margin-top:6px;color:var(--dim)'; l.textContent=LABEL[n]; d.appendChild(l); ic.appendChild(d); });
+  // téléphones
+  const P=document.getElementById('phones'); P.innerHTML='';
+  const A=acc(), T=text();
+  const tab=(n,l,on)=>`<div class="tab ${on?'on':''}" data-i="${n}" data-c="${on?'#10142a':T}">${'<canvas></canvas>'}${l}</div>`;
+  const phone=(label, inner)=>{ const c=document.createElement('div'); c.className='col'; c.innerHTML=`<div class="label">${label}</div><div class="phone"><div class="scene"></div>${inner}</div>`; P.appendChild(c); return c; };
+  // accueil
+  phone('ACCUEIL (niveau 3)',`
+    <div class="abs" style="left:12px;top:12px;display:flex;gap:10px;align-items:center"><span class="px"><span class="in" style="padding:10px 12px;font-size:16px;color:var(--accent)">3</span></span><div><div style="font-size:11px">RECRUE</div><div class="barline" style="width:96px;margin-top:6px"><i><b></b></i></div></div></div>
+    <div class="abs" style="right:14px;top:14px" data-gear></div>
+    <div class="abs" style="left:0;right:0;top:268px;text-align:center;font-size:10px;color:var(--text)">TOUCHE LA ROQUETTE</div>
+    <div class="abs" style="left:12px;right:12px;bottom:78px"><span class="px" style="display:block"><span class="in" style="padding:10px 12px;font-size:10px;display:flex;justify-content:space-between"><span>FAIS 16 BOOSTS</span><span style="color:var(--accent)">+100 XP</span></span></span></div>
+    <div class="tabbar">${tab('target','MISSION')}${tab('rocket','ACCUEIL',1)}${tab('trophy','PROGRES')}</div>`);
+  // vol
+  phone('EN VOL',`
+    <div class="abs" style="left:12px;top:12px" data-pause></div>
+    <div class="abs" style="left:50%;transform:translateX(-50%);top:12px"><span class="px"><span class="in" style="padding:9px 18px;font-size:16px">12.450</span></span></div>
+    <div class="fuelbar"><i><b></b></i></div>
+    <div class="abs" style="left:0;right:0;top:310px;text-align:center"><div style="width:44px;height:44px;margin:0 auto;border:3px dashed var(--accent);transform:rotate(45deg)"></div></div>`);
+  // fin
+  phone('FIN DE VOL',`
+    <div class="abs" style="left:0;right:0;top:34px;text-align:center"><div style="font-size:10px;color:var(--dim)">SCORE</div><div class="t-title" style="font-size:30px;margin-top:10px">12.450</div><div style="font-size:11px;color:var(--accent);margin-top:10px">NOUVEAU RECORD</div></div>
+    <div class="abs" style="left:14px;right:14px;top:170px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:8px"><span>NIVEAU 3</span><span style="color:var(--accent)">+64 XP</span></div><div class="barline"><i><b style="width:58%"></b></i></div></div>
+    <div class="abs" style="left:14px;right:14px;top:236px"><span class="px" style="display:block"><span class="in" style="padding:12px;font-size:10px;display:flex;align-items:center;gap:10px" data-mission></span></span></div>
+    <div class="abs" style="left:14px;right:14px;bottom:20px"><span class="px acc" style="display:block"><span class="in" style="padding:20px;text-align:center;font-size:18px">REJOUER</span></span><div style="text-align:center;font-size:9px;color:var(--dim);margin-top:12px">REGARDER UNE PUB : XP X2</div></div>`);
+  // pause
+  phone('PAUSE',`
+    <div class="abs" style="left:0;right:0;top:50px;text-align:center;font-size:20px" class="t-title">PAUSE</div>
+    <div class="abs" style="left:24px;right:24px;top:120px;display:flex;flex-direction:column;gap:14px">
+      <span class="px acc" style="display:block"><span class="in" style="padding:16px;text-align:center;font-size:13px">REPRENDRE</span></span>
+      <span class="px" style="display:block"><span class="in" style="padding:14px;text-align:center;font-size:11px">RECOMMENCER</span></span>
+      <span class="px" style="display:block"><span class="in" style="padding:14px;text-align:center;font-size:11px">SON : OUI</span></span>
+      <span class="px" style="display:block"><span class="in" style="padding:14px;text-align:center;font-size:11px">ACCUEIL</span></span></div>`);
+  // décor des scènes : ville pixel simple
+  document.querySelectorAll('.scene').forEach((s,i)=>{ const c=document.createElement('canvas'); c.width=100; c.height=206; s.appendChild(c); const g=c.getContext('2d');
+    const sky=['#1b1840','#2a2257','#3a2a6a','#5b3a78']; sky.forEach((col,k)=>{g.fillStyle=col;g.fillRect(0,k*14,100,14);});
+    let seed=i*7+3; const r=()=>{seed=(seed*9301+49297)%233280;return seed/233280;};
+    for(let x=0;x<100;x+=1){ if(r()<0.5){ const h=20+Math.floor(r()*70); g.fillStyle=i===1?'#262a58':'#20244c'; g.fillRect(x,100-h+(i===0?20:0),4,h);} }
+    g.fillStyle='#14173a'; g.fillRect(0,128,100,78); g.fillStyle=A; g.globalAlpha=.9; g.fillRect(46,128,2,78); g.globalAlpha=1; for(let y=130;y<206;y+=8){ g.fillStyle='#46548f'; g.fillRect(48,y,4,3);} });
+  // icônes injectées
+  document.querySelectorAll('.tab').forEach(t=>{ const c=mk(t.dataset.i,3,t.dataset.c); t.replaceChild(c,t.querySelector('canvas')); });
+  document.querySelectorAll('[data-gear]').forEach(e=>{e.innerHTML='';e.appendChild(gear(3,T));});
+  document.querySelectorAll('[data-pause]').forEach(e=>{e.innerHTML='<span class="px"><span class="in" style="padding:11px 12px;display:block"></span></span>'; e.querySelector('.in').appendChild(mk('pause',3,T));});
+  document.querySelectorAll('[data-mission]').forEach(e=>{e.appendChild(mk('target',3,A)); const s=document.createElement('span'); s.innerHTML='RAMASSE <b style="color:var(--accent)">3</b> CIBLES'; s.style.flex='1'; e.appendChild(s); e.appendChild(mk('check',2,'#f4f1e8'));});
+}
+document.querySelectorAll('#pal button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#pal button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); pal.dataset.pal=b.dataset.p; render();});
+document.querySelectorAll('#fnt button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#fnt button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); document.querySelectorAll('.phone, .px, .tab, .pill, .btn, .barline, .note').forEach(e=>e.style.fontFamily="'"+b.dataset.f+"', monospace"); document.querySelectorAll('.t-title').forEach(e=>e.style.fontFamily="'"+b.dataset.f+"', monospace");});
+document.fonts.ready.then(render); render();
+</script>
+</body>
+</html>
