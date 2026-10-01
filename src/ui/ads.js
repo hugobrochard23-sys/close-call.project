@@ -14,7 +14,7 @@
   const U = CC.U;
   // annonceurs fictifs (dessinés par le code, aucune image externe)
   const CREATIVES = [
-    { brand: 'SKYLINE SODA', line: 'LA BULLE QUI VOLE', bg: '#1f5fa8', fg: '#ffffff', accent: '#ffd23a', art: 'can' },
+    { brand: 'SKYLINE SODA', line: 'LA BULLE QUI VOLE', bg: '#1f5fa8', fg: '#ffffff', accent: '#d9a441', art: 'can' },
     { brand: 'TURBO KART LEGENDS', line: 'NOUVELLE SAISON - JOUE GRATUIT', bg: '#b8321f', fg: '#fff2d0', accent: '#2ae07a', art: 'kart' },
     { brand: 'PIXEL PIZZA', line: 'CHAUDE EN 15 MIN OU OFFERTE', bg: '#2a7a3a', fg: '#fff8e0', accent: '#ff7a1a', art: 'pizza' },
     { brand: 'NOVA HEADPHONES', line: 'ENTENDS CHAQUE EXPLOSION', bg: '#23202e', fg: '#e8e0ff', accent: '#ff3aa8', art: 'phones' },

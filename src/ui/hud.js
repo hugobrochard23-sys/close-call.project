@@ -97,10 +97,10 @@
       // v040 : plus de rectangle derrière le score — gros chiffres blancs (jaune si record battu) ; sous eux, une fine barre « vers le record »
       const spx2 = px * 1.15, mpx = px * 1.8, mlab = 'X' + run.mult, mw = F.measure(mlab, mpx), gap = px * 6, sw2 = F.measure(sc, spx2), gx0 = W / 2 - (mw + gap + sw2) / 2;
       ctx.save(); ctx.translate(W / 2, top + pillH / 2); ctx.scale(bump, bump); ctx.translate(-W / 2, -(top + pillH / 2));
-      F.draw(ctx, mlab, gx0, top + pillH / 2 - mpx * 3.6, mpx, run.mult > 1 ? '#ffd23a' : '#f4f1e8', { align: 'left' });
-      F.draw(ctx, sc, gx0 + mw + gap, top + pillH / 2 - spx2 * 3.6, spx2, broke ? '#ffd23a' : '#f4f1e8', { align: 'left' });
+      F.draw(ctx, mlab, gx0, top + pillH / 2 - mpx * 3.6, mpx, run.mult > 1 ? '#d9a441' : '#e8ecef', { align: 'left' });
+      F.draw(ctx, sc, gx0 + mw + gap, top + pillH / 2 - spx2 * 3.6, spx2, broke ? '#d9a441' : '#e8ecef', { align: 'left' });
       ctx.restore();
-      if (rec > 0) { const bw = Math.min(W * 0.46, pw * 1.5), bh2 = Math.max(4, pillH * 0.1); Home.meter(ctx, W / 2 - bw / 2, top + pillH + bh2, bw, bh2, Math.min(1, run.score / rec), '#ffd23a', '#ffd23a'); }
+      if (rec > 0) { const bw = Math.min(W * 0.46, pw * 1.5), bh2 = Math.max(4, pillH * 0.1); Home.meter(ctx, W / 2 - bw / 2, top + pillH + bh2, bw, bh2, Math.min(1, run.score / rec), '#d9a441', '#d9a441'); }
       if (false) {
         const mh = pillH * 0.8, mw = pillH * 1.5, mx = W / 2 - pw / 2 - mw - pillH * 0.15, my = top + (pillH - mh) / 2;
         Home.pill(ctx, mx, my, mw, mh, '#c020a8', '#ffb0f0');
@@ -118,7 +118,7 @@
         const a = f.t < 0.12 ? f.t / 0.12 : 1 - U.clamp((f.t - 1.2) / 0.6, 0, 1);
         if (a > 0) { ctx.globalAlpha = a; F.draw(ctx, f.text, W / 2, fy - (1 - Math.min(1, f.t * 6)) * fpx * 3, fpx * 1.1, f.color, { align: 'center', outline: '#0a0e16' }); ctx.globalAlpha = 1; }
       }
-      if (s === 'CRASHED' && game.crashKind) { const lbl = 'TOUCHE : ' + game.causeOf(game.crashKind), lp = Math.min(px * 1.5, W * 0.92 / Math.max(1, F.measure(lbl, 1))); F.draw(ctx, lbl, W / 2, H * 0.3, lp, '#ff4258', { align: 'center' }); }
+      if (s === 'CRASHED' && game.crashKind) { const lbl = 'TOUCHE : ' + game.causeOf(game.crashKind), lp = Math.min(px * 1.5, W * 0.92 / Math.max(1, F.measure(lbl, 1))); F.draw(ctx, lbl, W / 2, H * 0.3, lp, '#c24a42', { align: 'center' }); }
       // ---- mission accomplie (bandeau)
       for (const t of game.progress.toasts) {
         const a = Math.min(1, t.t * 6, (2.4 - t.t) * 3), bh = pillH * 1.7, y = H * 0.27, bw = Math.min(W * 0.86, pillH * 9);
@@ -142,14 +142,14 @@
     fuelPixel(game, rk, x, y, w, h, k, c1, c2, boosting, low, blink, fuel) {
       const ctx = this.ctx, C = CC.CONFIG.hud.colors, Home = CC.Home, st = Home.stair, R = Math.round;
       const u = Math.max(2, R(w * 0.11)), c = Math.max(2, R(w * 0.2));
-      st(ctx, x - u, y - u, w + 2 * u, h + 2 * u, c); ctx.fillStyle = '#46548f'; ctx.fill();
+      st(ctx, x - u, y - u, w + 2 * u, h + 2 * u, c); ctx.fillStyle = '#5a6674'; ctx.fill();
       st(ctx, x, y, w, h, c); ctx.fillStyle = low && blink ? '#8a2018' : '#5f574f'; ctx.fill();
       ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fillRect(R(x + u * 0.5), R(y + c * 2), u, R(h - c * 4));
       const ix = R(x + u * 1.7), iw = R(w - u * 3.4), iy = R(y + u * 1.7), ih = R(h - u * 1.7 - w * 0.95);
-      ctx.fillStyle = '#0a0f1a'; ctx.fillRect(ix, iy, iw, ih);
+      ctx.fillStyle = '#14181d'; ctx.fillRect(ix, iy, iw, ih);
       const fh = R(ih * k);
       if (fh > 0) { ctx.fillStyle = c2; ctx.fillRect(ix, iy + ih - fh, iw, fh); ctx.fillStyle = c1; ctx.fillRect(ix, iy + ih - fh, R(iw * 0.55), fh); ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(ix, iy + ih - fh, iw, u); }
-      ctx.fillStyle = '#1c2342'; for (let i = 1; i < 4; i++) ctx.fillRect(ix, R(iy + ih * i / 4 - u / 2), iw, u);
+      ctx.fillStyle = '#262d36'; for (let i = 1; i < 4; i++) ctx.fillRect(ix, R(iy + ih * i / 4 - u / 2), iw, u);
       Home.icon.flame(ctx, x + w / 2, y + h - w * 0.5, w * 0.36, blink ? '#ffffff' : (low ? '#ff5a3a' : boosting ? '#ffe45a' : '#7fe0ff'));
       if (rk.active && fuel <= 0) CC.Font.draw(ctx, 'PANNE', x + w / 2, y - w * 1.0, w * 0.075, '#ffffff', { align: 'center', outline: '#ff3b2e' });
       const T = game.input.touch, left = T && T.reboostUntil ? (T.reboostUntil - performance.now()) / CC.CONFIG.input.touch.reboostMs : 0;
@@ -163,11 +163,11 @@
       const free = rk.active && rk.freeBoost, low = k < 0.25 && !free, blink = low && Math.floor(performance.now() / 220) % 2 === 0;
       const b = Math.max(2, R(w * 0.16));
       x = R(x); y = R(y); w = R(w); h = R(h);
-      ctx.fillStyle = blink ? '#ff4258' : '#f4f1e8'; ctx.fillRect(x, y, w, h);                        // cadre
-      ctx.fillStyle = '#10142a'; ctx.fillRect(x + b, y + b, w - 2 * b, h - 2 * b);                       // fond
+      ctx.fillStyle = blink ? '#c24a42' : '#e8ecef'; ctx.fillRect(x, y, w, h);                        // cadre
+      ctx.fillStyle = '#14181d'; ctx.fillRect(x + b, y + b, w - 2 * b, h - 2 * b);                       // fond
       const ih = h - 2 * b, fh = R(ih * k);
-      if (fh > 0) { ctx.fillStyle = free ? '#4fb4ff' : (low ? '#ff4258' : '#ff8a2a'); ctx.fillRect(x + b, y + b + ih - fh, w - 2 * b, fh); }
-      if (rk.active && fuel <= 0) CC.Font.draw(ctx, 'PANNE', x + w / 2, y - w * 1.0, w * 0.075, '#ff4258', { align: 'center' });
+      if (fh > 0) { ctx.fillStyle = free ? '#8fb4c8' : (low ? '#c24a42' : '#d9a441'); ctx.fillRect(x + b, y + b + ih - fh, w - 2 * b, fh); }
+      if (rk.active && fuel <= 0) CC.Font.draw(ctx, 'PANNE', x + w / 2, y - w * 1.0, w * 0.075, '#c24a42', { align: 'center' });
     }
 
     // rayons qui filent du centre : lignes fines déterministes qui avancent vers les bords
@@ -233,17 +233,17 @@
       }
       if (!label) return;
       const ctx = this.ctx, px = this.refH * 0.0042, w = CC.Font.measure(label, px, !this.modern) + px * 14, h = px * 16, x = W / 2 - w / 2, y = H * 0.23;
-      CC.Home.pill(ctx, x, y, w, h, 'rgba(28,35,66,0.97)', '#46548f');
+      CC.Home.pill(ctx, x, y, w, h, 'rgba(38,45,54,0.97)', '#5a6674');
       const cx = x + px * 6, cy = y + h / 2, r = px * 2.2, k = (t % 3.2) / 3.2;
-      if (kind === 'door') CC.Home.icon.target(ctx, cx, cy, r * 1.3, '#ffd23a');
-      else if (kind === 'fuel') CC.Home.icon.flame(ctx, cx, cy, r * 1.3, '#ffd23a');
+      if (kind === 'door') CC.Home.icon.target(ctx, cx, cy, r * 1.3, '#d9a441');
+      else if (kind === 'fuel') CC.Home.icon.flame(ctx, cx, cy, r * 1.3, '#d9a441');
       else {
-        ctx.fillStyle = '#f4f1e8';
+        ctx.fillStyle = '#e8ecef';
         const ox = kind === 'drag' ? Math.sin(k * Math.PI * 4) * px * 2.5 : 0;
         ctx.beginPath(); ctx.arc(cx + ox, cy, r, 0, Math.PI * 2); ctx.fill();
-        if (kind === 'hold') { ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = Math.max(2, px * 0.6); ctx.beginPath(); ctx.arc(cx, cy, r + px * (1 + 2 * ((k * 3) % 1)), 0, Math.PI * 2); ctx.stroke(); }
+        if (kind === 'hold') { ctx.strokeStyle = '#d9a441'; ctx.lineWidth = Math.max(2, px * 0.6); ctx.beginPath(); ctx.arc(cx, cy, r + px * (1 + 2 * ((k * 3) % 1)), 0, Math.PI * 2); ctx.stroke(); }
       }
-      this.text(label, x + px * 11, y + h / 2 - px * 3.5, 0.0042, '#f4f1e8', {});
+      this.text(label, x + px * 11, y + h / 2 - px * 3.5, 0.0042, '#e8ecef', {});
     }
 
     // Jauge d'essence (v009) : longueur du cadre proportionnelle au réservoir du niveau, remplissage = essence restante.
@@ -349,15 +349,15 @@
           // v038i : repère en crochets d'angle arrondis (contour sombre + rouge vif) et point central
           const lw = Math.max(2, H / 330), k = r * 0.62;
           ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-          for (const [col, w] of (CC.Home.skin === 'pixel' ? [['#ff4258', lw * 1.4]] : [['rgba(4,8,16,0.9)', lw * 2.1], ['#ff3b2e', lw]])) {
+          for (const [col, w] of (CC.Home.skin === 'pixel' ? [['#c24a42', lw * 1.4]] : [['rgba(4,8,16,0.9)', lw * 2.1], ['#ff3b2e', lw]])) {
             ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath();
             for (const [ax, ay] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { ctx.moveTo(sx + ax * r, sy + ay * (r - k)); ctx.lineTo(sx + ax * r, sy + ay * r); ctx.lineTo(sx + ax * (r - k), sy + ay * r); }
             ctx.stroke();
           }
           ctx.lineCap = 'butt';
-          if (t.type === 'fuel' && CC.Home.icon && CC.Home.icon.flame) CC.Home.icon.flame(ctx, sx, sy - r * 2.6, r * 1.1, '#ffd23a');
+          if (t.type === 'fuel' && CC.Home.icon && CC.Home.icon.flame) CC.Home.icon.flame(ctx, sx, sy - r * 2.6, r * 1.1, '#d9a441');
           if (CC.Home.skin !== 'pixel') { ctx.fillStyle = 'rgba(4,8,16,0.9)'; ctx.beginPath(); ctx.arc(sx, sy, lw * 1.9, 0, 6.283); ctx.fill(); }
-          ctx.fillStyle = '#ff4258'; ctx.beginPath(); ctx.arc(sx, sy, lw * 1.1, 0, 6.283); ctx.fill();
+          ctx.fillStyle = '#c24a42'; ctx.beginPath(); ctx.arc(sx, sy, lw * 1.1, 0, 6.283); ctx.fill();
           continue;
         }
         let x = p.x, y = p.y;

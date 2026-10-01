@@ -7,33 +7,28 @@
  * Les icônes sont dessinées en pixels (grille 16×16, plusieurs couleurs) dans un petit canevas mis en cache puis agrandies sans lissage. */
 (function () {
   const U = CC.U, F = CC.Font, Home = CC.Home;
-  const NAVY = '#161d3d', PANEL = '#1c2447', DARK = '#10142a', EDGE = '#46548f', STEEL = '#3f5b7b', STEEL2 = '#587a9c', CREAM = '#f4f1e8', GOLD = '#ffd23a', DIM = '#8d97c4', GREEN = '#58b83a', GREEN_D = '#3a8a2a', RED = '#ff4258';
+  const NAVY = '#1d232b', PANEL = '#262d36', DARK = '#14181d', EDGE = '#5a6674', STEEL = '#3b4652', STEEL2 = '#505d6b', CREAM = '#e8ecef', GOLD = '#d9a441', DIM = '#8995a1', GREEN = '#d9a441', GREEN_D = '#9a7126', RED = '#d0473e';
   const hit = (ui, x, y, w, h, action) => ui.buttons.push({ x, y, w, h, action });
   const inRect = (ui, x, y, w, h) => !ui.isTouch() && ui.mouse.x >= x && ui.mouse.x <= x + w && ui.mouse.y >= y && ui.mouse.y <= y + h;
   // texte ajusté à une largeur maximale (police à chasse fixe : la mesure est exacte)
   function txt(ctx, s, x, y, maxW, px, color, align) { s = String(s); const p = Math.min(px, maxW / Math.max(1, F.measure(s, 1))); F.draw(ctx, s, x, y, p, color, { align: align || 'left' }); return p; }
   const panel = (ctx, x, y, w, h, fill, edge, c) => Home.pill(ctx, x, y, w, h, fill || PANEL, edge || EDGE, c === undefined ? Math.min(h * 0.18, 14) : c);
-  function btnGreen(ctx, x, y, w, h, on) {
-    const u = Math.max(2, Math.round(h * 0.07)), c = Math.max(2, Math.round(h * 0.12)), st = Home.stair;
-    st(ctx, x, y + u, w, h - u, c); ctx.fillStyle = GREEN_D; ctx.fill();
-    st(ctx, x, y, w, h - u, c); ctx.fillStyle = on ? '#7bd85a' : GREEN; ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.fillRect(Math.round(x + c), Math.round(y + u * 0.6), Math.round(w - 2 * c), Math.max(1, u * 0.7));
-  }
+  function btnGreen(ctx, x, y, w, h, on) { Home.button3d(ctx, x, y, w, h, '', '', '', 1); if (on) { ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(Math.round(x + 2), Math.round(y + 2), Math.round(w - 4), Math.round(h - 6)); } }
 
   // ---------- icônes multicolores 16×16 ----------
   const ICONS = {};
   function mk(draw) { const c = document.createElement('canvas'); c.width = c.height = 16; const g = c.getContext('2d'); draw((x, y, w, h, col) => { if (col === null) g.clearRect(x, y, w, h); else { g.fillStyle = col; g.fillRect(x, y, w, h); } }); return c; }
-  const L = '#c2c3c7', M = '#8d97c4', K = '#10142a', Rr = '#e0402c', Y = '#ffd23a', O = '#ff8a2a', B = '#4fb4ff', Gg = '#58b83a', Nn = '#d9a066';
+  const L = '#b9c0c8', M = '#7f8b97', K = '#14181d', Rr = '#a8473f', Y = '#d9a441', O = '#c98a3a', B = '#8fb4c8', Gg = '#7f9a6f', Nn = '#b79a78';
   ICONS.wrench = mk((R) => { for (let i = 0; i < 9; i++) R(2 + i, 12 - i, 3, 3, L); for (let i = 0; i < 9; i++) R(4 + i, 12 - i, 1, 1, M); R(9, 1, 6, 6, L); R(11, 3, 2, 2, null); R(13, 1, 2, 3, null); R(2, 12, 1, 1, null); R(3, 13, 1, 1, K); });
-  ICONS.pin = mk((R) => { R(5, 1, 6, 1, Rr); R(4, 2, 8, 1, Rr); R(3, 3, 10, 4, Rr); R(4, 7, 8, 1, Rr); R(5, 8, 6, 1, Rr); R(6, 9, 4, 1, Rr); R(7, 10, 2, 3, Rr); R(11, 3, 2, 4, '#b02030'); R(6, 4, 4, 3, CREAM); });
-  ICONS.shop = mk((R) => { for (let x = 1; x < 15; x += 2) { R(x, 2, 2, 4, (x / 2 | 0) % 2 ? CREAM : Rr); R(x, 6, 2, 1, (x / 2 | 0) % 2 ? CREAM : Rr); } R(1, 1, 14, 1, M); R(2, 7, 12, 8, Nn); R(4, 9, 5, 4, B); R(4, 9, 5, 1, M); R(10, 9, 3, 6, '#8a5a2a'); R(2, 14, 12, 1, '#a8703a'); });
-  ICONS.engine = mk((R) => { R(2, 4, 12, 9, M); R(2, 4, 12, 2, L); R(6, 4, 2, 9, Y); R(0, 6, 3, 5, '#4fe0ff'); R(13, 6, 2, 5, O); R(2, 12, 12, 1, '#5f6a9a'); });
-  ICONS.boost = mk((R) => { R(1, 3, 6, 10, M); R(9, 3, 6, 10, M); R(1, 3, 6, 2, L); R(9, 3, 6, 2, L); R(1, 11, 6, 2, O); R(9, 11, 6, 2, O); R(3, 5, 1, 6, '#5f6a9a'); R(11, 5, 1, 6, '#5f6a9a'); });
+  ICONS.pin = mk((R) => { R(5, 1, 6, 1, '#d9a441'); R(4, 2, 8, 1, '#d9a441'); R(3, 3, 10, 4, '#d9a441'); R(4, 7, 8, 1, '#d9a441'); R(5, 8, 6, 1, '#d9a441'); R(6, 9, 4, 1, '#d9a441'); R(7, 10, 2, 3, '#d9a441'); R(11, 3, 2, 4, '#9a7126'); R(6, 4, 4, 3, '#14181d'); });
+  ICONS.shop = mk((R) => { for (let x = 1; x < 15; x += 2) { R(x, 2, 2, 4, (x / 2 | 0) % 2 ? CREAM : '#7f8b97'); R(x, 6, 2, 1, (x / 2 | 0) % 2 ? CREAM : '#7f8b97'); } R(1, 1, 14, 1, M); R(2, 7, 12, 8, Nn); R(4, 9, 5, 4, B); R(4, 9, 5, 1, M); R(10, 9, 3, 6, '#8a5a2a'); R(2, 14, 12, 1, '#a8703a'); });
+  ICONS.engine = mk((R) => { R(2, 4, 12, 9, M); R(2, 4, 12, 2, L); R(6, 4, 2, 9, Y); R(0, 6, 3, 5, '#8fb4c8'); R(13, 6, 2, 5, O); R(2, 12, 12, 1, '#6c7885'); });
+  ICONS.boost = mk((R) => { R(1, 3, 6, 10, M); R(9, 3, 6, 10, M); R(1, 3, 6, 2, L); R(9, 3, 6, 2, L); R(1, 11, 6, 2, O); R(9, 11, 6, 2, O); R(3, 5, 1, 6, '#6c7885'); R(11, 5, 1, 6, '#6c7885'); });
   ICONS.body = mk((R) => { R(2, 5, 12, 6, CREAM); R(2, 9, 12, 2, L); R(10, 5, 2, 6, Y); R(0, 6, 2, 4, M); });
-  ICONS.paint = mk((R) => { R(4, 4, 8, 10, M); R(3, 3, 10, 2, L); R(4, 7, 8, 1, Rr); R(4, 8, 8, 1, Y); R(4, 9, 8, 1, Gg); R(4, 10, 8, 1, B); R(5, 1, 6, 2, L); });
-  ICONS.coins = mk((R) => { for (const [x, y] of [[2, 10], [8, 10], [5, 6], [5, 12]]) { R(x, y, 6, 3, '#ffc820'); R(x, y, 6, 1, '#fff0a0'); R(x, y + 2, 6, 1, '#c87800'); } R(5, 2, 6, 3, '#ffc820'); R(5, 2, 6, 1, '#fff0a0'); R(5, 4, 6, 1, '#c87800'); });
-  ICONS.pilot = mk((R) => { R(3, 5, 10, 9, '#f0b890'); R(2, 2, 12, 4, '#d93a2a'); R(2, 5, 12, 1, '#8a1810'); R(2, 6, 2, 6, '#9b4bd6'); R(12, 6, 2, 6, '#9b4bd6'); R(5, 8, 2, 2, K); R(9, 8, 2, 2, K); R(7, 12, 2, 1, '#a05040'); R(6, 0, 4, 2, '#d93a2a'); });
-  ICONS.trophy = mk((R) => { R(3, 1, 10, 2, Y); R(4, 3, 8, 5, Y); R(1, 2, 3, 4, Y); R(12, 2, 3, 4, Y); R(2, 3, 1, 2, null); R(13, 3, 1, 2, null); R(6, 8, 4, 3, '#c9961a'); R(4, 11, 8, 2, Y); R(5, 3, 2, 4, '#fff0a0'); });
+  ICONS.paint = mk((R) => { R(4, 4, 8, 10, M); R(3, 3, 10, 2, L); R(4, 7, 8, 1, '#8995a1'); R(4, 8, 8, 1, '#aab4bf'); R(4, 9, 8, 1, '#7f8b97'); R(4, 10, 8, 1, '#5a6674'); R(5, 1, 6, 2, L); });
+  ICONS.coins = mk((R) => { for (const [x, y] of [[2, 10], [8, 10], [5, 6], [5, 12]]) { R(x, y, 6, 3, '#d9a441'); R(x, y, 6, 1, '#f0d28a'); R(x, y + 2, 6, 1, '#9a7126'); } R(5, 2, 6, 3, '#d9a441'); R(5, 2, 6, 1, '#f0d28a'); R(5, 4, 6, 1, '#9a7126'); });
+  ICONS.pilot = mk((R) => { R(3, 5, 10, 9, '#d7b79a'); R(2, 2, 12, 4, '#5b6b7b'); R(2, 5, 12, 1, '#3c4856'); R(2, 6, 2, 6, '#6b5b7b'); R(12, 6, 2, 6, '#6b5b7b'); R(5, 8, 2, 2, K); R(9, 8, 2, 2, K); R(7, 12, 2, 1, '#a05040'); R(6, 0, 4, 2, '#5b6b7b'); });
+  ICONS.trophy = mk((R) => { R(3, 1, 10, 2, Y); R(4, 3, 8, 5, Y); R(1, 2, 3, 4, Y); R(12, 2, 3, 4, Y); R(2, 3, 1, 2, null); R(13, 3, 1, 2, null); R(6, 8, 4, 3, '#9a7126'); R(4, 11, 8, 2, Y); R(5, 3, 2, 4, '#f0d28a'); });
   Home.bigIcon = function (ctx, name, cx, cy, size) { const c = ICONS[name]; if (!c) return; const s = Math.max(1, Math.round(size / 16)), d = 16 * s; ctx.imageSmoothingEnabled = false; ctx.drawImage(c, Math.round(cx - d / 2), Math.round(cy - d / 2), d, d); };
 
   // ---------- en-tête ----------
@@ -79,9 +74,9 @@
     list.forEach((t, i) => {
       const cx = bx + cw * (i + 0.5), on = active === t.id, hot = inRect(ui, bx + cw * i, by - bh * 0.5, cw, bh * 1.5);
       if (i) { ctx.fillStyle = EDGE; ctx.fillRect(Math.round(bx + cw * i - 1), Math.round(by + bh * 0.12), 2, Math.round(bh * 0.76)); }
-      if (on) { Home.stair(ctx, bx + cw * i + 3, by + 3, cw - 6, bh - 6, 3); ctx.strokeStyle = '#f0c890'; ctx.lineWidth = 3; ctx.stroke(); ctx.fillStyle = 'rgba(70,84,143,0.35)'; ctx.fill(); }
+      if (on) { Home.stair(ctx, bx + cw * i + 3, by + 3, cw - 6, bh - 6, 3); ctx.strokeStyle = '#e0c690'; ctx.lineWidth = 3; ctx.stroke(); ctx.fillStyle = 'rgba(90,102,116,0.35)'; ctx.fill(); }
       Home.bigIcon(ctx, t.icon, cx, by + bh * 0.05 - (hot ? 3 : 0), bh * 0.95);
-      txt(ctx, t.label, cx, by + bh * 0.66, cw * 0.92, 1.5, on ? '#ffe3b0' : CREAM, 'center');
+      txt(ctx, t.label, cx, by + bh * 0.66, cw * 0.92, 1.5, on ? '#f0dcae' : CREAM, 'center');
       hit(ui, bx + cw * i, by - bh * 0.55, cw, bh * 1.55, () => { ui.overlay = on ? null : t.id; });
     });
     return bh + HH * 0.03;
@@ -104,12 +99,12 @@
   function rocketSide(ctx, x, y, w, h, t) {
     const gw = 34, gh = 16, s = Math.max(1, Math.floor(Math.min(w / gw, h / gh))), ox = Math.round(x + (w - gw * s) / 2), oy = Math.round(y + (h - gh * s) / 2);
     const R = (cx, cy, cw, ch, col) => { ctx.fillStyle = col; ctx.fillRect(ox + cx * s, oy + cy * s, cw * s, ch * s); };
-    R(0, 13, 34, 3, '#2b3350'); for (let i = 0; i < 34; i += 6) R(i, 13, 3, 3, '#ffd23a');          // rail à bandes jaunes
-    R(4, 5, 5, 6, '#5f6a9a'); R(3, 6, 2, 4, '#3a4270');                                            // tuyère
+    R(0, 13, 34, 3, '#2b3239'); for (let i = 0; i < 34; i += 6) R(i, 13, 3, 3, '#6c7885');          // rail à bandes jaunes
+    R(4, 5, 5, 6, '#6c7885'); R(3, 6, 2, 4, '#3a4270');                                            // tuyère
     R(9, 4, 17, 8, CREAM); R(9, 9, 17, 3, '#c2c3c7'); R(15, 4, 2, 8, Y); R(21, 4, 1, 8, '#c2c3c7'); // corps
-    R(26, 5, 3, 6, CREAM); R(29, 6, 2, 4, Rr); R(31, 7, 2, 2, Rr);                                 // ogive
-    R(8, 0, 6, 4, '#8d97c4'); R(10, 1, 4, 3, '#a8b2d8'); R(8, 12, 6, 3, '#8d97c4');                  // ailerons
-    const fl = (Math.sin(t * 14) > 0 ? 3 : 2); R(4 - fl, 6, fl, 4, O); R(4 - Math.max(1, fl - 1), 7, Math.max(1, fl - 1), 2, Y);
+    R(26, 5, 3, 6, CREAM); R(29, 6, 2, 4, '#9a7126'); R(31, 7, 2, 2, '#9a7126');                                 // ogive
+    R(8, 0, 6, 4, '#8995a1'); R(10, 1, 4, 3, '#aab4bf'); R(8, 12, 6, 3, '#8995a1');                  // ailerons
+    const fl = (Math.sin(t * 14) > 0 ? 3 : 2); R(4 - fl, 6, fl, 4, '#c98a3a'); R(4 - Math.max(1, fl - 1), 7, Math.max(1, fl - 1), 2, '#f0d28a');
   }
 
   // ============================================================================================================
@@ -147,12 +142,12 @@
       txt(ctx, lab + ':', m + 8, y0 + rowH * 0.36, 1e9, Math.min(1.5, (lw - 4) / 80), CREAM);
       ctx.fillStyle = DARK; ctx.fillRect(Math.round(bx - 2), Math.round(byy - 2), Math.round(bwid + 4), Math.round(bh + 4));
       const sg = bwid / up.max;
-      for (let k = 0; k < up.max; k++) { ctx.fillStyle = k < lv ? GOLD : '#2a3260'; ctx.fillRect(Math.round(bx + k * sg + 1), Math.round(byy), Math.max(1, Math.round(sg - 3)), Math.round(bh)); if (k < lv) { ctx.fillStyle = '#fff0a0'; ctx.fillRect(Math.round(bx + k * sg + 1), Math.round(byy), Math.max(1, Math.round(sg - 3)), Math.max(1, Math.round(bh * 0.25))); } }
+      for (let k = 0; k < up.max; k++) { ctx.fillStyle = k < lv ? GOLD : '#2d343d'; ctx.fillRect(Math.round(bx + k * sg + 1), Math.round(byy), Math.max(1, Math.round(sg - 3)), Math.round(bh)); if (k < lv) { ctx.fillStyle = '#f0d28a'; ctx.fillRect(Math.round(bx + k * sg + 1), Math.round(byy), Math.max(1, Math.round(sg - 3)), Math.max(1, Math.round(bh * 0.25))); } }
       const px2 = bx + bwid + 10, pbw = vw * 0.17, pbh = rowH * 0.62, pby = y0 + (rowH - pbh) / 2;
       if (cost === null) txt(ctx, 'MAX', px2 + pbw / 2, y0 + rowH * 0.36, pbw, 1.5, GOLD, 'center');
       else {
         if (can) btnGreen(ctx, px2, pby, pbw, pbh, inRect(ui, px2, pby, pbw, pbh)); else panel(ctx, px2, pby, pbw, pbh, DARK, EDGE, 6);
-        txt(ctx, '+' + cost, px2 + pbw / 2, pby + pbh * 0.32, pbw - 6, 1.5, can ? CREAM : DIM, 'center');
+        txt(ctx, '+' + cost, px2 + pbw / 2, pby + pbh * 0.32, pbw - 6, 1.5, can ? DARK : DIM, 'center');
         hit(ui, px2 - 6, y0, pbw + 12, rowH, () => { if (prog.buy(id)) { game.audio.play('levelUp'); if (CC.Haptics) CC.Haptics.pattern('mission'); } else game.audio.play('warnFuel'); });
       }
     });
@@ -184,7 +179,7 @@
     const cells = order.map((z) => ({ z, need: cfg.worlds[z], open: prog.level >= cfg.worlds[z] })).concat([{ z: 'defis', open: prog.level >= 4, need: 4 }]);
     cells.forEach((c, i) => {
       const x = m + (i % cols) * (cw + gap), y = gy + Math.floor(i / cols) * (ch + gap), on = inRect(ui, x, y, cw, ch);
-      panel(ctx, x, y, cw, ch, c.open ? (on ? '#27316a' : PANEL) : DARK, c.open ? EDGE : '#2a3260', 8);
+      panel(ctx, x, y, cw, ch, c.open ? (on ? '#323b46' : PANEL) : DARK, c.open ? EDGE : '#2d343d', 8);
       const nm = c.z === 'defis' ? 'DEFIS' : ({ sky: 'BASE AIR', mini: 'MINIATURE' }[c.z] || prog.worldName(c.z));
       if (c.open) { if (c.z === 'defis') Home.icon.star(ctx, x + ch * 0.5, y + ch / 2, ch * 0.22, GOLD); else Home.bigIcon(ctx, 'pin', x + ch * 0.5, y + ch / 2, ch * 0.7); }
       else Home.icon.lock(ctx, x + ch * 0.5, y + ch / 2, ch * 0.22, DIM);
@@ -205,27 +200,27 @@
     const top = Home.drawTop(ui, ctx, game, L, 'sub');
     // bandeau
     const by = top + HH * 0.016, bh = HH * 0.065, bw = W * 0.84, bx = (W - bw) / 2;
-    panel(ctx, bx, by, bw, bh, NAVY, '#f0c890', bh * 0.2);
-    ctx.fillStyle = '#f0c890'; ctx.fillRect(Math.round(bx - m * 0.9), Math.round(by + bh * 0.2), Math.round(m * 0.9), Math.round(bh * 0.6)); ctx.fillRect(Math.round(bx + bw), Math.round(by + bh * 0.2), Math.round(m * 0.9), Math.round(bh * 0.6));
+    panel(ctx, bx, by, bw, bh, NAVY, '#e0c690', bh * 0.2);
+    ctx.fillStyle = '#e0c690'; ctx.fillRect(Math.round(bx - m * 0.9), Math.round(by + bh * 0.2), Math.round(m * 0.9), Math.round(bh * 0.6)); ctx.fillRect(Math.round(bx + bw), Math.round(by + bh * 0.2), Math.round(m * 0.9), Math.round(bh * 0.6));
     txt(ctx, 'BOUTIQUE', W / 2, by + bh * 0.28, bw * 0.8, 3, GOLD, 'center');
     // onglets par rareté
     this.tab = this.tab || 0; this.page = this.page || 0;
     const ty = by + bh + HH * 0.014, th = HH * 0.044, tw = (W - 2 * m - 8) / 3;
-    TABS.forEach(([lab], i) => { const x = m + i * (tw + 4), on = i === this.tab; panel(ctx, x, ty, tw, th, on ? NAVY : '#2f4a68', on ? '#f0c890' : EDGE, 6); txt(ctx, lab, x + tw / 2, ty + th * 0.3, tw - 6, 1.5, on ? CREAM : DIM, 'center'); hit(ui, x, ty, tw, th, () => { this.tab = i; this.page = 0; }); });
+    TABS.forEach(([lab], i) => { const x = m + i * (tw + 4), on = i === this.tab; panel(ctx, x, ty, tw, th, on ? NAVY : '#33404d', on ? '#e0c690' : EDGE, 6); txt(ctx, lab, x + tw / 2, ty + th * 0.3, tw - 6, 1.5, on ? CREAM : DIM, 'center'); hit(ui, x, ty, tw, th, () => { this.tab = i; this.page = 0; }); });
     // grille
     const list = CC.Skins.list.filter(TABS[this.tab][1]), per = 4, pages = Math.max(1, Math.ceil(list.length / per)); this.page = Math.min(this.page, pages - 1);
     const gy = ty + th + HH * 0.012, rw = (W - 2 * m) * 0.7, cw = (rw - 6) / 2, ch = HH * 0.215, gap = 6;
     list.slice(this.page * per, this.page * per + per).forEach((s, i) => {
       const x = m + (i % 2) * (cw + gap), y = gy + Math.floor(i / 2) * (ch + gap), owned = !!game.save.owned[s.id], eq = game.save.equipped === s.id;
-      panel(ctx, x, y, cw, ch, NAVY, eq ? '#f0c890' : EDGE, 8);
+      panel(ctx, x, y, cw, ch, NAVY, eq ? '#e0c690' : EDGE, 8);
       panel(ctx, x + 4, y + 4, cw - 8, ch * 0.36, DARK, EDGE, 6);
       CC.Shop.icon(ctx, s, x + cw / 2 - 6, y + 4 + ch * 0.18, ch * 0.3);
       txt(ctx, s.short || s.name, x + cw / 2, y + ch * 0.46, cw - 8, 1.5, CREAM, 'center');
-      txt(ctx, eq ? 'EQUIPEE' : owned ? 'A TOI' : CC.Skins.formatPrice(s.price), x + cw / 2, y + ch * 0.6, cw - 8, 1.5, eq ? GOLD : owned ? '#7bd85a' : GOLD, 'center');
+      txt(ctx, eq ? 'EQUIPEE' : owned ? 'A TOI' : CC.Skins.formatPrice(s.price), x + cw / 2, y + ch * 0.6, cw - 8, 1.5, eq ? GOLD : owned ? '#e8bd62' : GOLD, 'center');
       const bx2 = x + 6, bw2 = cw - 12, bh2 = ch * 0.22, by2 = y + ch - bh2 - 6;
       if (eq) { panel(ctx, bx2, by2, bw2, bh2, DARK, EDGE, 6); txt(ctx, 'OK', bx2 + bw2 / 2, by2 + bh2 * 0.3, bw2, 1.5, DIM, 'center'); }
-      else { btnGreen(ctx, bx2, by2, bw2, bh2, inRect(ui, bx2, by2, bw2, bh2)); txt(ctx, owned ? 'EQUIPER' : 'ACHETER', bx2 + bw2 / 2, by2 + bh2 * 0.28, bw2 - 6, 1.5, CREAM, 'center'); hit(ui, bx2, by2, bw2, bh2, () => (owned ? this.pick(game, s.id) : this.buy(game, s.id))); }
-      if (!owned) { const pw = cw * 0.5; txt(ctx, 'PUB 1 MIN', x + cw / 2, by2 - 12, cw - 8, 1, '#8fd0ff', 'center'); hit(ui, x + 4, by2 - 16, cw - 8, 14, () => this.watch(game, s.id)); }
+      else { btnGreen(ctx, bx2, by2, bw2, bh2, inRect(ui, bx2, by2, bw2, bh2)); txt(ctx, owned ? 'EQUIPER' : 'ACHETER', bx2 + bw2 / 2, by2 + bh2 * 0.28, bw2 - 6, 1.5, DARK, 'center'); hit(ui, bx2, by2, bw2, bh2, () => (owned ? this.pick(game, s.id) : this.buy(game, s.id))); }
+      if (!owned) { const pw = cw * 0.5; txt(ctx, 'PUB 1 MIN', x + cw / 2, by2 - 12, cw - 8, 1, '#8fb4c8', 'center'); hit(ui, x + 4, by2 - 16, cw - 8, 14, () => this.watch(game, s.id)); }
     });
     // colonne de droite : solde + pages
     const rx = m + rw + 6, rww = W - m - rx;
@@ -237,7 +232,7 @@
     txt(ctx, 'OFFRE', rx + rww / 2, ay + 6, rww - 6, 1, GOLD, 'center'); txt(ctx, CC.Skins.formatPrice(CC.CONFIG.shop.priceCents), rx + rww / 2, ay + ch * 0.2, rww - 6, 1.5, CREAM, 'center'); txt(ctx, 'OU 1 MIN', rx + rww / 2, ay + ch * 0.36, rww - 6, 1, DIM, 'center'); txt(ctx, 'DE PUB', rx + rww / 2, ay + ch * 0.5, rww - 6, 1, DIM, 'center');
     const py = gy + 2 * ch + gap * 2 + 6;
     txt(ctx, (this.page + 1) + ' / ' + pages, W / 2, py + 4, 80, 1.5, CREAM, 'center');
-    for (const [lab, dx, dp] of [['<', -1, -1], ['>', 1, 1]]) { const bx3 = W / 2 + dx * 56 - 18, on = inRect(ui, bx3, py - 6, 36, 26); panel(ctx, bx3, py - 6, 36, 26, on ? '#27316a' : NAVY, EDGE, 6); txt(ctx, lab, bx3 + 18, py + 1, 20, 2, CREAM, 'center'); hit(ui, bx3, py - 6, 36, 26, () => { this.page = (this.page + dp + pages) % pages; }); }
+    for (const [lab, dx, dp] of [['<', -1, -1], ['>', 1, 1]]) { const bx3 = W / 2 + dx * 56 - 18, on = inRect(ui, bx3, py - 6, 36, 26); panel(ctx, bx3, py - 6, 36, 26, on ? '#323b46' : NAVY, EDGE, 6); txt(ctx, lab, bx3 + 18, py + 1, 20, 2, CREAM, 'center'); hit(ui, bx3, py - 6, 36, 26, () => { this.page = (this.page + dp + pages) % pages; }); }
     if (this.flash) txt(ctx, this.flash, W / 2, py + 26, W * 0.92, 1, GOLD, 'center');
     Home.drawTabs(ui, ctx, game, L, 'shop');
   };

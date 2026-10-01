@@ -24,8 +24,8 @@
       const col = hot ? CC.CONFIG.hud.colors.yellow : (opts.color || '#f4f4f4');
       if (opts.primary && (opts.box || touch)) {   // v038i : bouton principal épais, vert, brillant (REPRENDRE, ...)
         const pxl = CC.Home.skin === 'pixel';
-        CC.Home.button3d(ctx, bx, by, w, h + Math.max(2, px) * 0.4, pxl ? (hot ? '#fff0a0' : '#ffd23a') : (hot ? '#4dff7a' : '#00e436'), pxl ? '#ffd23a' : '#009e3a', pxl ? '#c9961a' : '#00632a');
-        this.text(ctx, label, x, y - px * 0.2, px, pxl ? '#10142a' : '#ffffff', { align: 'center', outline: pxl ? null : '#00501f' });
+        CC.Home.button3d(ctx, bx, by, w, h + Math.max(2, px) * 0.4, pxl ? (hot ? '#f0d28a' : '#d9a441') : (hot ? '#4dff7a' : '#00e436'), pxl ? '#d9a441' : '#009e3a', pxl ? '#9a7126' : '#00632a');
+        this.text(ctx, label, x, y - px * 0.2, px, pxl ? '#14181d' : '#ffffff', { align: 'center', outline: pxl ? null : '#00501f' });
         return;
       }
       if ((opts.box || touch) && opts.box !== false) {
@@ -173,7 +173,7 @@
         const spx = this.fitPx(['00 / 60'], W * 0.22, HH * 0.0034), sy = areaTop;
         this.star(ctx, W * 0.06 + spx * 3, sy + spx * 3.5, spx * 4.2, true, col.yellow);
         this.text(ctx, stars + ' / ' + CH.maps * 3, W * 0.06 + spx * 9, sy, spx, col.white, {});
-        const names = ['BRONZE', 'ARGENT', 'OR'], tc = ['#d08a4a', '#d0d8e0', '#ffd23a'], ts = spx * 10;
+        const names = ['BRONZE', 'ARGENT', 'OR'], tc = ['#d08a4a', '#d0d8e0', '#d9a441'], ts = spx * 10;
         CH.trophies.forEach((need, i) => {
           const cx = W * (P ? 0.6 : 0.62) + i * W * (P ? 0.13 : 0.1), won = stars >= need;
           this.trophy(ctx, cx, sy + ts * 0.35, ts, tc[i], won);
@@ -407,7 +407,7 @@
         this.text(ctx, l2, W / 2, Y(0.41), fit(l2, 0.8, HH * 0.003), c.next ? '#cfcfcf' : col.yellow, { align: 'center' });
         if (c.trophyAfter > c.trophyBefore) {
           const tn = ['BRONZE', 'ARGENT', 'OR'][c.trophyAfter - 1], tl = 'NOUVEAU TROPHÉE : ' + tn;
-          this.text(ctx, tl, W / 2, Y(0.465), fit(tl, 0.9, HH * 0.0034), ['#d08a4a', '#d0d8e0', '#ffd23a'][c.trophyAfter - 1], { align: 'center' });
+          this.text(ctx, tl, W / 2, Y(0.465), fit(tl, 0.9, HH * 0.0034), ['#d08a4a', '#d0d8e0', '#d9a441'][c.trophyAfter - 1], { align: 'center' });
         }
         acts.push(['REJOUER', col.yellow, via(() => game.restartLevel())]);
         if (c.n < CC.CONFIG.challenge.maps) acts.push(['CARTE SUIVANTE', D.color, via(() => game.startChallenge(c.diff, c.n + 1))]);

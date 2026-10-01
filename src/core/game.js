@@ -439,9 +439,9 @@
       const ch = run.doorChain, m0 = run.mult, v = Math.round(run.addBonus(perfect ? 60 : 20));
       run.addFuel(perfect ? 1.2 : 0.3);
       const col = CC.CONFIG.hud.colors;
-      this.feed(perfect ? 'PARFAIT  +' + v : 'PASSE  +' + v, perfect ? '#ffd23a' : '#f4f1e8');
+      this.feed(perfect ? 'PARFAIT  +' + v : 'PASSE  +' + v, perfect ? '#d9a441' : '#e8ecef');
       this.audio.play('door', null, Math.min(ch, 8));
-      if (run.mult > m0) this.feed('MULTIPLICATEUR  X' + run.mult, '#ffd23a');
+      if (run.mult > m0) this.feed('MULTIPLICATEUR  X' + run.mult, '#d9a441');
       run.maxMult = Math.max(run.maxMult || 1, run.mult);
       if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('fire');
       this.cellBump = Math.max(this.cellBump, perfect ? 1 : 0.4);
@@ -464,7 +464,7 @@
       } else if (kind === 'gold') {
         run.stats.gold++; const v = Math.round(run.addBonus(S.gold)); run.addFuel(CC.CONFIG.cells.goldFuel);
         this.audio.play('gold'); if (touch) CC.Haptics.tick('gold');
-        fx.ring(pos, this.rocket.fwd, 0.3, 3.4, 0.35, '#ffd23a', 0.6);
+        fx.ring(pos, this.rocket.fwd, 0.3, 3.4, 0.35, '#d9a441', 0.6);
         for (let i = 0; i < 26; i++) fx.sparks.emit({ pos, vel: new V(U.fx.range(-1, 1), U.fx.range(-1, 1), U.fx.range(-1, 1)).normalize().multiplyScalar(U.fx.range(3, 9)), life: U.fx.range(0.3, 0.7), s0: 0.06, s1: 0.07, s2: 0.01, cols: fx.pal.ember, drag: 1.6, a: 1, fout: 0.4 });
         this.feed('ETOILE  +' + v, col.yellow); this.cellBump = 1.6; this.progress.event('gold');
       } else if (kind === 'mult') {
@@ -498,7 +498,7 @@
       const pos = new V().fromArray(q.p), col = CC.CONFIG.hud.colors;
       run.stats.rings = (run.stats.rings || 0) + 1; run.addBonus(60); run.addFuel(1.0);
       this.audio.play('ring', null, grp.got);
-      this.effects.ring(pos, this.rocket.fwd, 0.4, q.rad * 1.4, 0.4, '#ffd23a', 0.7);
+      this.effects.ring(pos, this.rocket.fwd, 0.4, q.rad * 1.4, 0.4, '#d9a441', 0.7);
       this.feed('ANNEAU  ' + grp.got + '/' + grp.n, col.yellow); this.cellBump = 1.2;
       if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('collect');
       if (grp.got === grp.n && !grp.dead) {
@@ -603,7 +603,7 @@
         if (!t.guard && (t.type === 'fuel' || t.type === 'truck')) {   // v042 : un RESERVOIR touché rapporte des écrous (monnaie des améliorations), multipliés par la série
           const n = (t.type === 'fuel' ? 3 : 2) * this.endlessRun.mult;
           this.progress.event('nuts', n); this.endlessRun.stats.nuts = (this.endlessRun.stats.nuts || 0) + n;
-          this.feed('RESERVOIR  +' + n, '#ffd23a');
+          this.feed('RESERVOIR  +' + n, '#d9a441');
         }
         if (!t.guard) {   // v034 : cible détruite = 100 points (un char de garde ne rapporte rien : il tirait sur nous)
           const v = Math.round(this.endlessRun.addBonus(CC.CONFIG.score.target));
@@ -640,8 +640,8 @@
       const rk = this.rocket, runH = this.endlessRun;
       if (runH && runH.hull > 0 && kind !== 'outOfBounds' && kind !== 'stalled' && kind !== 'altitude' && this.state === 'FLIGHT') {   // v042 : COQUE — un coup absorbé, la roquette traverse
         runH.hull--; rk.shieldT = 1.5; runH.doorChain = 0;
-        this.flash = 0.7; this.flashColor = '#ffd23a'; this.rig.shake = 1; this.audio.play('boom', pos); this.effects.explosion(pos, normal, false, 'orange');
-        this.feed('COQUE  -1', '#ff4258'); if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('warn');
+        this.flash = 0.7; this.flashColor = '#d9a441'; this.rig.shake = 1; this.audio.play('boom', pos); this.effects.explosion(pos, normal, false, 'orange');
+        this.feed('COQUE  -1', '#d0473e'); if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('warn');
         return;
       }
       this.lastSpeed = 0; this.crashKind = kind;
