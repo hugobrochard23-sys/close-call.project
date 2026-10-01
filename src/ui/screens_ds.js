@@ -192,7 +192,24 @@
       DS.text(ctx, String(i + 1).padStart(2, '0') + '  ' + z[0], x + 10 * k, yy + chh * 0.8, DS.fit(ctx, String(i + 1).padStart(2, '0') + '  ' + z[0], 15 * k, cwid - 20 * k), open ? T.white : T.muted, { weight: 700, ls: 0.5 });
       if (!open) DS.text(ctx, 'LV ' + cfg.worlds[id], x + cwid - 10 * k, yy + chh * 0.8, 13 * k, T.gold, { align: 'right', weight: 700 });
     });
+    // accès aux 9 niveaux d'origine
+    { const by = y + 5 * (chh + gap) + 2 * k; DS.btn(ui, ctx, x0, by, cw, 52 * k, { k, kind: 'secondary', label: 'NIVEAUX 1 A 9', icon: 'rocket', iconColor: T.cyanL, color: T.white, size: 20 * k, glow: true, key: 'lv9', action: () => { ui.overlay = 'levels'; } }); }
     navBar(ui, ctx, L, game, 'map');
+  };
+  Home.drawLevels = function (ui, ctx, game, W, H) {
+    const L = Home.layout(ui, W, H), { T: top, HH } = L, k = DS.kOf(L), cw = colW(L, k), x0 = W / 2 - cw / 2, best = game.save.best || {};
+    backdrop(ctx, L);
+    let y = header(ui, ctx, L, k, 'NIVEAUX', game, { currency: false });
+    const n = CC.Levels.length, gap = 7 * k, rh = Math.min(58 * k, (HH - 76 * k - 70 * k - gap * n) / n);
+    CC.Levels.forEach((lv, i) => {
+      const open = game.isUnlocked(i), b = best[lv.id], yy = y + i * (rh + gap);
+      DS.panel(ctx, x0, yy, cw, rh, { k, shadow: false, accent: open ? undefined : T.borderSoft });
+      DS.panel(ctx, x0 + 8 * k, yy + (rh - 38 * k) / 2, 38 * k, 38 * k, { k, r: 10 * k, shadow: false, accent: T.borderSoft }); DS.text(ctx, String(i + 1), x0 + 27 * k, yy + rh / 2 + 1 * k, 22 * k, open ? T.cyanL : T.muted, { align: 'center', weight: 700 });
+      DS.text(ctx, lv.name, x0 + 58 * k, yy + rh / 2, 21 * k, open ? T.white : T.muted, { weight: 700, ls: 1 });
+      if (open) { DS.text(ctx, b ? U.formatTime(b.time) : '--:--', x0 + cw - 62 * k, yy + rh / 2, 17 * k, b ? T.gold : T.muted, { align: 'right', weight: 700 }); DS.icon(ctx, 'play', x0 + cw - 30 * k, yy + rh / 2, 22 * k, T.cyanL); hit(ui, x0, yy, cw, rh, () => game.startLevel(i)); }
+      else DS.icon(ctx, 'lock', x0 + cw - 30 * k, yy + rh / 2, 22 * k, T.muted);
+    });
+    DS.btn(ui, ctx, x0, y + n * (rh + gap) + 2 * k, cw, 48 * k, { k, kind: 'secondary', label: 'DEFIS ET MISSIONS LIBRES', size: 17 * k, color: T.white, key: 'defis', action: () => { ui.overlay = 'defi'; } });
   };
 
   // ============================================================================================================

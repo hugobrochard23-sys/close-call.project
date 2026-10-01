@@ -60,6 +60,7 @@
       else if (this.overlay === 'quests') { this.buttons = []; CC.Home.drawQuests(this, ctx, game, W, H); }        // v034
       else if (this.overlay === 'progress') { this.buttons = []; CC.Home.drawGarage(this, ctx, game, W, H); }
       else if (this.overlay === 'garage') { this.buttons = []; CC.Home.drawGarage(this, ctx, game, W, H); }
+      else if (this.overlay === 'levels') { this.buttons = []; CC.Home.drawLevels(this, ctx, game, W, H); }
       else if (this.overlay === 'map') { this.buttons = []; CC.Home.drawMap(this, ctx, game, W, H); }
       else if (this.overlay === 'msettings') { this.buttons = []; CC.Home.drawSettings(this, ctx, game, W, H); }
       else if (this.overlay === 'revive') { this.buttons = []; CC.Home.drawRevive(this, ctx, game, W, H); }

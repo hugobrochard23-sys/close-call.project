@@ -29,8 +29,8 @@
     ctx.textAlign = o.align || 'left'; ctx.textBaseline = o.base || 'middle'; ctx.lineJoin = 'round';
     if (o.alpha !== undefined) ctx.globalAlpha = o.alpha;
     if (o.ls && 'letterSpacing' in ctx) ctx.letterSpacing = o.ls + 'px';
-    if (o.stroke) { ctx.lineWidth = Math.max(2, size * 0.14); ctx.strokeStyle = o.stroke; ctx.strokeText(s, x, y); }
-    if (o.shadow) { ctx.fillStyle = o.shadow; ctx.fillText(s, x, y + Math.max(1.5, size * 0.07)); }
+    // v054 RÈGLE D'OR : jamais de contour autour d'un texte. Seulement un voile d'ombre doux (sans décalage dur) pour la lisibilité sur le décor.
+    if (o.stroke || o.shadow) { ctx.shadowColor = 'rgba(2,10,20,0.7)'; ctx.shadowBlur = size * 0.24; ctx.shadowOffsetY = size * 0.03; }
     ctx.fillStyle = color; ctx.fillText(s, x, y);
     ctx.restore();
   };
@@ -219,8 +219,7 @@
       const fs = size * (word === 'COLD' ? 0.95 : 1.12); ctx.font = 'italic 700 ' + fs + 'px ' + T.family; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
       if ('letterSpacing' in ctx) ctx.letterSpacing = (size * 0.03) + 'px';
       ctx.shadowColor = glow; ctx.shadowBlur = size * 0.3; ctx.fillStyle = glow; ctx.fillText(word, 0, 0); ctx.shadowBlur = 0;
-      ctx.lineWidth = size * 0.16; ctx.strokeStyle = '#0A2540'; ctx.strokeText(word, 0, 0);
-      const g = ctx.createLinearGradient(0, -fs * 0.4, 0, fs * 0.4); g.addColorStop(0, col1); g.addColorStop(1, col2); ctx.fillStyle = g; ctx.fillText(word, 0, 0);
+            const g = ctx.createLinearGradient(0, -fs * 0.4, 0, fs * 0.4); g.addColorStop(0, col1); g.addColorStop(1, col2); ctx.fillStyle = g; ctx.fillText(word, 0, 0);
       ctx.restore();
     }
     ctx.restore();

@@ -179,7 +179,7 @@
     const size = px * FS, widths = segments.map((s) => wAt100(s.t.toUpperCase()) * size / 100);
     let width = 0; for (const w of widths) width += w;
     let cx = x; if (opts.align === 'center') cx = x - width / 2; else if (opts.align === 'right') cx = x - width;
-    const outline = opts.outline === undefined ? CC.CONFIG.hud.colors.outline : opts.outline;
+    const outline = null;   // v054 : jamais de contour autour des textes
     ctx.save();
     if (opts.alpha !== undefined) ctx.globalAlpha = opts.alpha;
     ctx.font = '700 ' + size.toFixed(1) + 'px ' + STACK; ctx.textBaseline = 'alphabetic'; ctx.lineJoin = 'round'; ctx.miterLimit = 2;
