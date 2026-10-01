@@ -145,12 +145,12 @@
    * n'importe quel décor, comme les jeux mobiles), remplace la police pixel qui jurait avec les graphismes. Mêmes règles de taille :
    * `px` reste « un pixel de la police 5×7 » (capitales ≈ 7 px de haut), donc toute la mise en page existante est conservée.
    * Le HUD des niveaux d'origine (DÉFI) garde la police pixel (opts.pixel) : il reproduit celui de la vidéo. */
-  const STACK = '"Arial Black","Segoe UI Black","Helvetica Neue",Impact,"Trebuchet MS",sans-serif';
-  const FS = 9.4;                                    // taille de police pour 1 px de « pixel »
+  const STACK = 'Rajdhani,"Exo 2","Segoe UI",Arial,sans-serif';   // v050 : police du design system
+  const FS = 10.8;                                    // taille de police pour 1 px de « pixel »
   let mctx = null; const mcache = new Map();
   const wAt100 = (t) => {
     let w = mcache.get(t);
-    if (w === undefined) { if (!mctx) mctx = document.createElement('canvas').getContext('2d'); mctx.font = '900 italic 100px ' + STACK; w = mctx.measureText(t).width; if (mcache.size > 3000) mcache.clear(); mcache.set(t, w); }
+    if (w === undefined) { if (!mctx) mctx = document.createElement('canvas').getContext('2d'); mctx.font = '700 100px ' + STACK; w = mctx.measureText(t).width; if (mcache.size > 3000) mcache.clear(); mcache.set(t, w); }
     return w;
   };
   // v038j : habillage PIXEL — la police 5×7 en pixels CARRES (cw = 1) à taille entière devient la police de toute l'interface du CLASSIQUE
@@ -182,7 +182,7 @@
     const outline = opts.outline === undefined ? CC.CONFIG.hud.colors.outline : opts.outline;
     ctx.save();
     if (opts.alpha !== undefined) ctx.globalAlpha = opts.alpha;
-    ctx.font = '900 italic ' + size.toFixed(1) + 'px ' + STACK; ctx.textBaseline = 'alphabetic'; ctx.lineJoin = 'round'; ctx.miterLimit = 2;
+    ctx.font = '700 ' + size.toFixed(1) + 'px ' + STACK; ctx.textBaseline = 'alphabetic'; ctx.lineJoin = 'round'; ctx.miterLimit = 2;
     const base = y + px * 7.2;
     if (opts.skew) { ctx.translate(0, base); ctx.transform(1, 0, opts.skew * 0.6, 1, 0, 0); ctx.translate(0, -base); }
     let px0 = cx;

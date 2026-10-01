@@ -1024,6 +1024,7 @@
 
     start() {
       try { document.fonts.load('16px "Press Start 2P"'); } catch (e) { /* police chargée à la demande */ }
+      if (CC.DS) CC.DS.loadFonts();
       if (CC.Icons3D) CC.Icons3D.prewarm();   // v045 : icônes 3D rendues une par une pendant l'accueil
       if (this.testMode) { this.initTestHarness(); return; }
       this.quality = new CC.Quality(this);
