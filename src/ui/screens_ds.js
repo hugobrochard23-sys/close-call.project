@@ -52,8 +52,8 @@
     let bottom = top + HH;
     const gutter = Math.max(14 * k, (W - colW(L, k)) / 2);
     if (items.length) { const nh = DS.nav(ui, ctx, L, items, null, (id) => { ui.overlay = id; }); bottom -= nh; } else bottom -= 14 * k;
-    const ph = 72 * k; bottom -= ph + 10 * k;
-    DS.btn(ui, ctx, gutter, bottom, W - 2 * gutter, ph, { k, kind: 'primary', label: 'PLAY', sub: 'ENDLESS', icon: 'play', size: ph * 0.46, breathe: true, glow: true, key: 'play', action: () => { game.firePad(); } });
+    DS.text(ctx, 'TOUCHE LA FUSEE', W / 2, bottom - 26 * k, 22 * k, T.white, { align: 'center', weight: 700, ls: 2, alpha: 0.75 + 0.25 * Math.sin(performance.now() / 1000 * Math.PI), shadow: 'rgba(0,0,0,0.55)' });   // v053 : plus de bouton PLAY
+    const ph = 0, gutter2 = gutter; bottom -= 24 * k;
     if ((P.launches || 0) < 3) { const msg = 'PASSE LES TROUS  ·  VISE LES RESERVOIRS'; DS.text(ctx, msg, W / 2, bottom - 14 * k, DS.fit(ctx, msg, 14 * k, W - 2 * gutter), T.white, { align: 'center', weight: 700, shadow: 'rgba(0,0,0,0.6)', ls: 1 }); }
     
     ctx.restore();

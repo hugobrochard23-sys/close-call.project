@@ -62,6 +62,9 @@
       this.seed = seed;
       // v035 : enchaînement des zones (graphe de voisinage, les zones rarement vues d'abord), limité aux zones ouvertes par le niveau
       this.zoneOrder = CC.Zones.order(seed, zones, 90);
+      // v053 : DEPART ALEATOIRE — une partie sur deux, la montée / la descente vers la 2e zone commence 15 à 40 m après le lanceur (au lieu de 2 000 m de ville)
+      const ro = G.stream(seed, 'zoff'); this.off = 0;
+      if (this.zoneOrder.length > 1 && ro() < 0.55) { const hw1 = Math.max(130, 1.8 * Math.abs(CC.Zones.PROFILE[this.zoneOrder[1]].elev - CC.Zones.PROFILE[this.zoneOrder[0]].elev)); this.off = C().zoneLen - (hw1 + ro.between([15, 40])); }
     }
     // v034c : la TRAJECTOIRE (lane) — position latérale (relative au couloir) et altitude (relative au sol) qui serpentent, montent et
     // descendent ; les structures sont posées autour d'elle, le parcours est donc toujours faisable
@@ -89,7 +92,7 @@
     }
     slope(d) { return (this.cx(d + 1) - this.cx(d - 1)) / 2; }
     half(d) { return param(C().width, d) / 2 * (1 + 0.12 * Math.sin(d / this.l[2] + this.p[2])); }
-    zoneIndex(d) { return Math.max(0, Math.floor(Math.max(0, d) / C().zoneLen)); }
+    zoneIndex(d) { return Math.max(0, Math.floor((Math.max(0, d) + (this.off || 0)) / C().zoneLen)); }   // v053 : off décale la grille des zones
     zoneId(d) { return this.zoneOrder[this.zoneIndex(d) % this.zoneOrder.length]; }
     // ambiance d'une zone (tirée de la graine : même partie = mêmes ambiances)
     env(zi) {
@@ -161,7 +164,7 @@
     while (T.nextTarget < d1) {
       const d = T.nextTarget;
       const nearPin = [-150, -60, 0, 40].some((o) => CC.Zones.pinAt(T, d + o).length);   // pas de plongée vers une cible dans une scène à structure imposée
-      if (d >= d0 + 10 && !inRamp(d) && tr0(d).t === 1 && Math.abs(d % cfg.zoneLen) > 70 && !nearPin && !CC.Zones.noTargets[zoneAt(d)]) {
+      if (d >= d0 + 10 && !inRamp(d) && tr0(d).t === 1 && Math.abs((d + T.off) % cfg.zoneLen) > 70 && !nearPin && !CC.Zones.noTargets[zoneAt(d)]) {
         const zone = zoneAt(d), lx = CC.Zones.targetLx(T, d, zone) + r.between([-2, 2]);
         tgt.push({ d, lx, zone });
         reserved.push({ d: d - 12, lx, w: 30, dd: 110 });

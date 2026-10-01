@@ -44,22 +44,8 @@
     eau:    ['port', 'city', 'forest'],
     usine:  ['city', 'port', 'metro', 'forest', 'mini', 'tour'],
   };
-  // v040 : parcours fixe en jeu normal (zones ouvertes, dans l'ordre du cycle) ; l'ordre aléatoire ne sert plus qu'aux tests (allowed = null)
-  const CYCLE = ['city', 'forest', 'usine', 'port', 'eau', 'city', 'tour', 'sky', 'chute', 'metro', 'mini'];
-  Z.order = function (seed, allowed, n) {
-    if (allowed) {
-      const seq = ['city'];
-      for (let i = 0, guard = 0; seq.length < n && guard < 4000; i++, guard++) {
-        const z = CYCLE[i % CYCLE.length], last = seq[seq.length - 1];
-        if (!allowed.includes(z) || z === last) continue;
-        if (!NEXT[last].includes(z) && z !== last) seq.push('city');
-        seq.push(z);
-      }
-      while (seq.length < n) seq.push(seq[seq.length - 1]);
-      return seq.slice(0, n);
-    }
-    return Z.randomOrder(seed, allowed, n);
-  };
+  // v053 : ordre ALEATOIRE (graphe de voisinage) en jeu normal comme en test
+  Z.order = function (seed, allowed, n) { return Z.randomOrder(seed, allowed, n); };
   Z.randomOrder = function (seed, allowed, n) {
     const r = G.stream(seed, 'zorder'), ok = (id) => !allowed || allowed.includes(id), out = ['city'];
     while (out.length < n) {
@@ -68,7 +54,7 @@
       if (!cand.length) cand = NEXT[cur].filter((z) => ok(z) && z !== cur);
       if (!cand.length) cand = ['city'];
       // les zones rarement vues sont préférées (chaque partie fait le tour)
-      const w = {}; for (const z of cand) w[z] = 1 + 6 * (out.indexOf(z) < 0 ? 1 : 0);   // v038 : une zone pas encore vue dans la partie est très fortement préférée (toutes les zones tournent)
+      const w = {}; for (const z of cand) w[z] = 1 + 6 * (out.indexOf(z) < 0 ? 1 : 0) + (z === 'sky' || z === 'tour' || z === 'chute' ? 3 : 0) - (z === 'eau' ? 0.6 : 0);   // v053 : les zones aériennes sortent plus souvent, la profondeur un peu moins   // v038 : une zone pas encore vue dans la partie est très fortement préférée (toutes les zones tournent)
       out.push(r.weighted(w));
     }
     return out;
@@ -181,7 +167,7 @@
   // hw(k) : demi-largeur de la transition à la frontière k (plus le sol monte, plus elle est longue)
   Z.hw = (T, k) => Math.max(130, 1.8 * Math.abs(T.elev(k) - T.elev(k - 1)));
   Z.trans = (T, d) => {       // { z0, z1, t } : zones de part et d'autre et avancement (0 → 1) de la transition autour de d
-    const L = C().zoneLen, k0 = Math.round(d / L), B = k0 * L;
+    const L = C().zoneLen, off = T.off || 0, k0 = Math.round((d + off) / L), B = k0 * L - off;
     if (d <= 0 || k0 < 1) return { z0: T.zoneOrder[0], z1: T.zoneOrder[0], t: 1, k: 0 };
     const hw = Z.hw(T, k0);
     if (Math.abs(d - B) > hw) { const z = T.zoneOrder[T.zoneIndex(d) % T.zoneOrder.length]; return { z0: z, z1: z, t: 1, k: 0 }; }
@@ -191,7 +177,7 @@
   Z.yCenter = (T, zone, zi, d) => {
     const P = PROFILE[zone];
     if (!P.drift) return (P.y[0] + P.y[1]) / 2;
-    const L = C().zoneLen, k = U.clamp((d - zi * L) / L, 0, 1); return P.drift[0] + (P.drift[1] - P.drift[0]) * k;
+    const L = C().zoneLen, k = U.clamp((d + (T.off || 0) - zi * L) / L, 0, 1); return P.drift[0] + (P.drift[1] - P.drift[0]) * k;
   };
   Z.prof = (T, d, key) => {
     const tr = Z.trans(T, d), a = PROFILE[tr.z0][key], b = PROFILE[tr.z1][key];
@@ -202,7 +188,7 @@
   Z.plan = function (T, zi) {
     T._plans = T._plans || {};
     if (T._plans[zi]) return T._plans[zi];
-    const zone = T.zoneOrder[zi % T.zoneOrder.length], def = Z.defs[zone], cfg = C(), L = cfg.zoneLen, start = zi * L, end = start + L;
+    const zone = T.zoneOrder[zi % T.zoneOrder.length], def = Z.defs[zone], cfg = C(), L = cfg.zoneLen, start = Math.max(0, zi * L - (T.off || 0)), end = zi * L - (T.off || 0) + L;
     const plan = T._plans[zi] = { zone, zi, scenes: [], pins: [] };
     const dIn = zi > 0 && T.elev(zi) !== T.elev(zi - 1), dOut = T.elev(zi + 1) !== T.elev(zi), tight = def && def.tight;
     const padIn = zi === 0 ? 0 : dIn ? Z.hw(T, zi) + (tight ? 4 : 50) : 40, padOut = dOut ? Z.hw(T, zi + 1) + (tight ? 4 : 50) : 40;
@@ -394,8 +380,9 @@
   /* ---------- passage entre deux zones : tranchée / vallée quand le sol monte ou descend, portail à la frontière ---------- */
   function passage(ctx) {
     const T = ctx.T, b = ctx.b, L = C().zoneLen;
-    for (let B = Math.ceil(Math.max(1, ctx.d0 - 400) / L) * L; B < ctx.d1 + 400; B += L) {
-      const k = Math.round(B / L); if (k < 1) continue;
+    const off = T.off || 0;
+    for (let B = Math.ceil(Math.max(1, ctx.d0 - 400 + off) / L) * L - off; B < ctx.d1 + 400; B += L) {
+      const k = Math.round((B + off) / L); if (k < 1) continue;
       const e0 = T.elev(k - 1), e1 = T.elev(k), hw = Z.hw(T, k), z0 = T.zoneOrder[(k - 1) % T.zoneOrder.length], z1 = T.zoneOrder[k % T.zoneOrder.length];
       const sc = new Scene(ctx, { name: 'passage', d0: B - hw, d1: B + hw, zone: z1, zi: k, key: 'p' + k, stage: 0 });
       // tranchée ou vallée : deux murs continus dont le sommet reste au niveau le plus haut (+ marge)

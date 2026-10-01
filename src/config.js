@@ -331,7 +331,7 @@ CC.CONFIG = {
     firstRunXp: 3,              // XP du tout premier vol
     levelBase: 30, levelStep: 20, levelMaterials: 20,   // XP pour passer du niveau n au suivant : base + step × (n − 1) ; matériaux offerts à chaque niveau   // XP pour passer du niveau n au suivant : base + step × (n − 1)
     missionSlots: 1,
-    worlds: { city: 1, forest: 2, usine: 2, port: 3, tour: 3, sky: 3, chute: 3, metro: 4, eau: 3, mini: 5 },   // niveau qui débloque chaque décor
+    worlds: { city: 1, forest: 1, port: 2, usine: 2, tour: 2, sky: 2, chute: 3, metro: 3, mini: 4, eau: 4 },   // niveau qui débloque chaque décor
     ranks: ['RECRUE', 'PILOTE', 'AS', 'CAPITAINE', 'MAJOR', 'COMMANDANT', 'LEGENDE'],
   },
 
