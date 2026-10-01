@@ -309,9 +309,8 @@
     }
     // une rame à l'arrêt sur la voie centrale ; la trajectoire passe au-dessus
     const lx = hold.lx;
-    S.item(c, (r) => { train(S, c, 0, 70, r.pick(['#b8c4d0', '#d8d8d4', '#c0a0a0']), r); });
-    // pas de pin : la trajectoire reste au-dessus de 10 m grâce au plancher de la zone
-    S.reserve(c, 0, 4, 76); S.gate(c, lx, Math.max(11, hold.y));
+    // v036b : plus de rame à l'arrêt au milieu (elle formait un mur infranchissable) : les voies restent dégagées
+    S.gate(c, lx, Math.max(11, hold.y));
     // grandes affiches lumineuses sur le mur du fond des quais
     for (const s of [-1, 1]) S.rows(S.d0 + 15, S.d1, 26, 0.2, (dc) => S.item(dc, (r) => { S.bx(dc, s * (w(dc) - 0.3), 11, 0.3, 6, 7, 'col:' + r.pick(['#d8d0c0', '#c8d8e0', '#e0c8c0']), undefined, false); S.bx(dc, s * (w(dc) - 0.4), 11, 0.2, 5.2, 6.2, dark(S) ? 'emis:#d8e8f0' : 'col:#f4f0e8', undefined, false); }));
   }, pin(T, sc) { return { lx: U.clamp(T.laneX0((sc.d0 + sc.d1) / 2), -6, 6), y: 11.5, from: 30, to: sc.d1 - sc.d0 - 30 }; } };
@@ -320,8 +319,8 @@
     build(S) {
       const c = S.mid, L = S.lane(c), s = L.lx > 0 ? 1 : -1;
       // mur de séparation entre les deux tunnels : la voie libre est de notre côté ; l'autre est une voie de garage avec une rame noire
-      S.item(c, () => { S.bx(c, -s * 2, H / 2, 2.2, H, S.len - 40, 'concrete', '#a8aeb2'); });
-      S.reserve(c, -s * 2, 3, S.len - 40);
+      // v036b : une rangée de piliers (et non plus un mur plein) : on voit et on peut passer d'un tunnel à l'autre
+      S.rows(S.d0 + 20, S.d1 - 20, 15, 0, (dc) => S.item(dc, () => { S.bx(dc, -s * 2, H / 2, 1.4, H, 1.4, 'concrete', '#a8aeb2'); }));
       S.rows(S.d0 + 20, S.d1 - 20, 16, 0, (dc) => S.item(dc, () => { S.bx(dc, -s * 0.6, 15, 0.3, 1.2, 1.2, 'emis:#d83a2a', undefined, false); S.bx(dc, -s * 0.6, 11, 0.4, 7, 0.4, 'col:#1c1e22', undefined, false); }));
       S.item(c, (r) => { train(S, c, -s * 10, 56, '#3a3e46', r); });
       S.rows(S.d0, S.d1, 20, 0.2, (dc) => S.item(dc, () => { S.bx(dc, s * (S.vol(dc) - 1.2), 10.4, 1.2, 0.3, 11.6, 'col:#3a3a3e', undefined, false); }));
