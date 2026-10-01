@@ -290,6 +290,84 @@
       farTowers(S, 90, 180, 3);
     } };
 
+  // ---------- v055 : VILLE EN 4 DIMENSIONS — chute libre · cheminée · slalom latéral · toits ----------
+  // CHUTE LIBRE : on entre très haut par le toit, on tombe dans un puits entre deux murs d'immeubles, poutres et câbles en travers
+  function shaft(S, half, h, dist) {
+    avenueRoad(S, []);
+    for (let dc = S.d0 + 6; dc < S.d1; dc += 22) S.item(dc + 11, (r) => {
+      const L = S.lane(dc + 11), tint = r.pick(dist.tints);
+      for (const s of [-1, 1]) {
+        const w = r.between([16, 24]), set = r.between([0, 1.5]);
+        S.bx(dc + 11, L.lx + s * (half + set + w / 2), h / 2 - 0.5, w, h, 21.6, dist.mat, tint);
+        for (let k = 0; k < 3; k++) if (r() < 0.6) S.bx(dc + 11, L.lx + s * (half + set - 0.4), r.between([4, h - 6]), 0.3, 3, r.between([3, 8]), 'emis:' + r.pick(['#e8a020', '#2a9ac8', '#d83a2a']), undefined, false);
+      }
+    });
+  }
+  function beams(S, half, step, off0) {
+    let k = 0;
+    for (let dc = S.d0 + off0; dc < S.d1 - 30; dc += step, k++) S.item(dc, (r) => {
+      const L = S.lane(dc), above = k % 2 === 0, y = above ? L.y + S.R + 7 : Math.max(2.5, L.y - S.R - 7);
+      if (!above && y < 3.5) return;
+      S.bx(dc, L.lx, y, 2 * half + 4, 1.6, 2.4, 'metal', '#9a9a96'); S.bx(dc, L.lx, y + 0.9, 2 * half + 4, 0.3, 2.6, 'hazard', undefined, false);
+      for (let c = 0; c < 3; c++) S.bx(dc + r.between([-4, 4]), L.lx + r.between([-half + 2, half - 2]), y + (above ? 5 : -5), 0.12, 10, 0.12, 'col:#222', undefined, false);   // câbles pendants
+      S.gate(dc, L.lx, L.y);
+    });
+  }
+  city.scenes.chute = { len: [260, 330],
+    pin(T, sc) { const mid = (sc.d0 + sc.d1) / 2; return { lx: U.clamp(T.laneX0(mid), -4, 4), y: 68, y2: 12, from: 62, to: sc.d1 - sc.d0 - 20 }; },
+    build(S) {
+      const dist = district(S, S.sr.between([100, 130]), S.sr.between([130, 180])), half = S.R + 6.5;
+      shaft(S, half, 200, dist); beams(S, half, 26, 60);
+      farTowers(S, 110, 200, 3);
+    } };
+  // CHEMINEE : l'inverse, on remonte le long du puits jusqu'au-dessus des toits
+  city.scenes.cheminee = { len: [260, 330],
+    pin(T, sc) { const mid = (sc.d0 + sc.d1) / 2; return { lx: U.clamp(T.laneX0(mid), -4, 4), y: 12, y2: 72, from: 20, to: sc.d1 - sc.d0 - 62 }; },
+    build(S) {
+      const dist = district(S, S.sr.between([100, 130]), S.sr.between([130, 180])), half = S.R + 6.5;
+      shaft(S, half, 200, dist); beams(S, half, 26, 60);
+      farTowers(S, 110, 200, 3);
+    } };
+  // SLALOM : la trajectoire tourne de gauche à droite, un bloc d'immeuble barre alternativement chaque côté du couloir
+  city.scenes.slalom = { len: [240, 320],
+    pin(T, sc) {
+      const a = 11, per = 76, o = sc.d0 + 34; sc.slal = { a, per, o };
+      return { lx: 0, y: U.clamp(T.laneY0((sc.d0 + sc.d1) / 2), 12, 24), fx: (d) => a * Math.sin(2 * Math.PI * (d - o) / per) * U.clamp((sc.d1 - 30 - d) / 50, 0, 1), from: 34, to: sc.d1 - sc.d0 - 34 };
+    },
+    build(S) {
+      const sr = S.sr, dist = district(S, sr.between([60, 90]), sr.between([80, 120])), sl = S.sc.slal || { a: 11, per: 76, o: S.d0 + 34 };
+      avenueRoad(S, []); furniture(S, [], { noTrees: true });
+      for (const s of [-1, 1]) buildingRow(S, s, dist, [], 0, { shops: true });
+      for (let k = 0, dc = sl.o + sl.per / 4; dc < S.d1 - 40; dc += sl.per / 2, k++) {
+        const sg = k % 2 === 0 ? 1 : -1, L = S.lane(dc), v = S.vol(dc) + 6, tint = sr.pick(dist.tints), edge = L.lx - sg * (S.R + 3.4);
+        S.item(dc, () => {
+          const x0 = sg > 0 ? -v : edge, x1 = sg > 0 ? edge : v;
+          if (x1 - x0 < 1) return;
+          S.bx(dc, (x0 + x1) / 2, 40, x1 - x0, 80, 12, dist.mat, tint);
+          S.bx(dc, edge + sg * 0.3, 40, 0.5, 80, 12.4, 'hazard', undefined, false);
+        });
+        S.reserve(dc, 0, 2 * v, 14); S.gate(dc, L.lx, L.y);
+      }
+      farTowers(S, 80, 160, 3);
+    } };
+  // TOITS : on rase les toits d'un quartier bas, les antennes et les pylônes sur les côtés
+  city.scenes.toits = { len: [220, 290],
+    pin(T, sc) { const mid = (sc.d0 + sc.d1) / 2; return { lx: U.clamp(T.laneX0(mid), -6, 6), y: 40, from: 26, to: sc.d1 - sc.d0 - 26 }; },
+    build(S) {
+      const tints = ['#e8e4dc', '#d8dce0', '#e8d8c8', '#d0d8e0'];
+      avenueRoad(S, []);
+      for (let dc = S.d0; dc < S.d1; dc += 20) S.item(dc + 10, (r) => {
+        const L = S.lane(dc + 10), ceil = Math.max(8, L.y - S.R - 2.6), v = S.vol(dc + 10) + 6;
+        for (let k = -1; k <= 1; k++) {
+          const w = v * 2 / 3, h = r.between([ceil * 0.4, ceil]);
+          S.bx(dc + 10, k * w, h / 2 - 0.5, w - 0.6, h, 19.4, { side: 'facade', top: 'concrete', bottom: 'concreteDark' }, r.pick(tints));
+        }
+        for (const s of [-1, 1]) if (r() < 0.55) S.cyl(dc + 10, L.lx + s * (S.R + 6 + r.between([0, 6])), 0, 0.4, r.between([48, 90]), 'col:#2c2f33', undefined, 6, 0.2);
+      });
+      for (let dc = S.d0 + 50; dc < S.d1 - 40; dc += 48) S.gate(dc, S.lane(dc).lx, S.lane(dc).y);
+      farTowers(S, 90, 190, 6);
+    } };
+
   // ============================================================== METRO
   const H = 24;
   // enveloppe du tunnel : plafond, parois, carrelage, lampes, rails ; wv(dc) : demi-largeur intérieure
