@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Icônes pixel — aperçu</title>
+<style>
+  body{margin:0;background:#3b4652;color:#e8ecef;font-family:monospace;padding:14px}
+  h1{font-size:13px;margin:0 0 12px;color:#d9a441}
+  .row{display:flex;flex-wrap:wrap;gap:12px}
+  .card{background:#262d36;border:3px solid #5a6674;padding:10px;text-align:center;width:150px}
+  .card canvas{image-rendering:pixelated;width:132px;height:132px;display:block;margin:0 auto 6px;background:#1d232b}
+  .bar{display:flex;background:#1d232b;border:3px solid #5a6674;margin-top:16px;max-width:520px}
+  .bar div{flex:1;text-align:center;padding:10px 0 6px;font-size:13px;font-weight:bold;letter-spacing:1px}
+  .bar canvas{image-rendering:pixelated;width:84px;height:84px;display:block;margin:-30px auto 2px}
+  .bar .on{outline:3px solid #f0c890;outline-offset:-5px}
+</style></head><body>
+<h1>ICONES PIXEL DESSINEES (48×48, contour sombre, ombrage haut-gauche) — a valider</h1>
+<div class="row" id="row"></div>
+<div class="bar" id="bar"></div>
+<script>
+const N=48, OUT='#1a1f26';
+const lerp=(a,b,t)=>a+(b-a)*t;
+function hex(c){return [1,3,5].map(i=>parseInt(c.slice(i,i+2),16));}
+function mix(c,to,t){const a=hex(c),b=hex(to);return '#'+a.map((v,i)=>Math.round(lerp(v,b[i],t)).toString(16).padStart(2,'0')).join('');}
+const seg=(px,py,ax,ay,bx,by)=>{const dx=bx-ax,dy=by-ay,t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/(dx*dx+dy*dy)));return Math.hypot(px-(ax+t*dx),py-(ay+t*dy));};
+const circ=(cx,cy,r)=>(x,y)=>Math.hypot(x-cx,y-cy)<=r;
+const rect=(x0,y0,x1,y1)=>(x,y)=>x>=x0&&x<=x1&&y>=y0&&y<=y1;
+const poly=(pts)=>(x,y)=>{let c=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const[xi,yi]=pts[i],[xj,yj]=pts[j];if((yi>y)!=(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)c=!c;}return c;};
+const and=(a,b)=>(x,y)=>a(x,y)&&b(x,y), or=(...f)=>(x,y)=>f.some(g=>g(x,y)), not=(a)=>(x,y)=>!a(x,y);
+// une icône = liste de régions peintes dans l'ordre : {f: masque, c: couleur, line: contour interne}
+const ICONS={
+ wrench:()=>{const A=[9,38],B=[31,16],ux=B[0]-A[0],uy=B[1]-A[1],L=Math.hypot(ux,uy),nx=ux/L,ny=uy/L;
+  const head=(x,y)=>Math.hypot(x-B[0],y-B[1])<=9.5;
+  const notch=(x,y)=>{const t=(x-B[0])*nx+(y-B[1])*ny,s=Math.abs(-(x-B[0])*ny+(y-B[1])*nx);return t>1&&s<4.2;};
+  const tail=(x,y)=>Math.hypot(x-A[0],y-A[1])<=6.5&&Math.hypot(x-A[0],y-A[1])>=2.6;
+  return [{f:or((x,y)=>seg(x,y,A[0],A[1],B[0],B[1])<=3.2,and(head,not(notch)),tail),c:'#aab4bf'}];},
+ pin:()=>[{f:or(circ(24,17,12),(x,y)=>y>=17&&y<=42&&Math.abs(x-24)<=(42-y)/25*11.4),c:'#c0392b'},{f:circ(24,17,4.6),c:'#f4f1e8',line:1}],
+ shop:()=>[
+  {f:rect(8,24,40,42),c:'#e8d8b8'},
+  {f:rect(6,20,42,25),c:'#8d6a46'},
+  {f:rect(12,29,24,37),c:'#7fb4d6',line:1},{f:rect(28,29,36,42),c:'#8a5a2a',line:1},{f:rect(33,35,34,36),c:'#e8bd62'},
+  {f:(x,y)=>x>=4&&x<=44&&y>=10&&y<=24&&(y<=20||((x%6)<4)),c:'#d9d3c6'},
+  {f:(x,y)=>x>=4&&x<=44&&y>=10&&y<=24&&(y<=20||((x%6)<4))&&Math.floor((x-4)/6)%2===0,c:'#c0392b'},
+  {f:rect(18,5,30,10),c:'#e8bd62',line:1}],
+ gear:()=>{return [{f:(x,y)=>{const dx=x-24,dy=y-24,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx);const tooth=Math.cos(a*8)>0.15;return (d<=13&&d>=5.5)||(d>13&&d<=19&&tooth);},c:'#aab4bf'}];},
+ flame:()=>[{f:(x,y)=>{const t=(y-4)/38;if(t<0||t>1)return false;const w=Math.sin(Math.min(1,t*1.15)*Math.PI*0.95)*(1-t*0.2)*13+(t>0.5?2:0);return Math.abs(x-24-Math.sin(t*5)*2*(1-t))<=w*0.9&&!(t<0.12&&Math.abs(x-24)>2);},c:'#e8742a'},
+   {f:(x,y)=>{const t=(y-18)/22;return t>0&&t<1&&Math.abs(x-24)<=Math.sin(t*Math.PI*0.9)*7;},c:'#ffd23a'},{f:(x,y)=>{const t=(y-27)/13;return t>0&&t<1&&Math.abs(x-24)<=Math.sin(t*Math.PI)*3.6;},c:'#fff6c8'}],
+ trophy:()=>[
+  {f:or((x,y)=>{const yy=(y-6)/20;return yy>=0&&yy<=1&&Math.abs(x-24)<=lerp(13,7,yy*yy);},rect(21,26,27,34)),c:'#e8bd62'},
+  {f:(x,y)=>{const d=Math.hypot(x-(x<24?10:38),y-14);return d<=7&&d>=3.6&&((x<24&&x<=15)||(x>=24&&x>=33));},c:'#c9983f'},
+  {f:rect(14,34,34,40),c:'#7f8b97'},{f:rect(10,40,38,45),c:'#505d6b'},{f:rect(20,8,23,18),c:'#fff0b0'}],
+ engine:()=>[
+  {f:rect(10,14,40,34),c:'#aab4bf'},{f:rect(26,14,30,34),c:'#d9a441'},{f:poly([[10,12],[2,8],[2,40],[10,36]]),c:'#505d6b'},{f:rect(4,18,6,30),c:'#ff9a2a',line:1},{f:rect(40,18,45,30),c:'#7f8b97'},{f:rect(16,8,26,13),c:'#7f8b97'}],
+ nut:()=>[{f:(x,y)=>{const dx=Math.abs(x-24),dy=Math.abs(y-24);const hexd=Math.max(dx*0.866+dy*0.5,dy);return hexd<=17&&!(Math.hypot(x-24,y-24)<=6.5);},c:'#d9a441'}],
+};
+function render(name,N2){
+  const reg=ICONS[name](), cv=document.createElement('canvas'); cv.width=cv.height=N; const g=cv.getContext('2d');
+  const id=g.createImageData(N,N), at=(x,y)=>{if(x<0||y<0||x>=N||y>=N)return -1;let r=-1;reg.forEach((q,i)=>{if(q.f(x+0.5,y+0.5))r=i;});return r;};
+  const grid=[];for(let y=0;y<N;y++){grid.push([]);for(let x=0;x<N;x++)grid[y].push(at(x,y));}
+  const put=(x,y,c)=>{const [r,gg,b]=hex(c),i=(y*N+x)*4;id.data[i]=r;id.data[i+1]=gg;id.data[i+2]=b;id.data[i+3]=255;};
+  const gv=(x,y)=>(x<0||y<0||x>=N||y>=N)?-1:grid[y][x];
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    const r=grid[y][x];
+    if(r<0){ if(gv(x-1,y)>=0||gv(x+1,y)>=0||gv(x,y-1)>=0||gv(x,y+1)>=0) put(x,y,OUT); continue; }
+    const q=reg[r]; let c=q.c;
+    const up=gv(x,y-1),dn=gv(x,y+1),lf=gv(x-1,y),rt=gv(x+1,y),up2=gv(x,y-2),lf2=gv(x-2,y),dn2=gv(x,y+2),rt2=gv(x+2,y);
+    let sh=0; if(up!==r)sh+=2; if(lf!==r)sh+=1.5; if(up===r&&up2!==r)sh+=1; if(lf===r&&lf2!==r)sh+=0.6; if(dn!==r)sh-=2; if(rt!==r)sh-=1.5; if(dn===r&&dn2!==r)sh-=1; if(rt===r&&rt2!==r)sh-=0.6;
+    c= sh>0? mix(c,'#ffffff',Math.min(0.55,sh*0.17)) : sh<0? mix(c,'#000000',Math.min(0.5,-sh*0.15)) : c;
+    if(q.line&&(up!==r||dn!==r||lf!==r||rt!==r)) c=OUT;
+    put(x,y,c);
+  }
+  g.putImageData(id,0,0); return cv;
+}
+const row=document.getElementById('row');
+['wrench','pin','shop','gear','flame','trophy','engine','nut'].forEach(n=>{const d=document.createElement('div');d.className='card';d.appendChild(render(n));const t=document.createElement('div');t.textContent=n.toUpperCase();d.appendChild(t);row.appendChild(d);});
+const bar=document.getElementById('bar');
+[['wrench','GARAGE',1],['pin','MAP',0],['shop','SHOP',0]].forEach(([n,l,on])=>{const d=document.createElement('div');if(on)d.className='on';d.appendChild(render(n));d.appendChild(document.createTextNode(l));bar.appendChild(d);});
+</script></body></html>
