@@ -438,6 +438,7 @@
         sd.build(S);
       }
     }
+    if (Z.backdrop) Z.backdrop(ctx);   // v038b : couches de bâtiments / conteneurs / montagnes très hauts sur les côtés
     if (Z.tight) Z.tight(ctx);   // v038 : portes serrées (src/world/tight.js)
     if (CC.Life && CC.Life.flushGlows) CC.Life.flushGlows(ctx);
   };

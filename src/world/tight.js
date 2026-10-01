@@ -54,12 +54,12 @@
       if (ctx.busy.some((q) => Math.abs(q - d) < 34) || ctx.rings.some((q) => Math.abs(q.d - d) < 40) || ctx.reserved.some((q) => Math.abs(q.d - d) < q.dd / 2 + 6)) continue;
       const { sc, zone } = at, th = THEME[zone], st = U.clamp(Math.floor(d / cfg.stageLen), 0, 3);
       const S = new Z.Scene(ctx, { name: 'tight', d0: d - 10, d1: d + 10, zone, zi: sc.zi, key: 't' + Math.round(d), stage: st });
-      const Ln = S.lane(d), v = T.vol(d) + 3, hole = cfg.tight.hole[st];
+      const Ln = S.lane(d), v = T.vol(d) + (zone === 'usine' || zone === 'eau' ? 3 : zone === 'city' || zone === 'tour' || zone === 'chute' ? 46 : 26), hole = cfg.tight.hole[st];   // v038b : le panneau déborde largement sur les côtés (on n'en voit plus le bord)
       S.item(d, (r) => {
         const shape = r.weighted({ win: 3, slit: 1.6, slot: 1.6 });
         let w = hole, h = hole;
         if (shape === 'slit') { w = Math.min(2 * v - 4, hole * 3.4); h = hole * 0.62; } else if (shape === 'slot') { w = hole * 0.62; h = hole * 2.0 + 4; }
-        const lo = (zone === 'chute' || zone === 'tour' || zone === 'sky') ? Math.max(0, Ln.y - 52) : 0, top = Ln.y + 40, yc = Math.max(Ln.y, lo + h / 2 + 0.4);
+        const lo = (zone === 'chute' || zone === 'tour' || zone === 'sky') ? Math.max(0, Ln.y - 52) : 0, top = (zone === 'usine' ? 76 : Ln.y + (zone === 'city' || zone === 'tour' || zone === 'chute' ? 150 : 80)), yc = Math.max(Ln.y, lo + h / 2 + 0.4);
         const tint = r.pick(th.tints), dd = 4;
         S.wall(d, -v, v, lo, top, dd, th.mat, tint, { lx: Ln.lx, yc, w, h });
         // bordure du trou : bandes hachurées en haut et en bas, rails lumineux sur les côtés (lisibles de loin)

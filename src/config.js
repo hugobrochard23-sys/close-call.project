@@ -13,9 +13,9 @@ CC.CONFIG = {
     shadows: true,
     launchFx: 0.16,              // CHOIX v024 : durée (s) du renflement qui parcourt le tube au tir
     shadowMapSize: 2048,
-    curve: 0.00012,              // v037 : courbure visuelle du monde (réglage unique ; 0 = aucune) : un sommet à d m de la caméra est abaissé de curve × d²
+    curve: 0.00026,              // v037 : courbure visuelle du monde (réglage unique ; 0 = aucune) : un sommet à d m de la caméra est abaissé de curve × d²
     curveNear: 25,               // distance (m) en deçà de laquelle rien ne bouge
-    viewDist: 360,               // v038 : distance de vue (m) en CLASSIQUE : le brouillard est calé dessus, les tronçons plus loin ne sont pas construits ; les objets émergent du brouillard (fondu)
+    viewDist: 310,               // v038 : distance de vue (m) en CLASSIQUE : le brouillard est calé dessus, les tronçons plus loin ne sont pas construits ; les objets émergent du brouillard (fondu)
     curveCap: 520,               // plafond de d (m) : l'horizon lointain ne plonge pas indéfiniment
     shadowRange: 70,             // demi-taille de la zone d'ombre autour de la roquette (m)
   },
