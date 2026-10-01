@@ -33,7 +33,7 @@
   Z.PROFILE = PROFILE;
   // zones voisines autorisées (le sol ne saute jamais de la base aérienne au métro)
   const NEXT = {
-    city:   ['forest', 'metro', 'port', 'tour', 'mini', 'usine'],
+    city:   ['forest', 'metro', 'port', 'tour', 'mini', 'usine', 'eau'],
     forest: ['city', 'port', 'mini', 'tour', 'usine'],
     metro:  ['city', 'port', 'forest', 'mini', 'usine'],
     port:   ['city', 'eau', 'metro', 'forest', 'usine', 'tour'],
@@ -52,7 +52,7 @@
       if (!cand.length) cand = NEXT[cur].filter((z) => ok(z) && z !== cur);
       if (!cand.length) cand = ['city'];
       // les zones rarement vues sont préférées (chaque partie fait le tour)
-      const w = {}; for (const z of cand) w[z] = 1 + 2 * (out.indexOf(z) < 0 ? 1 : 0);
+      const w = {}; for (const z of cand) w[z] = 1 + 2 * (out.indexOf(z) < 0 ? 1 : 0) + (z === 'usine' || z === 'eau' ? 3 : 0);   // v037 : usine et profondeur reviennent plus souvent
       out.push(r.weighted(w));
     }
     return out;
@@ -404,9 +404,13 @@
   }
   Z.portals = {};
   Z.portals.default = (S, B, lx, y, open) => {       // grand portique sobre (porte de zone)
-    const H = y + open / 2 + 10;
-    S.frame(B, lx, y, open + 4, open, open + 4 + 24, H, 6, 'concreteDark', '#c8ccd0');
-    S.bx(B, lx, y + open / 2 + 3, open + 8, 1.2, 6.4, 'hazard', undefined, false);
+    // v037 : plus de mur plein autour de la porte : un simple portique (deux poteaux et une poutre), on voit et on passe de chaque côté
+    const H = y + open / 2 + 8, w = open / 2 + 5;
+    S.item(B, () => {
+      for (const s of [-1, 1]) S.bx(B, lx + s * w, H / 2, 2.2, H, 2.2, 'concreteDark', '#c8ccd0');
+      S.bx(B, lx, H, 2 * w + 2.2, 2.2, 2.6, 'concreteDark', '#c8ccd0');
+      S.bx(B, lx, H - 1.4, 2 * w, 0.5, 2.8, 'hazard', undefined, false);
+    });
   };
 
   /* ---------- point d'entrée : construit un tronçon de 200 m (sol, passages, scènes) ---------- */
