@@ -74,8 +74,8 @@
       this.tripod = null;
       window.addEventListener('resize', () => this.resize());
       // v036b : perte du contexte WebGL (mémoire du téléphone) : on laisse three.js le recréer et on redimensionne au retour
-      this.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.glLost = true; });
-      this.canvas.addEventListener('webglcontextrestored', () => { this.glLost = false; this.resize(); });
+      this.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.glLost = true; (window.__blk || (window.__blk = [])).push({ reason: 'contextlost' }); });
+      this.canvas.addEventListener('webglcontextrestored', () => { this.glLost = false; this.resize(); if (this.quality) this.quality.apply('low'); });
       this.resize();
     }
 
@@ -919,6 +919,42 @@
       if (f && !(Number.isFinite(f.near) && Number.isFinite(f.far) && f.far > f.near)) { f.near = 60; f.far = 600; }
     }
 
+    /* v038d : ÉCRAN NOIR — filet de sécurité. Toutes les ~0,5 s en vol, on lit quelques pixels du rendu 3D : s'ils sont tous noirs pendant 1,5 s (contexte
+     * WebGL perdu, cible de rendu corrompue, shader en échec sur un téléphone fragile), on réagit par paliers, sans que le joueur ait à relancer :
+     *   1. qualité minimale + recréation des cibles de rendu + ambiance réappliquée ; 2. rendu direct (sans post-traitement) ;
+     *   3. perte puis restauration forcées du contexte WebGL. Chaque palier est noté dans window.__blk (et dans la télémétrie). */
+    watchBlack() {
+      if (this.testMode || this.state !== 'FLIGHT' || this.paused || !this.rocket.active || this.fadeIn > 0) { this.blk = 0; return; }
+      if ((this.blkF = (this.blkF || 0) + 1) % 30) return;
+      const gl = this.renderer.getContext();
+      if (gl.isContextLost()) { this.recoverBlack('lost'); return; }
+      const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight, px = this._px || (this._px = new Uint8Array(4));
+      let mx = 0;
+      for (const [a, b] of [[0.5, 0.5], [0.3, 0.4], [0.7, 0.4], [0.5, 0.72], [0.25, 0.65], [0.75, 0.65], [0.5, 0.28]]) {
+        gl.readPixels(Math.floor(w * a), Math.floor(h * b), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+        mx = Math.max(mx, px[0] + px[1] + px[2]); if (mx > 8) break;
+      }
+      if (mx > 8) { this.blk = 0; return; }
+      if ((this.blk = (this.blk || 0) + 1) >= 3) { this.blk = 0; this.recoverBlack('black'); }
+    }
+    recoverBlack(reason) {
+      const st = this.blkStage = (this.blkStage || 0) + 1, log = window.__blk || (window.__blk = []);
+      log.push({ reason, stage: st, t: Math.round(this.telemetry.t), dist: this.endlessRun ? Math.round(this.endlessRun.dist) : 0, fps: Math.round(this.fps) });
+      if (this.telemetry) this.telemetry.event('blackScreen', { reason, stage: st });
+      if (st === 1) {
+        if (this.quality) this.quality.apply('low');
+        for (const rt of [this.postfx.rtScene, this.postfx.rtA, this.postfx.rtB]) rt.dispose();
+        if (this.level && this.level.env) this.applyEnvironment(this.level.env);
+        this.flash = 0; this.boostK = 0; this.uwK = 0;
+      } else if (st === 2) {
+        this.settings.postfx = false;
+      } else {
+        this.renderer.forceContextLoss();
+        setTimeout(() => { this.renderer.forceContextRestore(); this.resize(); }, 150);
+        this.blkStage = 0;
+      }
+    }
+
     // v036b : une erreur dans une image ne doit jamais figer ou noircir le jeu : on la note et on continue
     safe(fn) { try { fn(); } catch (e) { (window.__errs || (window.__errs = [])).push(String(e && e.stack || e).slice(0, 300)); if (this.testMode) throw e; } }
 
@@ -935,7 +971,9 @@
       if (this.fadeIn > 0) this.fadeIn = Math.max(0, this.fadeIn - dt);
       if (!this.paused && this.state !== 'BOOT') this.safe(() => this.update(dt));
       else { this.input.poll(0); this.rig.update(0); }
-      this.safe(() => this.render(performance.now() / 1000));
+      try { this.render(performance.now() / 1000); this.renderErr = 0; }
+      catch (e) { (window.__errs || (window.__errs = [])).push(String(e && e.stack || e).slice(0, 300)); if (this.testMode) throw e; if ((this.renderErr = (this.renderErr || 0) + 1) === 20) this.recoverBlack('exception'); }
+      this.safe(() => this.watchBlack());
       this.safe(() => this.hud.draw(this, dt));
       if (this.telemetry.enabled) this.recordFrame();
     }
