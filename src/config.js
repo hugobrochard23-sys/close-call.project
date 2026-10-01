@@ -293,9 +293,9 @@ CC.CONFIG = {
   pad: {
     chargeTime: 0.9,             // s entre l'appui et l'allumage (appuyer deux fois de suite ne raccourcit pas : l'attente fait partie du plaisir)
     pitchDeg: 7,                 // inclinaison du rail vers le haut
-    cam: [4.9, 0.45, 1.7],       // position de la caméra du lanceur, relative à la roquette (vue de profil, un peu de l'arrière)
+    cam: [5.4, 0.7, 2.0],       // position de la caméra du lanceur, relative à la roquette (vue de profil, un peu de l'arrière)
     look: [0.0, -0.13, 0.12],  // point regardé, relatif à la roquette
-    fov: 42,                     // angle de vue vertical du lanceur (°) ; la caméra de jeu, elle, s'élargit en portrait
+    fov: 44,                     // angle de vue vertical du lanceur (°) ; la caméra de jeu, elle, s'élargit en portrait
     pushIn: 0.16,                // fraction de la distance dont la caméra avance pendant la charge
     launchSpeed: 14,             // m/s au départ du rail (la poussée fait le reste : accélération visible)
     freeBoost: 1.0,              // s de poussée gratuite après un lancement depuis le lanceur

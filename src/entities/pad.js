@@ -38,7 +38,7 @@
     build() {
       const K = CC.Models.kit, lam = K.lam, box = K.box, cyl = K.cyl;
       const g = this.group;
-      const steel = lam('#454c57'), dark = lam('#262a31'), mid = lam('#5d6572'), light = lam('#8f98a6'), hz = lam('#f2c200'), hz2 = lam('#1d1f23');
+      const steel = lam('#8a94a2'), dark = lam('#58616d'), mid = lam('#9aa4b2'), light = lam('#cdd4de'), hz = lam('#f2c200'), hz2 = lam('#1d1f23');
       // vue de PROFIL depuis +x : le côté proche (x > 0) reste bas pour ne jamais masquer la roquette ; pylônes, mât radar,
       // bouteilles et fond de baie sont du côté éloigné (x < 0)
       const deck = this.deck = new THREE.Group(); g.add(deck);
@@ -69,14 +69,25 @@
       box(0.5, 0.05, 0.05, light, 0, 0, 0, this.dish); box(0.05, 0.26, 0.05, light, 0.22, 0.12, 0, this.dish);
       // FOND DE BAIE : mur d'acier bleu nuit à panneaux, bandes lumineuses qui courent, halo derrière la roquette
       const wall = new THREE.Group(); g.add(wall);
-      box(0.3, 7.5, 12, lam('#182130'), -2.5, 2.0, -0.6, wall);
+      box(0.3, 7.5, 12, lam('#5f6d80'), -2.5, 2.0, -0.6, wall);
       for (let r = 0; r < 4; r++) for (let c = 0; c < 5; c++) {
         const w = 2.05, z = -0.6 + (c - 2) * 2.35, y = -0.7 + r * 1.55;
-        box(0.06, 1.3, w, lam((r + c) % 2 ? '#212c3f' : '#1d2739'), -2.32, y + 0.65, z, wall);
-        box(0.05, 0.04, w, lam('#0f1520'), -2.3, y + 1.32, z, wall);
+        box(0.06, 1.3, w, lam((r + c) % 2 ? '#7a8aa0' : '#6e7e94'), -2.32, y + 0.65, z, wall);
+        box(0.05, 0.04, w, lam('#4f5c6d'), -2.3, y + 1.32, z, wall);
       }
       box(0.36, 0.5, 12, lam('#f2c200'), -2.5, -0.85, -0.6, wall);   // plinthe hachurée (bande jaune)
       for (let i = 0; i < 24; i++) box(0.4, 0.51, 0.5, hz2, -2.5, -0.85, -6.4 + i * 0.52, wall);
+      // v046 : DECORATION du lanceur (de jour) — drapeau, manche à air, caisses, bidons, cônes, projecteur, balcon, enseigne, plantes
+      const wood = lam('#a8814f'), red = lam('#c24a42'), cream = lam('#ece6d6'), green = lam('#6f9a5a'), cone = lam('#e8742a'), blue = lam('#5f86a8');
+      box(0.05, 3.0, 0.05, light, -1.9, 1.3, 2.2, deck); box(0.02, 0.5, 0.8, red, -1.9, 2.55, 2.62, deck); box(0.02, 0.5, 0.4, cream, -1.9, 2.55, 2.2 + 0.2 + 0.4, deck);   // mât et drapeau
+      box(0.04, 1.6, 0.04, mid, 1.35, 0.35, -2.3, deck); box(0.02, 0.2, 0.5, cone, 1.35, 1.05, -2.05, deck); box(0.02, 0.15, 0.3, cream, 1.35, 1.05, -1.7, deck);   // manche à air
+      for (const [x, y, z, s] of [[-0.95, -0.4, 2.0, 0.5], [-1.0, -0.4, 2.55, 0.42], [-0.95, 0.02, 2.2, 0.38]]) { box(s, s * 0.9, s, wood, x, y, z, deck); box(s * 1.04, 0.04, s * 0.2, dark, x, y, z, deck); }   // caisses empilées
+      for (const [x, z] of [[-1.15, 1.45], [-1.15, 1.8]]) { cyl(0.14, 0.14, 0.5, blue, 10, deck).position.set(x, -0.35, z); cyl(0.145, 0.145, 0.05, light, 10, deck).position.set(x, -0.08, z); }   // bidons
+      for (const [x, z] of [[1.2, 2.4], [1.2, -2.9], [0.6, 2.6]]) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.3, 8), cone); c.position.set(x, -0.36, z); deck.add(c); box(0.26, 0.03, 0.26, cone, x, -0.5, z, deck); }   // cônes de chantier
+      box(0.5, 0.06, 0.4, dark, -0.8, 1.6, -3.2, deck); box(0.06, 1.1, 0.06, mid, -0.8, 1.05, -3.2, deck); box(0.6, 0.3, 0.16, light, -0.78, 1.7, -3.1, deck);   // projecteur
+      box(0.9, 0.5, 0.06, cream, -2.2, 0.9, 1.2, wall); box(0.8, 0.4, 0.02, blue, -2.17, 0.9, 1.2, wall); box(0.5, 0.06, 0.04, red, -2.16, 0.9, 1.2, wall);   // enseigne sur le mur
+      box(0.7, 0.4, 1.4, cream, -2.1, -0.4, -4.0, wall); box(0.72, 0.06, 1.44, red, -2.1, -0.15, -4.0, wall); box(0.04, 0.2, 0.9, blue, -1.74, -0.3, -4.0, wall);   // petite cabine de contrôle
+      for (const z of [-3.2, -2.9]) { box(0.3, 0.18, 0.3, lam('#8a5a36'), -2.0, -0.6, z, wall); const t = new THREE.Mesh(new THREE.IcosahedronGeometry(0.18, 0), green); t.position.set(-2.0, -0.42, z); wall.add(t); }   // jardinières
       this.strips = [];
       for (let i = 0; i < 12; i++) {
         const m = new THREE.MeshBasicMaterial({ color: '#39d4ff' });

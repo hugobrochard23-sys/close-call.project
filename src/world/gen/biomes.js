@@ -11,9 +11,9 @@
   E('day', { label: 'JOUR', dark: 0, vis: 1, skyline: '#e6ebf0', make: (r) => ({
     sky: { top: '#8db4da', horizon: '#f1f3f5', bottom: '#cdd1d6', sunColor: '#ffffff', sunSize: 700 },
     fog: { color: '#e6e6e8', near: 160, far: r.between([820, 1000]) },
-    hemi: { sky: '#e8eef6', ground: '#8d8a8e', intensity: 0.66 }, ambient: { color: '#ffffff', intensity: 0.24 },
-    sun: { color: '#ffffff', intensity: 0.74, dir: sunDir(r, [0.55, 0.85]) },
-    postfx: { vignette: 0.6, vignetteColor: '#43201f', halftone: 0.45, lift: '#100000', saturation: 0.85 },
+    hemi: { sky: '#e4ecf6', ground: '#8d96a2', intensity: 0.66 }, ambient: { color: '#ffffff', intensity: 0.26 },
+    sun: { color: '#fff3dc', intensity: 0.66, dir: sunDir(r, [0.55, 0.85]) },
+    postfx: { vignette: 0.42, vignetteColor: '#2c3a4c', halftone: 0.3, lift: '#080c12', saturation: 1.0, bloomThreshold: 0.95, bloomStrength: 0.18 },   // v046 : jour franc — plus de voile brun-rouge
   }) });
   E('overcast', { label: 'COUVERT', dark: 0.15, vis: 0.8, skyline: '#c9ccd0', make: (r) => ({
     sky: { top: '#9aa3ad', horizon: '#d6d9dc', bottom: '#b9bcc0', sunColor: '#d8dce0', sunSize: 90 },

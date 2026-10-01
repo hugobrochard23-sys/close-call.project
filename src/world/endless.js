@@ -96,7 +96,8 @@
       if (!this._env) this._env = {};
       if (!this._env[zi]) {
         const Z = ZONES[this.zoneOrder[zi % this.zoneOrder.length]], r = G.stream(this.seed, 'env' + zi);
-        const id = this.forceEnv || Z.envs[Math.floor(r() * Z.envs.length)];
+        let pool = Z.envs; if (zi === 0 && !this.forceEnv) { const day = pool.filter((e) => (G.Envs.get(e).dark || 0) < 0.1); if (day.length) pool = day; }   // v046 : la partie ne commence JAMAIS de nuit
+        const id = this.forceEnv || pool[Math.floor(r() * pool.length)];
         this._env[zi] = G.Envs.get(id).make(r);
         this._env[zi].clouds = false; this._env[zi].dark = G.Envs.get(id).dark; this._env[zi].id = id;
         // v034c : lumières dosées (plus de « mini disco ») : la nuit reste bleutée et douce, aberration chromatique réduite partout
