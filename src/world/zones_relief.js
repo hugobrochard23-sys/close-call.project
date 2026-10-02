@@ -5,7 +5,7 @@
  *   · gradins (marches géantes) · montagnesRusses (vagues + portiques) · defile (slalom dans une tranchée) · salle (hall fermé spécial).
  * Les zones où le sol ne peut pas descendre (port : l'eau est plate ; mer : fond fixe) n'ont que les variantes adaptées. */
 (function () {
-  const U = CC.U, Z = CC.Zones, G = CC.Gen;
+  const U = CC.U, Z = CC.Zones, G = CC.Gen, DEG = 180 / Math.PI;
   const ss = (a, b, x) => { const t = U.clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
   const clampLx = (T, mid, k) => U.clamp(T.laneX0(mid), -k, k);
 
@@ -286,6 +286,37 @@
       });
       for (let dc = S.d0 + 30; dc < S.d1 - 30; dc += 30) S.gate(dc, S.lane(dc).lx, S.lane(dc).y);
       scatterProps(S, 8, rad + 14);
+    } };
+
+  // ===== MONUMENT : un grand ouvrage qu'on traverse ou qu'on longe — arche colossale (ville, base aérienne), trilithes (forêt, pièce), tours de refroidissement
+  // reliées par une conduite (usine, port), colonnade (métro, mer)
+  const MON = { city: 'arc', sky: 'arc', forest: 'trilithon', mini: 'trilithon', usine: 'cooling', port: 'cooling', metro: 'colonnade', eau: 'colonnade' };
+  SC.monument = { len: [240, 300], noDoor: true, noChaos: true,
+    pin: pinFor(17),
+    build(S) {
+      const kind = MON[S.zone] || 'arc', sk = skin(S), mid = S.mid, L0 = S.lane(mid), half = S.R + 7, acc = ZK[S.zone].acc;
+      if (kind === 'arc') {
+        const a = half + 22, n = 14, y0 = 5, seg = Math.PI * a / n * 1.18;
+        S.item(mid, () => {
+          for (const sg of [-1, 1]) S.bx(mid, L0.lx + sg * a, y0 / 2, 7, y0 + 2, 11, sk.wm, sk.wt);
+          for (let i = 0; i < n; i++) { const th = Math.PI * (i + 0.5) / n, x = Math.cos(th) * a, y = y0 + Math.sin(th) * a; S.bxr(mid, L0.lx + x, y, seg, 7, 11, sk.wm, sk.wt, th * DEG + 90); }
+          S.bx(mid, L0.lx, y0 + a + 3.5, 12, 1.2, 11.4, 'hazard', undefined, false);
+        });
+        S.reserve(mid, L0.lx, 2 * (a + 8), 14); S.gate(mid - 14, L0.lx, L0.y); S.gate(mid, L0.lx, L0.y);
+      } else if (kind === 'trilithon') {
+        for (let i = 0; i < 5; i++) { const dc = mid + (i - 2) * 24; S.item(dc, () => { const L1 = S.lane(dc); for (const sg of [-1, 1]) S.bx(dc, L1.lx + sg * half, 13, 5, 26, 6, sk.bm, sk.bt); S.bx(dc, L1.lx, 27.5, 2 * half + 8, 5, 7, sk.bm, sk.bt); S.bx(dc, L1.lx, 30.3, 2 * half + 8.4, 0.6, 7.4, 'basic:' + acc, undefined, false); }); S.gate(dc, S.lane(dc).lx, S.lane(dc).y); S.reserve(dc, S.lane(dc).lx, 2 * half + 10, 8); }
+      } else if (kind === 'cooling') {
+        S.item(mid, () => {
+          for (const sg of [-1, 1]) { S.cyl(mid, L0.lx + sg * (half + 20), 0, 15, 66, sk.bm, sk.bt, 22, 10); S.cyl(mid, L0.lx + sg * (half + 20), 66, 10.4, 1.2, 'col:#6a6e74', undefined, 22, 10.4, false); }
+          S.b.cylinder({ p: S.at(mid, L0.lx, 48), rad: 2.6, h: 2 * (half + 20) + 2, seg: 12, mat: 'metal', r: [0, S.yaw(mid), 90], colSize: [5.4, 2 * (half + 20), 5.4] });
+          for (const sg of [-1, 1]) { S.bx(mid - 12, L0.lx + sg * (half + 6), 24, 1.6, 48, 1.6, 'col:#6a6e74'); S.bx(mid + 12, L0.lx + sg * (half + 6), 24, 1.6, 48, 1.6, 'col:#6a6e74'); }
+        });
+        S.reserve(mid, L0.lx, 2 * (half + 38), 34);
+      } else {
+        for (let i = 0; i < 9; i++) { const dc = mid + (i - 4) * 16; S.item(dc, () => { const L1 = S.lane(dc); for (const sg of [-1, 1]) S.cyl(dc, L1.lx + sg * (half + 5), 0, 3.2, 46, sk.bm, sk.bt, 14, 3.2); if (i % 3 === 1) S.bx(dc, L1.lx, 47.5, 2 * (half + 10), 3, 5, sk.bm, sk.bt); }); S.gate(dc, S.lane(dc).lx, S.lane(dc).y); }
+        S.reserve(mid, L0.lx, 2 * (half + 12), 150);
+      }
+      scatterProps(S, 6, S.R + 22);
     } };
 
   // habillage par zone des parois et des barres

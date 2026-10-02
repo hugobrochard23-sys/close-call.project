@@ -33,6 +33,7 @@
       difK: 0.7 + 0.3 * (n - 1),                       // la difficulté (cibles, ouvertures, missiles) monte avec le numéro du niveau
       hp,                                              // les trois premiers boss tombent d'un coup, ensuite de plus en plus de points de vie
       boss, bossTint: (k + ZN.indexOf(zone)) % 6, bossVar: k % 3, look: (k + 2 * ZN.indexOf(zone)) % 6, theme: th, mids,
+      event: n < 3 ? null : { type: ['rain', 'storm', 'convoy'][(n + k) % 3], d: Math.round(len * (0.5 + 0.1 * ((n * 7) % 3))) },   // v083 : un événement par niveau (dès le niveau 3)
       // départ DIRECTEMENT dans la zone (même altitude que le lanceur) ; les zones en contrebas / en altitude (métro, profondeur, base aérienne) sont atteintes par une rampe très courte
       order: (flat ? [] : ['city']).concat(new Array(90).fill(zone)),
       chest: 25 + 10 * n,

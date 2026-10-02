@@ -512,9 +512,11 @@
       ['REINITIALISER', ui._rst && performance.now() - ui._rst < 4000 ? 'SUR ?' : 'GO', () => {   // v068 : remet la progression à zéro (deux touches)
         if (ui._rst && performance.now() - ui._rst < 4000) { try { localStorage.removeItem('coldimpact.save'); localStorage.removeItem('closecall.save'); } catch (e) { /* ignoré */ } location.reload(); } else ui._rst = performance.now();
       }],
+      ['CODE DE SAUVEGARDE', 'COPIER', () => { const c = game.meta.exportCode(); if (!c) return; if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(c).then(() => CC.Home.toast(ui, 'CODE COPIE : COLLE-LE QUELQUE PART'), () => window.prompt('Copie ce code', c)); else window.prompt('Copie ce code', c); }],
+      ['RESTAURER UN CODE', 'COLLER', () => { const c = window.prompt('Colle ton code de sauvegarde'); if (c) { if (game.meta.importCode(c)) location.reload(); else CC.Home.toast(ui, 'CODE INVALIDE'); } }],
       ['REVOIR LE TUTO', 'GO', () => { s.tutorialDone = false; s.tutorialFlights = 0; game.progress.P.launches = 0; game.applySettings(); ui.overlay = null; }],
     ];
-    const rh = Math.min(u * 0.15, HH * 0.085), gap = HH * 0.016, y0 = Y(0.13), x0 = W * 0.06, w = W * 0.88;
+    const gap = HH * 0.012, rh = Math.min(u * 0.15, HH * 0.085, (HH * 0.8) / rows.length - gap), y0 = Y(0.13), x0 = W * 0.06, w = W * 0.88;
     rows.forEach((r, i) => {
       const y = y0 + i * (rh + gap), on = inRect(ui, x0, y, w, rh);
       pxRect(ctx, x0, y, w, rh, on ? 'rgba(255,255,255,0.16)' : 'rgba(12,18,30,0.85)', 'rgba(159,176,200,0.55)');
@@ -523,6 +525,7 @@
       text(ui, ctx, r[1], x0 + w - rh * 0.35, y + rh / 2 - vp * 3.5, vp, r[1] === 'NON' ? '#8a96a8' : CY, { align: 'right' });
       hit(ui, x0, y, w, rh, r[2]);
     });
+    if (Home.drawToast) Home.drawToast(ui, ctx, L);
     backButton(ui, ctx, L, ui.key('RETOUR', 'ESC'), () => { ui.overlay = null; });
   };
 

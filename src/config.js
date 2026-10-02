@@ -180,6 +180,7 @@ CC.CONFIG = {
   // utm_content = identifiant du cosmétique ; le jeu le débloque et l'équipe (src/ui/shop.js).
   shop: {
     priceCents: 229,             // prix unique de tous les cosmétiques (2,29 €)
+    noAdsLink: '',               // v083 : lien de paiement Stripe « sans publicité » (achat unique) — À RENSEIGNER
     passLink: '',                // v082 : lien de paiement Stripe du PASS PREMIUM (mensuel) — À RENSEIGNER
     stripeLink: '',              // lien de paiement Stripe, ex. 'https://buy.stripe.com/xxxx' — À RENSEIGNER
     adSeconds: 60,               // ou une minute de publicité, sans pouvoir la passer

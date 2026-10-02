@@ -35,6 +35,10 @@
     return o;
   }
 
+  // v083 : version dorée de n'importe quel engin : un seul métal doré brillant partagé (son éclat pulse dans Target.update)
+  const GOLD = new THREE.MeshPhongMaterial({ color: '#f2c230', specular: '#fff6c8', shininess: 120, emissive: '#4a3400' });
+  function goldify(model) { model.traverse((o) => { if (o.isMesh && o.material && !o.material.transparent) o.material = GOLD; }); }
+
   class Target {
     constructor(type, pos, yawDeg, opts) {
       opts = opts || {};
@@ -44,9 +48,10 @@
       const vr = Math.abs(Math.round(pos[0] * 7 + pos[2] * 3)) % 3;
       this.model = type === 'tank' ? CC.Models.tank(opts.tint !== undefined ? opts.tint : vr) : type === 'heli' ? CC.Models.helicopter(false, !!opts.gold) : type === 'heliCamo' ? CC.Models.helicopter(true)
         : type === 'truck' ? CC.Models.truck() : CC.BossModels && CC.BossModels[type] ? CC.BossModels[type](opts.tint, opts.variant) : GEN_MODELS[type] ? GEN_MODELS[type]() : CC.Models.house();   // v032 : radar, dépôt, poste, lance-missiles
+      if (opts.gold && type !== 'heli') goldify(this.model);   // v083 : ennemi doré (brille, rapporte plus, lâche une caisse verte)
       this.gen = this.model.userData.gen ? this.model.userData : null; this.tl = !!this.model.userData.tankLike;   // tl : engin « comme le char » (même IA de tourelle)
    // v080 : design de boss générique (models_boss.js)
-      this.arrive = opts.arrive ? new V().fromArray(opts.arrive) : null; this.grp = opts.grp || null; this.golden = !!opts.gold; this.rageK = 1;   // le boss entre en vol depuis le fond de l'arène
+      this.arrive = opts.arrive ? new V().fromArray(opts.arrive) : null; this.grp = opts.grp || null; this.noDrop = !!opts.noDrop; this.golden = !!opts.gold; this.rageK = 1;   // le boss entre en vol depuis le fond de l'arène
       this.ph = (vr + 1) * 1.7 + pos[0] * 0.13;             // phase propre (micro-mouvements désynchronisés)
       this.object.add(this.model);
       this.object.position.fromArray(pos);
@@ -117,6 +122,7 @@
 
     update(dt, game) {
       this.t += dt; if (this.hitCool > 0) this.hitCool -= dt;
+      if (this.golden && this.alive && this.type !== 'heli') GOLD.emissiveIntensity = 0.5 + 0.9 * Math.abs(Math.sin(this.t * 4));
       if (!this.alive) { if (this.wreck) this.updateWreck(dt, game); return; }
       const rk = game.rocket && game.rocket.active ? game.rocket : null;
       if (this.path && game.state === 'FLIGHT' && rk && this.fleeDist < this.pathLen) { this.fleeDist += this.fleeSpeed * dt; this.placeOnPath(); }

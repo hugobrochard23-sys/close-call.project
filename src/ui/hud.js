@@ -221,10 +221,15 @@
     /* v030 : tutoriel du premier vol (écran tactile, jusqu'au premier niveau terminé) : trois consignes courtes, une à la
      * fois, dans un cartouche en haut de l'écran (hors de la trajectoire), avec un pictogramme animé du geste. */
     drawTutorial(game, W, H) {
-      if ((game.progress.P.launches || 0) > 3 || game.state !== 'FLIGHT' || game.paused) return;
-      const rk = game.rocket, run = game.endlessRun, t = game.flightTime || 0;
+      if (game.state !== 'FLIGHT' || game.paused) return;
+      const rk = game.rocket, run = game.endlessRun, t = game.flightTime || 0, S0 = game.settings;
       let label = null, kind = 'drag';
-      if (t < 2.2) { label = 'GLISSE POUR DIRIGER'; kind = 'drag'; }
+      // v083 : explications UNE SEULE FOIS, au moment où le joueur voit la chose pour la première fois
+      if (run && !S0.seenCrate && game.pickups && game.pickups.some((q) => q.obj.position.distanceTo(rk.pos) < 140)) { label = 'ATTRAPE LA CAISSE VERTE'; kind = 'fuel'; }
+      else if (run && !S0.seenGold && game.targets.some((q) => q.alive && q.golden && q.obb && q.obb.c.distanceTo(rk.pos) < 260)) { label = 'ENGIN DORE : BONUS'; kind = 'fuel'; }
+      if (!label && (game.progress.P.launches || 0) > 3) return;
+      if (label) { /* explication ponctuelle déjà choisie */ }
+      else if (t < 2.2) { label = 'GLISSE POUR DIRIGER'; kind = 'drag'; }
       else if (!rk.thrusting && t < 6) { label = 'MAINTIENS : BOOST'; kind = 'hold'; }
       else if (run) {
         const d = run.dist;

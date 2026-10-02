@@ -47,10 +47,10 @@
   const LOOKS = [
     { name: 'JOUR', mul: '#ffffff', map: {}, h: 1.0, bias: 'day', top: null },
     { name: 'COUCHANT', mul: '#ffe2c4', map: { facade: 'facadeOchre', facadePink: 'facadeSand', facadeTan: 'facadeBrick', concrete: 'concreteWarm' }, h: 1.0, bias: 'dusk', top: 'tank' },
-    { name: 'NUIT', mul: '#c8d0ff', map: { facade: 'facadeNavy', facadePink: 'facadeNavy', facadeTan: 'facadeDark' }, h: 1.15, bias: 'night', top: 'mast' },
+    { name: 'NUIT', mul: '#c8d0ff', map: { facade: 'facadeNavy', facadePink: 'facadeNavy', facadeTan: 'facadeDark' }, h: 1.15, bias: 'night', top: 'mast', round: 0.2 },
     { name: 'GIVRE', mul: '#d6eaff', map: { facade: 'facadeWhite', facadePink: 'facadeGlass', facadeTan: 'facadeWhite', concrete: 'white', concreteWarm: 'white', dirt: 'white', grass: 'white', rock: 'white', sand: 'white', brick: 'white', planks: 'white' }, h: 0.9, bias: 'ice', top: 'snow' },
     { name: 'BRIQUE', mul: '#ffdccc', map: { facade: 'facadeBrick', facadePink: 'facadeBrick', facadeTan: 'facadeOchre', concrete: 'concreteWarm' }, h: 0.75, bias: 'dusk2', top: 'gable' },
-    { name: 'JADE', mul: '#cdf2e0', map: { facade: 'facadeMint', facadePink: 'facadeGlass', facadeTan: 'facadeMint', concrete: 'concreteDark' }, h: 1.3, bias: 'toxic', top: 'spire' },
+    { name: 'JADE', mul: '#cdf2e0', map: { facade: 'facadeMint', facadePink: 'facadeGlass', facadeTan: 'facadeMint', concrete: 'concreteDark' }, h: 1.3, bias: 'toxic', top: 'spire', round: 0.4 },
   ];
   const CLOSED = { eau: 1, metro: 1, usine: 1, mini: 1 };   // zones à lumière propre
   const dk = (id) => (G.Envs.get(id).dark || 0);

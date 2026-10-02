@@ -202,7 +202,7 @@
     const r = G.stream(T.seed, 'plan' + zi);
     const skipQ = (new URLSearchParams(location.search).get('skip') || '').split(',');
     if (T.levelLen && (T.difK || 1) < 1.3) skipQ.push('city1', 'escalier', 'cheminee', 'plongee', 'toits', 'epingle', 'chicane', 'slalom', 'ruelle', 'enfilade', 'chuteLibre', 'montee', 'pontPlongeon', 'gradins');   // niveaux faciles : pas de montée / plongeon ni de virage serré
-    skipQ.push('rame', 'presses', 'bras', 'chaine', 'grues', 'squelette', 'arche', 'levant', 'convoi', 'camp', 'helis', 'convoi2', 'camp2', 'helis2');   // v073 : scènes avec éléments mobiles ou superflus   // banc de test : ?skip=city1,escalier
+    skipQ.push('rame', 'presses', 'bras', 'chaine', 'grues', 'squelette', 'arche', 'levant', 'convoi', 'camp', 'helis', 'convoi2', 'camp2', 'helis2', 'banc');   // v083 : + « banc » (baleine qui traverse : un obstacle mobile qui tuait sans raison)   // v073 : scènes avec éléments mobiles ou superflus   // banc de test : ?skip=city1,escalier
     const names = Object.keys(def.scenes).filter((n) => n !== def.signature && skipQ.indexOf(n) < 0);
     for (let i = names.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = names[i]; names[i] = names[j]; names[j] = t; }
     if (T.levelLen && !(new URLSearchParams(location.search).has('norelief'))) {   // v079 : en mode niveaux, une scène « relief » sur deux (le parcours monte, descend, plonge)

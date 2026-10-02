@@ -27,6 +27,8 @@
       this.sinceAd = 0; this.lastRun = null;   // v034 : vols terminés depuis la dernière interstitielle ; dernier vol (pour la règle « pas après un record »)
     }
     enabled() { const g = this.game; return this.cfg.enabled && !g.testMode && g.settings.ads !== false; }
+    // v083 : l'achat « sans pub » supprime les publicités imposées (les récompensées restent un choix)
+    forced() { return this.enabled() && !(this.game.meta && this.game.meta.noAds); }
     now() { return performance.now() / 1000; }
 
     // fin de niveau (écran de résultats des modes DÉFI / niveaux)
@@ -41,7 +43,7 @@
     }
     interstitialDue() {
       const C = this.cfg, g = this.game, runs = g.progress ? g.progress.P.runs : this.ends, L = this.lastRun;
-      if (!this.enabled() || this.sinceAd < C.interstitialEvery || runs <= C.graceRuns) return false;
+      if (!this.forced() || this.sinceAd < C.interstitialEvery || runs <= C.graceRuns) return false;
       if (this.now() - this.lastAd < C.minGap) return false;
       if (L && (L.newRecord || L.levelUp || L.time < C.minRunTime)) return false;   // jamais sur une bonne nouvelle, ni sur un vol éclair
       return true;
@@ -63,7 +65,7 @@
     close(watched) {
       const A = this.cur, g = this.game;
       if (!A) return;
-      this.cur = null; g.ui.overlay = A.back === 'shop' ? 'shop' : null;
+      this.cur = null; g.ui.overlay = (A.back === 'shop' || A.back === 'daily' || A.back === 'pass') ? A.back : null;
       this.duck(false);
       if (A.kind === 'interstitial') this.sinceAd = 0;
       if (A.kind === 'rewarded') this.sinceAd = 0;   // v034 : une publicité regardée repart à zéro le compteur

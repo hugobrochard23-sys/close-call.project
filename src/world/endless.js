@@ -149,7 +149,7 @@
     const cfg = C(), T = new Track(seed, opts && opts.zones);
     if (opts && opts.env) T.forceEnv = opts.env;   // banc de test : ?env=neonNight
     if (opts && opts.levelLen) {   // v075 : niveau à longueur fixe (arène + boss à la fin)
-      T.levelLen = opts.levelLen; T.difK = opts.difK || 1; T.bossHp = opts.bossHp || 1; T.bossType = opts.bossType || 'heli'; T.padStyle = opts.padStyle || 0; T.theme = opts.theme || null; T.mids = opts.mids || []; T.bossTint = opts.bossTint || 0; T.bossVar = opts.bossVar || 0;
+      T.levelLen = opts.levelLen; T.difK = opts.difK || 1; T.bossHp = opts.bossHp || 1; T.bossType = opts.bossType || 'heli'; T.padStyle = opts.padStyle || 0; T.theme = opts.theme || null; T.mids = opts.mids || []; T.bossTint = opts.bossTint || 0; T.bossVar = opts.bossVar || 0; T.event = opts.event || null; T.storm = opts.event && opts.event.type === 'storm' ? { d0: opts.event.d - 30, d1: opts.event.d + 280 } : null;
     }
     if (opts && opts.order && opts.order.length) { const o = opts.order.filter((z) => CC.Zones.PROFILE[z]); while (o.length < 90) o.push(o[o.length % Math.max(1, opts.order.length)]); T.zoneOrder = o; if (opts.levelLen) { const dE = o[1] && o[1] !== o[0] ? Math.abs(CC.Zones.PROFILE[o[1]].elev - CC.Zones.PROFILE[o[0]].elev) : 0; T.off = dE ? C().zoneLen - (Math.max(130, 1.8 * dE) + 40) : 0; } }   // banc de test : ?order=city,metro,…
     const L = {
@@ -234,12 +234,18 @@
       return null;
     };
     for (const t of tgt) {
-      const d = t.d, ly = T.laneY(d), type = t.zone === 'mini' ? 'fuel' : r.pick(ly < 15 ? (T.theme ? T.theme.ground : ['tank', 'truck', 'heli', 'heli', 'sam']) : (T.theme ? T.theme.air : ['heli', 'heli', 'heli', 'heli', 'truck'])), lx = t.lx, air = type === 'heli';   // v069 : sur la ligne directrice : hélicoptère à hauteur de la trajectoire, ou char / camion si elle descend
-      const p = place(d, lx, ly + (t.dy || 0) + r.between([-1.5, 1.5]), air, air ? 8 : type === 'sam' ? 4.5 : 5.5);
+      const d = t.d, ly = T.laneY(d), raw = r.pick(ly < 15 ? (T.theme ? T.theme.ground : ['tank', 'truck', 'heli', 'heli', 'sam']) : (T.theme ? T.theme.air : ['heli', 'heli', 'heli', 'heli', 'truck'])), RO = CC.Roster;   // v069 : sur la ligne directrice : un engin à hauteur de la trajectoire, ou au sol si elle descend
+      const type = RO.pick(t.zone, raw === 'heli', r), air = RO.isAir(type), lx = t.lx;   // v083 : le thème décide air / sol, la zone décide QUI (pas d'hélicoptère sous l'eau)
+      let p;
+      if (type === 'boat') {   // patrouilleur : sur l'eau, de part et d'autre du quai
+        const lb = T.laneX(d) + (r() < 0.5 ? -1 : 1) * r.between([21, 29]), pb = T.at(d, lb, -3.3);
+        if (!clearAt(pb, RO.RAD.boat, false)) continue; p = pb;
+      } else p = place(d, lx, ly + (t.dy || 0) + r.between([-1.5, 1.5]), air, RO.RAD[type] || (air ? 8 : 5.5));
       if (!p) continue;   // pas de place libre : pas de cible (jamais dans un mur)
-      b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0) + (type === 'tank' ? 180 : 0), { unarmed: d * dk < 250 || r() > U.clamp(0.3 + (d * dk - 250) / 3000, 0.3, 0.9), scale: air ? 2.2 : type === 'fuel' ? 2.0 : 2.4, drift: air ? 5 : 2.2, driftSpeed: 0.45 });   // les premiers ne tirent pas ; ensuite de plus en plus souvent
+      b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0) + RO.face(type), RO.opts(type, { unarmed: d * dk < 250 || r() > U.clamp(0.3 + (d * dk - 250) / 3000, 0.3, 0.9), tint: Math.abs(Math.round(p[0] * 0.37 + p[2] * 0.11)) % 4 }));   // les premiers ne tirent pas ; ensuite de plus en plus souvent
       busy.push(d);
-      const hy = air ? p[1] - T.base(d) : type === 'fuel' ? 3.5 : 1.6;
+      if (type === 'boat') continue;   // hors trajectoire : pas de point de passage
+      const hy = air ? p[1] - T.base(d) : 1.6;
       gates.push({ d: d - 55, lx: T.laneX(d - 55), y: T.laneY(d - 55) * 0.7 }, { d: d - 22, lx, y: hy + 3 }, { d, lx, y: hy }, { d: d + 30, lx: T.laneX(d + 30), y: T.laneY(d + 30) * 0.8 });
     }
 
@@ -271,15 +277,15 @@
     const ramp = U.clamp(d0 * dk / 3500, 0, 1), tanks = [], foe = (T.theme && T.theme.foe) || { tank: 1, sam: 1, heli: 1 }, fk = Math.min(2.2, 0.85 + 0.15 * dk), nT = Math.round(2 * ramp * foe.tank * fk);   // v078 : nombre d'ennemis selon le thème du niveau et sa difficulté   // v077 : ennemis de garde (chars, lance-missiles, hélicoptères) qui tirent, de plus en plus nombreux   // v068 : ennemis de garde en nombre croissant
     for (let i = 0; i < nT; i++) {
       const d = d0 + cfg.chunkLen * (i + r.between([0.2, 0.8])) / nT, zn = zoneAt(d); if (!free(d, 14) || inRamp(d) || tr0(d).t < 1 || !CC.Zones.enemies(zn).tank) continue;
-      const lx = CC.Zones.edgeLx(T, d, r() < 0.5 ? -1 : 1, zn); tanks.push({ type: 'tank', pos: T.at(d, lx, 0), yaw: 180 - Math.sign(lx) * 20 }); busy.push(d);
+      const lx = CC.Zones.edgeLx(T, d, r() < 0.5 ? -1 : 1, zn); tanks.push({ type: CC.Roster.guardType('tank', zn, r), pos: T.at(d, lx, 0), yaw: 180 - Math.sign(lx) * 20 }); busy.push(d);
     }
     for (let i = 0; i < Math.round(1.6 * ramp * foe.sam * fk); i++) {
       const d = d0 + cfg.chunkLen * r.between([0.15, 0.85]), zn = zoneAt(d); if (!free(d, 20) || inRamp(d) || tr0(d).t < 1 || !CC.Zones.enemies(zn).sam) continue;
-      const lx = CC.Zones.edgeLx(T, d, r() < 0.5 ? -1 : 1, zn); tanks.push({ type: 'sam', pos: T.at(d, lx, 0), yaw: 180 - Math.sign(lx) * 15 }); busy.push(d);
+      const lx = CC.Zones.edgeLx(T, d, r() < 0.5 ? -1 : 1, zn); tanks.push({ type: CC.Roster.guardType('sam', zn, r), pos: T.at(d, lx, 0), yaw: 180 - Math.sign(lx) * 15 }); busy.push(d);
     }
     for (let i = 0; i < Math.round(1.6 * ramp * foe.heli * fk); i++) {
       const d = d0 + cfg.chunkLen * r.between([0.2, 0.8]), zn = zoneAt(d); if (!free(d, 25) || inRamp(d) || tr0(d).t < 1 || !CC.Zones.enemies(zn).heli) continue;
-      tanks.push({ type: 'heli', pos: T.at(d, T.laneX(d) + (r() < 0.5 ? -1 : 1) * 26, r.between([24, 36])), yaw: 180 }); busy.push(d);
+      tanks.push({ type: CC.Roster.guardType('heli', zn, r), pos: T.at(d, T.laneX(d) + (r() < 0.5 ? -1 : 1) * 26, r.between([24, 36])), yaw: 180 }); busy.push(d);
     }
 
     // v080 : SURPRISES — (1) une CIBLE DOREE de temps en temps, à l'écart de la trajectoire : risque / récompense (5 points, beaucoup de carburant) ;
@@ -292,17 +298,37 @@
           const d = d0 + cfg.chunkLen * (0.12 + 0.76 * rg()), sd = rg() < 0.5 ? -1 : 1, v = T.vol(d), lx = T.laneX(d) + sd * Math.min(Math.max(10, v - 8), 11 + rg() * 12), yy = T.laneY(d) + (rg() - 0.5) * 14;
           gs.tries++;
           if (!free(d, 14) || inRamp(d) || tr0(d).t !== 1) continue;
-          const p = place(d, lx, yy, true, 6); if (!p) continue;
-          gs.placed++; b.target('heli', p, T.yawAcross(d), { gold: true, scale: 2.3, unarmed: true, drift: 12, driftSpeed: 0.5 }); busy.push(d); break;
+          const RO = CC.Roster, gt = RO.goldType(zoneAt(d), rg), gair = RO.isAir(gt), p = place(d, lx, gair ? yy : 0, gair, RO.RAD[gt] || 6); if (!p) continue;
+          gs.placed++; b.target(gt, p, T.yawAcross(d) + RO.face(gt), RO.opts(gt, { gold: true, unarmed: true, drift: gair ? 12 : 4, driftSpeed: 0.5 })); busy.push(d); break;
         }
       }
       if ((T.difK || 1) >= 1 && rf() < 0.3) {
         const V5 = rf() < 0.5, pat = V5 ? [[0, -14], [12, -7], [24, 0], [12, 7], [0, 14]] : [[0, -14], [11, -7], [22, 0], [33, 7], [44, 14]];
         for (let a = 0; a < 4; a++) {
-          const d = d0 + cfg.chunkLen * (0.1 + 0.5 * rf()), pts = [];
+          const d = d0 + cfg.chunkLen * (0.1 + 0.5 * rf()), pts = [], RO = CC.Roster, fu = RO.formationType(zoneAt(d)), fair = RO.isAir(fu);   // v083 : la formation est faite d'engins de la zone
           if (!free(d, 18) || !free(d + 44, 12) || inRamp(d) || inRamp(d + 44) || tr0(d).t !== 1) continue;
-          for (const [dd, off] of pat) { const dm = d + dd, p = place(dm, T.laneX(dm) + off, T.laneY(dm) + 3, true, 8); if (!p) break; pts.push(p); }
-          if (pts.length === 5) { pts.forEach((p) => b.target('heli', p, T.yawAcross(d), { scale: 2.0, unarmed: true, grp: 'g' + k, drift: 2, driftSpeed: 0.5 })); busy.push(d, d + 44); (T.fstat = T.fstat || { n: 0 }).n++; break; }
+          for (const [dd, off] of pat) { const dm = d + dd, p = place(dm, T.laneX(dm) + off, fair ? T.laneY(dm) + 3 : 0, fair, RO.RAD[fu] || 8); if (!p) break; pts.push(p); }
+          if (pts.length === 5) { pts.forEach((p) => b.target(fu, p, T.yawAcross(d) + RO.face(fu) + (fu === 'truck' ? 90 : 0), RO.opts(fu, { unarmed: true, grp: 'g' + k, drift: 2, driftSpeed: 0.5 }))); busy.push(d, d + 44); (T.fstat = T.fstat || { n: 0 }).n++; break; }
+        }
+      }
+    }
+
+    // v083 : EVENEMENT du niveau — « rain » : pluie d'engins dorés en arc (tous détruits = bonus et une caisse verte) ; « convoy » : colonne de 8 engins ; « storm » : rafale de lance-missiles et de canons
+    if (T.event && T.levelLen && T.event.d >= d0 && T.event.d < d1 && !location.search.includes('notgt')) {
+      const ev = T.event, RO = CC.Roster, zn = zoneAt(ev.d), ru = G.stream(T.seed, 'event' + k);
+      if (ev.type === 'rain' || ev.type === 'convoy') {
+        const gold = ev.type === 'rain', ut = gold ? RO.goldType(zn, ru) : RO.formationType(zn), uair = RO.isAir(ut), n = gold ? 7 : 8, step = gold ? 26 : 15;
+        for (let i = 0; i < n; i++) {
+          const dm = ev.d + i * step, off = gold ? Math.sin(i * 0.95) * 15 : (i % 2 ? 5 : -5), yy = gold ? T.laneY(dm) + 4 * Math.sin(i * 1.3) : 0;
+          if (dm >= d1 - 6 || dm < d0 + 6 || dm > T.levelLen - 100) continue;
+          const p = place(dm, T.laneX(dm) + off, uair ? Math.max(T.laneY(dm) + (gold ? 3 : 2), 10) + (gold ? yy - T.laneY(dm) : 0) : 0, uair, RO.RAD[ut] || 6);
+          if (p) { b.target(ut, p, T.yawAcross(dm) + RO.face(ut) + (ut === 'truck' ? 90 : 0), RO.opts(ut, { gold, unarmed: true, grp: ev.type + k, noDrop: gold, drift: uair ? 3 : 1, driftSpeed: 0.5 })); busy.push(dm); }
+        }
+      } else if (ev.type === 'storm') {
+        for (let dm = ev.d - 10; dm < ev.d + 270; dm += 38) {
+          if (dm < d0 + 10 || dm >= d1 - 10 || dm > T.levelLen - 110 || !free(dm, 12) || inRamp(dm)) continue;
+          const zz = zoneAt(dm), kind = ru() < 0.55 ? 'sam' : 'tank', lx = CC.Zones.edgeLx(T, dm, ru() < 0.5 ? -1 : 1, zz); if (!CC.Roster.zone(zz).ground.length) continue;
+          tanks.push({ type: RO.guardType(kind, zz, ru), pos: T.at(dm, lx, 0), yaw: 180 - Math.sign(lx) * 18 }); busy.push(dm);
         }
       }
     }
@@ -456,7 +482,7 @@
       this.ensure(Math.floor(this.dist / cfg.chunkLen));
       const job = this.pending.shift();
       if (job && this.chunks.get(job.c.k) === job.c) {
-        const e = job.c.builder.guard(job.t.type || 'tank', job.t.pos, job.t.yaw, { scale: job.t.type === 'heli' ? 2.2 : 2.4 });   // s'ajoute aux listes du tronçon
+        const gty = job.t.type || 'tank', e = job.c.builder.guard(gty, job.t.pos, job.t.yaw, { scale: CC.Roster.scale(gty), tint: Math.abs(Math.round(job.t.pos[0] * 0.37 + job.t.pos[2] * 0.11)) % 4, drift: gty === 'jet' ? 16 : 0 });   // s'ajoute aux listes du tronçon
         g.targets.push(e); g.entities.push(e);
       }
       this.hint = null;   // v072 : où aller pendant la montée et le plongeon
@@ -472,7 +498,11 @@
         void D;
       }
       const L = this.level;
-      L.aaThreat = param(cfg.threat, this.dist); L.aaSalvo = this.dist * (this.T.difK || 1) > 3500; L.aaMaxAlive = Math.round(U.lerp(1, 6, U.clamp(this.dist * (this.T.difK || 1) / 7000, 0, 1)));   // v068 : plus de missiles, pas plus précis
+      L.aaThreat = param(cfg.threat, this.dist); L.aaSalvo = this.dist * (this.T.difK || 1) > 3500; L.aaMaxAlive = Math.round(U.lerp(1, 6, U.clamp(this.dist * (this.T.difK || 1) / 7000, 0, 1)));
+      { const S0 = this.T.storm, on = !!S0 && this.dist > S0.d0 && this.dist < S0.d1;   // v083 : TEMPETE de missiles : plus de tirs, plus de missiles à la fois, éclat rouge à l'entrée
+        if (on) { L.aaThreat = Math.min(1, L.aaThreat + 0.5); L.aaMaxAlive += 4; L.aaSalvo = true; }
+        if (on && !this.stormOn) { g.flash = Math.max(g.flash || 0, 0.3); g.flashColor = '#ff3a2a'; g.audio.play('alarm'); g.rig.shake = Math.max(g.rig.shake, 0.9); }
+        this.stormOn = on; }   // v068 : plus de missiles, pas plus précis
       // zone de décor : l'ambiance glisse en 3 s vers celle de la nouvelle zone
       const zi = this.T.zoneIndex(this.dist);
       if (zi !== this.zone) { this.envFrom = this.T.env(this.zone); this.zone = zi; this.envT = 0; this.announce(zi); }

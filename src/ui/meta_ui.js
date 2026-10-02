@@ -37,6 +37,7 @@
     const w = Math.min(L.W * 0.9, F.measure(q.text, 2) + 40), h = L.HH * 0.06, x = (L.W - w) / 2, y = L.T + L.HH * 0.8 - a * L.HH * 0.04;
     ctx.globalAlpha = a > 0.8 ? (1 - a) / 0.2 : 1; panel(ctx, x, y, w, h, NAVY, GOLD, 8); txt(ctx, q.text, L.W / 2, y + h * 0.3, w - 16, 2, GOLD, 'center'); ctx.globalAlpha = 1;
   }
+  Home.drawToast = drawToast;
   const say = (ui, out) => { if (!out) return; const arr = Array.isArray(out) ? out : [out]; Home.toast(ui, arr.map((o) => o.text).join('  ')); };
 
   // ============================================================================================================
@@ -104,10 +105,14 @@
       rewardIcon(ctx, r, x + cw / 2, cy0 + gh * 0.17, gh * 0.22); txt(ctx, 'J' + (i + 1), x + cw / 2, cy0 + gh * 0.31, cw, 0.9, DIM, 'center');
     }
     const bw = gw * 0.5, bh = gh * 0.2, bx = m + gw / 2 - bw / 2, by = gy + gh * 0.72;
-    if (ready) { greenBtn(ctx, bx, by, bw, bh, inRect(ui, bx, by, bw, bh)); txt(ctx, 'PRENDRE LE CADEAU', bx + bw / 2, by + bh * 0.3, bw - 10, 1.4, DARK, 'center'); hit(ui, bx, by, bw, bh, () => { const o = meta.claimGift(); if (o) { game.audio.play('levelUp'); say(ui, o); } }); }
+    if (ready) {
+      const adOk = game.ads && game.ads.enabled() && !game.testMode, w1 = adOk ? bw * 0.62 : bw, bx1 = adOk ? m + gw / 2 - bw / 2 : bx;
+      greenBtn(ctx, bx1, by, w1, bh, inRect(ui, bx1, by, w1, bh)); txt(ctx, adOk ? 'PRENDRE' : 'PRENDRE LE CADEAU', bx1 + w1 / 2, by + bh * 0.3, w1 - 10, 1.4, DARK, 'center'); hit(ui, bx1, by, w1, bh, () => { const o = meta.claimGift(); if (o) { game.audio.play('levelUp'); say(ui, o); } });
+      if (adOk) { const bx2 = bx1 + w1 + 6, w2 = bw - w1 - 6; panel(ctx, bx2, by, w2, bh, NAVY, '#8fd0ff', 6); txt(ctx, 'X2 PUB', bx2 + w2 / 2, by + bh * 0.3, w2 - 8, 1.3, '#8fd0ff', 'center'); hit(ui, bx2, by, w2, bh, () => game.ads.rewarded(() => { const o = meta.claimGift(); if (o) { const o2 = meta.give(o.kind === 'nuts' ? { t: 'nuts', n: o.n } : { t: 'crate', n: 1 }); say(ui, [o, o2]); } }, null, 'daily')); }
+    }
     else txt(ctx, 'REVIENS DEMAIN POUR LE SUIVANT', m + gw / 2, by + bh * 0.3, gw - 20, 1.2, DIM, 'center');
     // missions du jour
-    const my = gy + gh + HH * 0.014, mh = HH * 0.34; panel(ctx, m, my, gw, mh, PANEL, EDGE, 10);
+    const my = gy + gh + HH * 0.014, mh = HH * 0.31; panel(ctx, m, my, gw, mh, PANEL, EDGE, 10);
     txt(ctx, 'MISSIONS DU JOUR', m + 10, my + mh * 0.04, gw * 0.7, 1.3, CREAM);
     const rowH = mh * 0.3;
     meta.missions().forEach((q, i) => {
@@ -128,7 +133,10 @@
     txt(ctx, 'COFFRE GRATUIT', m + chh2 * 1.0, cy + chh2 * 0.2, gw * 0.36, 1.5, CREAM);
     const rd = meta.chestReady();
     txt(ctx, rd ? 'PRET !' : 'PROCHAIN DANS ' + fmtTime(meta.chestIn()), m + chh2 * 1.0, cy + chh2 * 0.55, gw * 0.5, 1.1, rd ? GREEN : DIM);
-    if (rd) { const bx3 = m + gw - gw * 0.3 - 10, bw3 = gw * 0.3, bh3 = chh2 * 0.5, by3 = cy + chh2 * 0.25; greenBtn(ctx, bx3, by3, bw3, bh3, inRect(ui, bx3, by3, bw3, bh3)); txt(ctx, 'OUVRIR', bx3 + bw3 / 2, by3 + bh3 * 0.3, bw3 - 8, 1.5, DARK, 'center'); hit(ui, bx3, by3, bw3, bh3, () => { const o = meta.openChest(); if (o) { game.audio.play('levelUp'); say(ui, o); } }); }
+    if (rd) { const bx3 = m + gw - gw * 0.3 - 10, bw3 = gw * 0.3, bh3 = chh2 * 0.5, by3 = cy + chh2 * 0.25; greenBtn(ctx, bx3, by3, bw3, bh3, inRect(ui, bx3, by3, bw3, bh3)); txt(ctx, 'OUVRIR', bx3 + bw3 / 2, by3 + bh3 * 0.3, bw3 - 8, 1.5, DARK, 'center'); hit(ui, bx3, by3, bw3, bh3, () => { const o = meta.openChest(); if (o) { game.audio.play('levelUp'); say(ui, o); } });
+      if (game.ads && game.ads.enabled() && !game.testMode) { const by4 = by3 + bh3 + 4; panel(ctx, bx3, by4, bw3, bh3 * 0.6, NAVY, '#8fd0ff', 6); txt(ctx, 'X2 PUB', bx3 + bw3 / 2, by4 + bh3 * 0.15, bw3 - 6, 1.1, '#8fd0ff', 'center'); hit(ui, bx3, by4, bw3, bh3 * 0.6, () => game.ads.rewarded(() => { const o = meta.openChest(); if (o) { const o2 = meta.give({ t: 'nuts', n: 60 }); say(ui, o.concat([o2])); } }, null, 'daily')); } }
+    if (!meta.noAds) { const ny = cy + chh2 + HH * 0.014, nh = HH * 0.06; panel(ctx, m, ny, gw, nh, NAVY, GOLD, 8); txt(ctx, 'SANS PUBLICITE IMPOSEE (ACHAT UNIQUE)', m + gw / 2, ny + nh * 0.32, gw - 16, 1.2, GOLD, 'center'); hit(ui, m, ny, gw, nh, () => { if (meta.buyNoAds() === 'no-link') Home.toast(ui, 'ACHAT BIENTOT DISPONIBLE'); }); }
+    else txt(ctx, 'MERCI : PLUS DE PUBLICITE IMPOSEE', W / 2, cy + chh2 + HH * 0.03, gw, 1.1, GREEN, 'center');
     drawToast(ui, ctx, L);
   };
 

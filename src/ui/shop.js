@@ -141,6 +141,12 @@
     if (P.get('paid') !== '1') return null;
     const id = P.get('utm_content') || game.save.pendingPurchase;
     const s = id && CC.Skins.byId[id];
+    if ((id === 'noads' || id === 'pass') && game.meta) {   // v083 : achats du pass premium et du « sans pub »
+      ['paid', 'session_id', 'utm_content', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term'].forEach((k) => P.delete(k));
+      try { history.replaceState(null, '', location.pathname + (P.toString() ? '?' + P : '') + location.hash); } catch (e) { /* adresse inchangée */ }
+      delete game.save.pendingPurchase; if (id === 'noads') game.meta.M.noAds = true; else game.meta.M.pass.premium = true; game.writeSave();
+      return (id === 'noads' ? 'SANS PUB ACTIVE' : 'PASS PREMIUM ACTIVE') + ' - MERCI !';
+    }
     ['paid', 'session_id', 'utm_content', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term'].forEach((k) => P.delete(k));
     try { history.replaceState(null, '', location.pathname + (P.toString() ? '?' + P : '') + location.hash); } catch (e) { /* adresse inchangée */ }
     if (!s) return null;

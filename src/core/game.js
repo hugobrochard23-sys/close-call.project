@@ -59,7 +59,8 @@
       this.initEnvironment();
       this.loadSave();
       this.progress = new CC.Progress(this);   // v034 : XP, niveaux, missions
-      this.meta = new CC.Meta(this); this.pickups = []; this.modRun = { shield: 0, drops: [] };   // v082 : étoiles, pass, modules, quotidien
+      this.meta = new CC.Meta(this); this.pickups = []; this.modRun = { shield: 0, drops: [] }; this.ghostRec = null; this.ghostMesh = null;
+      if (!this.testMode) { const ch = this.meta.readChallenge(); if (ch) { this.notice = 'DEFI RECU : NIVEAU ' + ch.n + ' - BATS ' + ch.score + ' PTS'; this.noticeT = 7; } }   // v083 : lien d'un ami   // v082 : étoiles, pass, modules, quotidien
       this.pad = new CC.Pad(this);             // v034 : lanceur (accueil du mode CLASSIQUE)
       this.shadow = new CC.RocketShadow(this); // v034 : ombre de la roquette
       this.horizon = new CC.Horizon(this);     // v036 : silhouettes lointaines
@@ -204,7 +205,7 @@
 
     // ---------- niveaux ----------
     unloadLevel() {
-      this.clearPickups();
+      this.clearPickups(); this.clearGhost();
       if (this.endlessRun) { this.endlessRun.dispose(); this.endlessRun = null; }   // v033 : tronçons du couloir infini
       if (this.builder) { this.builder.dispose(); this.builder = null; }
       for (const m of this.missiles) this.scene.remove(m.object);
@@ -252,7 +253,7 @@
     groundVehicles() {
       const down = new V(0, -1, 0);
       for (const t of this.targets) {
-        if (t.type !== 'tank' && t.type !== 'truck' && t.type !== 'house') continue;
+        if (t.type !== 'tank' && t.type !== 'truck' && t.type !== 'house' && !(t.tl && t.type !== 'boat')) continue;
         const p = t.object.position;
         const hit = this.world.raycast(new V(p.x, p.y + 1.5, p.z), down, 3.2, (bx) => bx.kind === 'solid' || bx.kind === 'brick');
         if (!hit || Math.abs(hit.point.y - p.y) > 1.5) continue;
@@ -321,9 +322,10 @@
       if (CC.Look) CC.Look.set(ld ? CC.Look.forLevel(ld) : null);   // v081 : look du niveau (teinte, matériaux, ambiance)
       this.assistFuel = ld ? 3 * Math.min(5, ((this.save.lvl && this.save.lvl.tries && this.save.lvl.tries[ld.n]) || 0)) : 0;   // coup de pouce après plusieurs échecs
       if (ld) seed = ld.seed;
-      const ordP = this.params.get('order'), L = CC.Endless.level(seed, { zones: this.testMode ? null : this.progress.unlockedWorlds(), order: ld ? ld.order : (ordP ? ordP.split(',') : null), env: this.params.get('env') || null, levelLen: ld && ld.len, difK: ld && ld.difK, bossHp: ld && ld.hp, bossType: ld && ld.boss, padStyle: ld && ld.n, theme: ld && ld.theme, mids: ld && ld.mids, bossTint: ld && ld.bossTint, bossVar: ld && ld.bossVar });
+      const ordP = this.params.get('order'), L = CC.Endless.level(seed, { zones: this.testMode ? null : this.progress.unlockedWorlds(), order: ld ? ld.order : (ordP ? ordP.split(',') : null), env: this.params.get('env') || null, levelLen: ld && ld.len, difK: ld && ld.difK, bossHp: ld && ld.hp, bossType: ld && ld.boss, padStyle: ld && ld.n, theme: ld && ld.theme, mids: ld && ld.mids, bossTint: ld && ld.bossTint, bossVar: ld && ld.bossVar, event: ld && ld.event });
       this.loadLevelFrom(L, -1);
       this.endlessRun = new CC.Endless.Run(this, L);
+      this.startGhost(ld);   // v083 : après le chargement (qui efface les anciens objets)
       this.progress.beginRun(); this.reviveUsed = false; this.hudFeed.length = 0; this.cellHap = 0; this.cellSnd = 0;
       if (opts.home) { this.enterPad(); return; }
       this.restartLevel(true);
@@ -433,6 +435,10 @@
           lr.stars = stars; lr.ratio = ratio; lr.newStars = win ? M.setStars(lv.n, stars) : 0;
           lr.passXp = M.addPassXp(win ? 60 + 25 * stars : 8 + Math.round(lr.pct * 20));
           if (win) M.event('wins', 1);
+          { const G = this.ghostRec, score = Math.floor(run.points || 0), tm = win ? (this.winTime || (G ? G.t : 0)) : (G ? G.t : 0);   // v083 : records, fantôme, défi d'ami
+            lr.rec = M.recordRun(lv.n, score, tm, win); lr.time = tm; lr.score = score;
+            if (G && G.pts.length > 9) M.setGhost(lv.n, { win, time: tm, d: Math.round(run.dist), pts: G.pts });
+            const ch = M.checkChallenge(lv.n, score); if (ch) lr.challenge = ch; }
           lr.drops = (this.modRun ? this.modRun.drops : []).map((id) => M.addMod(id, 1)); M.save(); }
         if (win) { L.done[lv.n] = 1; L.max = Math.max(L.max || 1, lv.n + 1); L.cur = lv.n + 1; L.tries[lv.n] = 0; this.progress.P.materials = (this.progress.P.materials || 0) + lv.chest; }
         else L.tries[lv.n] = (L.tries[lv.n] || 0) + 1;
@@ -620,6 +626,28 @@
       else this.restartLevel();
     }
 
+    // v083 : FANTOME — le meilleur essai du niveau (le plus loin, ou le plus rapide s'il est fini) rejoue en transparence ; position toutes les 0,25 s
+    clearGhost() { if (this.ghostMesh) { this.scene.remove(this.ghostMesh); this.ghostMesh = null; } }
+    startGhost(ld) {
+      this.clearGhost(); this.ghostRec = ld ? { t: 0, next: 0, pts: [] } : null; this.winTime = 0;
+      const gh = ld && this.meta.ghost(ld.n); this.ghostPlay = gh && gh.pts && gh.pts.length > 9 ? gh.pts : null; if (!this.ghostPlay) return;
+      const g = new THREE.Group(), mat = new THREE.MeshBasicMaterial({ color: '#9fe8ff', transparent: true, opacity: 0.38, depthWrite: false });
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.8, 8), mat); body.rotation.x = Math.PI / 2; g.add(body);
+      const nose = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.35, 8), mat); nose.rotation.x = -Math.PI / 2; nose.position.z = -0.55; g.add(nose);
+      for (let i = 0; i < 4; i++) { const f = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.2, 0.2), mat); f.position.z = 0.32; f.rotation.z = i * Math.PI / 2 + Math.PI / 4; f.position.x = Math.cos(f.rotation.z) * 0.12; f.position.y = Math.sin(f.rotation.z) * 0.12; g.add(f); }
+      g.scale.setScalar(1.5); g.visible = false; this.scene.add(g); this.ghostMesh = g;
+    }
+    updateGhost(dt) {
+      const R = this.ghostRec, rk = this.rocket; if (!R || !this.levelRun) return;
+      if (this.state === 'FLIGHT' && rk.active) {
+        R.t += dt; if (R.t >= R.next) { R.next += 0.25; R.pts.push(+rk.pos.x.toFixed(1), +rk.pos.y.toFixed(1), +rk.pos.z.toFixed(1)); }
+      }
+      const P = this.ghostPlay, m = this.ghostMesh; if (!m || !P) return;
+      if (this.state !== 'FLIGHT') { m.visible = false; return; }
+      const f = R.t / 0.25, i = Math.floor(f), n = P.length / 3; if (i + 1 >= n) { m.visible = false; return; }
+      const k = f - i, x = P[i * 3] + (P[i * 3 + 3] - P[i * 3]) * k, y = P[i * 3 + 1] + (P[i * 3 + 4] - P[i * 3 + 1]) * k, z = P[i * 3 + 2] + (P[i * 3 + 5] - P[i * 3 + 2]) * k;
+      m.position.set(x, y, z); m.lookAt(P[i * 3 + 3], P[i * 3 + 4], P[i * 3 + 5]); m.visible = true;
+    }
     // v082 : CAISSES VERTES (modules) lâchées par les hélicoptères dorés : à attraper en passant près d'elles
     clearPickups() { for (const q of (this.pickups || [])) this.scene.remove(q.obj); this.pickups = []; }
     spawnModPickup(c) {
@@ -640,7 +668,7 @@
         if (near) {
           const c = q.obj.position.clone(); this.modRun.drops.push(q.id);
           this.effects.ring(c, new V(0, 1, 0), 2, 30, 0.7, '#6aff9a', 0.95); this.effects.flash(c, '#6aff9a', 8, 90, 0.4, '#2aff6a'); this.flash = 0.2; this.flashColor = '#bfffd0';
-          this.audio.play('ringSeries'); (this.killPops = this.killPops || []).push({ p: c, t0: performance.now(), txt: 'MODULE' });
+          this.audio.play('ringSeries'); if (CC.Haptics) CC.Haptics.pattern('mission'); this.settings.seenCrate = true; (this.killPops = this.killPops || []).push({ p: c, t0: performance.now(), txt: 'MODULE' });
         }
         if (near || q.life <= 0) { this.scene.remove(q.obj); this.pickups.splice(i, 1); }
       }
@@ -660,7 +688,7 @@
       (this.killPops = this.killPops || []).push({ p: c, t0: performance.now(), txt: t.hp + ' / ' + t.hpMax });
     }
     onBossDead(t, c, rocket) {
-      this.meta.event('boss', 1);
+      this.meta.event('boss', 1); this.winTime = this.ghostRec ? this.ghostRec.t : 0;
       this.levelWin = true; this.hitStop = 1.4; this.hitScale = 0.2; this.chromaBurst = 0.03; this.flash = 0.5; this.flashColor = '#ffffff';
       for (let i = 0; i < 7; i++) setTimeout(() => { try { this.effects.explosion(c.clone().add(new V((Math.random() - 0.5) * 16, Math.random() * 9, (Math.random() - 0.5) * 16)), null, true, i % 2 ? 'cyan' : 'orange'); this.audio.play('boom', c); } catch (e) { /* ignoré */ } }, i * 170);
       setTimeout(() => { if (this.state === 'FLIGHT' && this.endlessRun) { const rk = this.rocket; rk.active = false; rk.mesh.visible = false; rk.light.intensity = 0; rk.rope.visible = false; this.finishEndless(); } }, 2000);
@@ -672,7 +700,7 @@
       t.kill(this);
       if (this.endlessRun) {   // v033 : la roquette traverse la cible et continue ; essence rechargée
         const run = this.endlessRun, fx = this.effects, up = new V(0, 1, 0), dir = rocket.vel.clone().normalize();
-        const val = (({ sam: 2, radar: 3, golden: 5 })[t.type] || 1) * (t.mini ? 3 : 1) * this.progress.pointMult(); if (t.mini) run.addFuel(CC.CONFIG.endless.fuelTarget * 1.5); if (t.golden) run.addFuel(CC.CONFIG.endless.fuelTarget * 2.2); run.points = (run.points || 0) + val; run.kills = (run.kills || 0) + 1;
+        const val = (({ sam: 2, radar: 3, jet: 2, aagun: 2, golden: 5 })[t.type] || 1) * (t.golden ? 5 : 1) * (t.mini ? 3 : 1) * this.progress.pointMult(); if (t.mini) run.addFuel(CC.CONFIG.endless.fuelTarget * 1.5); if (t.golden) run.addFuel(CC.CONFIG.endless.fuelTarget * 2.2); run.points = (run.points || 0) + val; run.kills = (run.kills || 0) + 1;
         run.stats.targets++; this.progress.event('targets'); this.progress.event('nuts', Math.max(val, Math.round(val * this.meta.nutsK())));   // v082 : module FORTUNE
         this.meta.event('kills', 1); if (t.golden) this.meta.event('golden', 1); run.stats.nuts = (run.stats.nuts || 0) + val;
         run.addFuel(CC.CONFIG.endless.fuelTarget * this.meta.fuelK());   // v082 : module SIPHON
@@ -688,9 +716,10 @@
         { const nowS = performance.now() / 1000; run.streak = nowS - (run.streakT || -9) < 4 ? Math.min(8, (run.streak || 0) + 1) : 0; run.streakT = nowS; }
         this.audio.play('boom', c); if (run.streak > 0) this.audio.play('door', null, run.streak); else this.audio.play('target');
         if (t.golden) { this.audio.play('ringSeries'); fx.ring(c, up, 3, 46, 0.9, '#ffd23a', 0.95); fx.ring(c, new V(1, 0, 0), 2, 38, 0.8, '#fff4b0', 0.9); fx.flash(c, '#ffd23a', 12, 130, 0.6, '#ffb020'); this.flash = 0.3; this.flashColor = '#ffe9a0'; this.hitStop = 0.14; }
-        if (t.grp && this.targets.every((x) => x.grp !== t.grp || !x.alive)) { run.points = (run.points || 0) + 3 * this.progress.pointMult(); run.addFuel(CC.CONFIG.endless.fuelTarget * 1.5); this.audio.play('levelUp'); fx.ring(c, up, 3, 50, 1.0, '#ffd23a', 0.95); fx.flash(c, '#ffd23a', 10, 120, 0.5, '#ffb020'); this.hitStop = 0.12; }
+        if (t.grp && this.targets.every((x) => x.grp !== t.grp || !x.alive)) { run.points = (run.points || 0) + 3 * this.progress.pointMult(); run.addFuel(CC.CONFIG.endless.fuelTarget * 1.5); this.audio.play('levelUp'); fx.ring(c, up, 3, 50, 1.0, '#ffd23a', 0.95); fx.flash(c, '#ffd23a', 10, 120, 0.5, '#ffb020'); this.hitStop = 0.12; if (t.noDrop) this.spawnModPickup(c); if (CC.Haptics) CC.Haptics.pattern('mission'); }
         (this.killPops = this.killPops || []).push({ p: c.clone(), t0: performance.now(), txt: '+' + (Math.round(val * 10) / 10) });
-        if (t.golden) this.spawnModPickup(c);   // v082 : l'hélicoptère doré lâche une caisse verte (un module)
+        if (t.golden) { this.settings.seenGold = true; if (CC.Haptics) CC.Haptics.pattern('levelUp'); }
+        if (t.golden && !t.noDrop) this.spawnModPickup(c);   // v082 : l'engin doré lâche une caisse verte (un module)
         { const rad = this.meta.warRadius();   // v082 : module OGIVE : tout ce qui est proche explose aussi
           if (rad > 0 && !t.boss) for (const q of this.targets) { if (q === t || !q.alive || q.boss || q.mini || q.hazard || !q.obb || q.obb.c.distanceTo(c) > rad) continue; const c2 = q.obb.c.clone(); q.kill(this); run.points = (run.points || 0) + this.progress.pointMult(); run.kills = (run.kills || 0) + 1; run.stats.targets++; this.progress.event('targets'); this.meta.event('kills', 1); run.addFuel(CC.CONFIG.endless.fuelTarget * 0.6); fx.explosion(c2, null, true, 'cyan'); fx.ring(c2, up, 2, 24, 0.5, '#ffd060', 0.9); } }
         if (t.boss) this.onBossDead(t, c, rocket);
@@ -946,7 +975,7 @@
       if (this.state === 'RESULTS' && this.results && this.results.endless) this.results.t += dt;   // v034 : chronologie de l'écran de récompenses
       if (this.endlessRun && this.state !== 'MENU' && this.state !== 'RESULTS') this.endlessRun.update(dt);   // v033 : tronçons, paliers, zones
       for (const e of this.entities) if (e.update) e.update(dt, this);
-      this.updatePickups(dt);
+      this.updatePickups(dt); this.updateGhost(dt);
       for (const m of this.missiles) m.update(dt, this);
       this.missiles = this.missiles.filter((m) => { if (!m.alive) this.scene.remove(m.object); return m.alive; });
       if (this.centerMsgT > 0 && (this.centerMsgT -= dt) <= 0) { this.centerMsg = null; this.centerMsgT = 0; }   // message passager (graine de la carte générée)

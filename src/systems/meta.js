@@ -66,7 +66,7 @@
     claim(track, t) { if (!this.canClaim(track, t)) return null; this.M.pass[track][t] = 1; const out = this.give(this.rewards(t)[track]); this.save(); return out; }
     claimAll() { const out = []; for (let t = 1; t <= this.tier; t++) for (const tr of ['free', 'prem']) { const r = this.claim(tr, t); if (r) out.push(r); } return out; }
     claimableCount() { let n = 0; for (let t = 1; t <= this.tier; t++) for (const tr of ['free', 'prem']) if (this.canClaim(tr, t)) n++; return n; }
-    buyPremium() { const link = CC.CONFIG.shop.passLink; if (!link) return 'no-link'; try { window.location.href = link + (link.indexOf('?') < 0 ? '?' : '&') + 'client_reference_id=pass'; } catch (e) { /* ignoré */ } return 'redirect'; }
+    buyPremium() { const link = CC.CONFIG.shop.passLink; if (!link) return 'no-link'; this.game.save.pendingPurchase = 'pass'; this.save(); try { window.location.href = link + (link.indexOf('?') < 0 ? '?' : '&') + 'client_reference_id=pass&utm_content=pass&utm_source=coldimpact'; } catch (e) { /* ignoré */ } return 'redirect'; }
 
     // ---------- modules ----------
     lvl(id) { const o = this.M.mods.owned[id]; return o ? o.lvl : 0; }
@@ -128,6 +128,36 @@
     openChest() {
       if (!this.chestReady()) return null; this.M.chest.next = Date.now() + 4 * 3600 * 1000;
       const out = [this.give({ t: 'nuts', n: 40 + Math.floor(Math.random() * 80) })]; if (Math.random() < 0.3) out.push(this.give({ t: 'crate', n: 1 })); this.addPassXp(15); this.save(); return out;
+    }
+    // ---------- records par niveau, fantômes, défis d'amis (sans serveur : tout passe par des liens) ----------
+    rec(n) { return (this.M.rec && this.M.rec[n]) || null; }
+    recordRun(n, score, time, win) {   // retourne ce qui est battu
+      const R = (this.M.rec = this.M.rec || {}), o = R[n] || (R[n] = { score: 0, time: 0 }), out = { score: score > o.score, time: win && (!o.time || time < o.time) };
+      if (out.score) o.score = score; if (out.time) o.time = Math.round(time * 10) / 10; return out;
+    }
+    ghosts() { if (!this._gh) { try { this._gh = JSON.parse(localStorage.getItem('coldimpact.ghosts') || '{}'); } catch (e) { this._gh = {}; } } return this._gh; }
+    ghost(n) { return this.ghosts()[n] || null; }
+    // un nouveau fantôme remplace l'ancien s'il va plus loin, ou (les deux ont fini) s'il est plus rapide
+    setGhost(n, g) {
+      const old = this.ghost(n); if (old && !(g.win && !old.win) && !(g.win && old.win && g.time < old.time) && !(!g.win && !old.win && g.d > old.d)) return false;
+      this.ghosts()[n] = g; if (!this.game.testMode) { try { localStorage.setItem('coldimpact.ghosts', JSON.stringify(this._gh)); } catch (e) { /* stockage plein */ } } return true;
+    }
+    challengeLink(n, score, time) { const base = location.origin + location.pathname; return base + '?c=' + n + '.' + Math.round(score) + '.' + Math.round(time); }
+    readChallenge() {   // lien reçu d'un ami : ?c=niveau.score.temps
+      const m = /[?&]c=(\d+)\.(\d+)\.(\d+)/.exec(location.search); if (!m) return null;
+      const ch = { n: Math.max(1, parseInt(m[1], 10)), score: parseInt(m[2], 10), time: parseInt(m[3], 10) };
+      try { const P = new URLSearchParams(location.search); P.delete('c'); history.replaceState(null, '', location.pathname + (P.toString() ? '?' + P : '') + location.hash); } catch (e) { /* adresse inchangée */ }
+      this.M.challenge = ch; this.save(); return ch;
+    }
+    // le défi est-il relevé par ce résultat ? (récompense : une caisse, une seule fois)
+    checkChallenge(n, score) { const c = this.M.challenge; if (!c || c.n !== n || score < c.score) return null; this.M.challenge = null; const out = this.give({ t: 'crate', n: 1 }); this.save(); return out; }
+    // ---------- sans pub ----------
+    get noAds() { return !!this.M.noAds; }
+    buyNoAds() { const link = CC.CONFIG.shop.noAdsLink; if (!link) return 'no-link'; this.game.save.pendingPurchase = 'noads'; this.save(); try { window.location.href = link + (link.indexOf('?') < 0 ? '?' : '&') + 'client_reference_id=noads&utm_content=noads&utm_source=coldimpact'; } catch (e) { /* ignoré */ } return 'redirect'; }
+    // ---------- code de sauvegarde (changer de téléphone sans serveur) ----------
+    exportCode() { const s = Object.assign({}, this.game.save); try { return 'CI1' + btoa(unescape(encodeURIComponent(JSON.stringify(s)))); } catch (e) { return ''; } }
+    importCode(str) {
+      try { if (!/^CI1/.test(str.trim())) return false; const o = JSON.parse(decodeURIComponent(escape(atob(str.trim().slice(3))))); if (!o || typeof o !== 'object' || !o.prog) return false; localStorage.setItem('coldimpact.save', JSON.stringify(o)); return true; } catch (e) { return false; }
     }
     // pastille rouge de l'accueil
     badge() { return this.giftReady() || this.chestReady() || this.missionsReady() > 0 || this.claimableCount() > 0; }

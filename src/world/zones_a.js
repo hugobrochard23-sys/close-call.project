@@ -69,7 +69,9 @@
       if (!cross && !(opts.skip && opts.skip(cx))) {
         S.item(cx, (r) => {
           const w = r.between([14, 22]), v = S.vol(cx) + off + set;
-          S.bx(cx, s * (v + w / 2), h / 2 - 0.5, w, h, dd - 0.6, dist.mat, tint);
+          { const rd = CC.Look && CC.Look.cur && CC.Look.cur.round, rr = Math.min(w, dd - 0.6) * 0.5;   // v083 : des tours rondes selon le look
+            if (rd && r() < rd) S.cyl(cx, s * (v + w / 2), -0.5, rr, h, dist.mat.side || 'facade', tint, 18, h > 70 ? rr * 0.78 : rr);
+            else S.bx(cx, s * (v + w / 2), h / 2 - 0.5, w, h, dd - 0.6, dist.mat, tint); }
           if (opts.shops) S.bx(cx, s * (v - 0.12 + w / 2), 2.1, w + 0.25, 4.2, dd - 0.4, 'storefront', tint, false);
           if (S.dark) {          // enseignes néon : une barre au-dessus de la vitrine, parfois une enseigne verticale en potence ; palette limitée (cyan, magenta, ambre)
             const pal = NEON_PAL, c1 = r.pick(pal);

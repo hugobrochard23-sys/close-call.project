@@ -1,4 +1,4 @@
-# COLD IMPACT — notes de projet (état v082)
+# COLD IMPACT — notes de projet (état v083)
 
 Jeu mobile de fusée (JS vanilla, Three.js r149, canvas 2D pour l'UI/HUD). Dépôt `hugobrochard23-sys/cold-impact.project`, branche `main`, déploiement GitHub Pages
 (https://hugobrochard23-sys.github.io/cold-impact.project/). Le propriétaire teste sur téléphone ; **toujours donner ce lien à la fin d'un message** (cache à vider / navigation privée).
@@ -66,6 +66,13 @@ Le pilote automatique ne sait pas viser, attendre un volet ni plonger verticalem
 - QUOTIDIEN (bouton avec pastille sur l'accueil) : cadeau 7 jours, 3 missions du jour (kills, golden, wins, boss, stars), coffre gratuit toutes les 4 h.
 - Amélioration MULTIPLICATEUR (morte) remplacée par PRECISION (`hitPad` : la roquette touche de plus loin).
 - Test des écrans : activer le tactile (`CC.Touch.active=true; document.body.classList.add('cc-touch'); game.resize()`) pour avoir la mise en page portrait plein écran.
+
+## v083 — E à I
+- E · ENNEMIS PAR ZONE (`world/roster.js`, `entities/models_enemy.js`) : le thème du niveau décide air/sol, `CC.Roster.ZONE` décide QUI (forêt : chars, jeeps, ifv, canons AA, lance-missiles — aucun hélicoptère ; port : camions, patrouilleurs `boat` sur l'eau, sites AA ; usine : sites AA, camions, ifv ; base aérienne : jets, radars ; mer : sous-marins et mines…). Les engins de boss (ifv, aagun, jet, sub…) servent aussi d'ennemis ordinaires (échelle 1,5-2,5). N'importe quel ennemi peut être DORE (`opts.gold`, matériau doré partagé) : 5× les points, lâche une caisse verte.
+- F · SURPRISES : un ÉVENEMENT par niveau dès le 3 (`def.event`) : `rain` (7 engins dorés en arc, tous détruits = bonus + caisse), `convoy` (colonne de 8), `storm` (menace et lance-missiles en plus sur 300 m, éclat rouge). Scène `monument` (arche colossale, trilithes, tours de refroidissement + conduite, colonnade). Tours rondes selon le look (`Look.round`).
+- G · FANTOME du meilleur essai (`ghostRec/ghostPlay`, localStorage `coldimpact.ghosts`), RECORDS par niveau (`meta.rec`), DEFI D'AMI par lien `?c=niveau.score.temps` (bouton DEFIER, bannière sur l'accueil, caisse offerte si relevé). Un vrai classement mondial demande un serveur (non fait).
+- H · PUB RECOMPENSEE : coffre de fin de niveau doublé, cadeau et coffre quotidiens ×2 ; achat SANS PUB (`CONFIG.shop.noAdsLink`, retour `utm_content=noads`) qui supprime seulement les interstitielles ; retour du pass premium (`utm_content=pass`).
+- I · explications ponctuelles (première caisse verte, premier engin doré), CODE DE SAUVEGARDE (réglages : copier / coller), vibrations sur engin doré, caisse, formation.
 
 ## À vérifier au doigt (jamais testé sur téléphone)
 Équilibrage des ennemis/missiles, difficulté des niveaux 2 à 5, taille de l'arène, caméra en virage, lisibilité des flèches (petites de loin), forêt dégagée.

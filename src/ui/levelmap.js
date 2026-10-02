@@ -103,6 +103,7 @@
     const info = 'NIVEAU ' + cur + '   ' + zn, ip = ui.fitPx([info], W * 0.86, u * 0.0042), iy = yb + bh + u * 0.025;
     text(ctx, info, W / 2, iy, ip, '#c8d0dc', { align: 'center' });
     text(ctx, def.theme.name, W / 2, iy + ip * 9, ui.fitPx([def.theme.name], W * 0.86, u * 0.0034), GOLD, { align: 'center' });
+    if (game.meta && game.meta.rec(cur)) { const q = game.meta.rec(cur), rs = 'RECORD ' + q.score + ' PTS' + (q.time ? '  ' + q.time + ' S' : ''); text(ctx, rs, W / 2, iy + ip * 14, ui.fitPx([rs], W * 0.8, u * 0.003), '#8fd0ff', { align: 'center' }); }
     if (game.meta) { const st = 'ETOILES ' + game.meta.total() + ' / ' + CC.LM.count * 3; text(ctx, st, W / 2, iy + ip * 18, ui.fitPx([st], W * 0.7, u * 0.003), '#ffd23a', { align: 'center' }); }
     Home.backButton(ui, ctx, L, ui.key('RETOUR', 'ESC'), () => { ui.overlay = null; ui.mapPage = null; });
   };
@@ -121,7 +122,19 @@
       if (game.meta.badge() && Math.floor(performance.now() / 500) % 2 === 0) { ctx.fillStyle = '#d0473e'; ctx.fillRect(R(gx + gr * 0.55), R(gy - gr * 1.05), R(gr * 0.5), R(gr * 0.5)); }
       ui.buttons.push({ x: gx - gr, y: gy - gr, w: 2 * gr, h: 2 * gr, action: () => { ui.overlay = 'daily'; } });
     }
+    if (game.meta && game.meta.M.challenge) {   // v083 : défi reçu d'un ami : toucher pour jouer ce niveau
+      const c = game.meta.M.challenge, ct = 'DEFI AMI  NIV ' + c.n + '  BATS ' + c.score + ' PTS', cp = ui.fitPx([ct], W * 0.86, u * 0.0046), cw = F.measure(ct, cp) + cp * 12, ch = cp * 16, cx0 = (W - cw) / 2, cy0 = Y(0.34);
+      Home.pill(ctx, cx0, cy0, cw, ch, 'rgba(38,60,48,0.97)', '#56d98b', ch * 0.3); text(ctx, ct, W / 2, cy0 + ch / 2 - cp * 3.6, cp, '#56d98b', { align: 'center' });
+      ui.buttons.push({ x: cx0, y: cy0, w: cw, h: ch, action: () => { game.setLevel(c.n); game.goHome({}); } });
+    }
     if (lv && lv.theme) { const th = lv.theme.name, tp2 = ui.fitPx([th], W * 0.8, u * 0.0042); text(ctx, th, W / 2, Y(0.27) + lp * 9, tp2, GOLD, { align: 'center' }); }
+  };
+
+  // v083 : partager le défi (lien avec le niveau, le score et le temps) : partage natif du téléphone, sinon copie
+  Home.shareChallenge = function (game, lv) {
+    const score = lv.score !== undefined ? lv.score : 0, time = lv.time || 0, url = game.meta.challengeLink(lv.n, score, time), msg = 'COLD IMPACT : niveau ' + lv.n + ', ' + score + ' pts en ' + Math.round(time) + ' s. Bats-moi !';
+    if (navigator.share) { navigator.share({ title: 'COLD IMPACT', text: msg, url }).catch(() => { /* annulé */ }); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(msg + ' ' + url).then(() => Home.toast(game.ui, 'LIEN COPIE'), () => window.prompt('Copie ce lien', url)); else window.prompt('Copie ce lien', url);
   };
 
   // ---------- résultat d'un niveau : le coffre tombe, tremble, s'ouvre sur un jet de pièces
@@ -133,7 +146,7 @@
     const title = win ? 'NIVEAU ' + lv.n + ' REUSSI !' : 'NIVEAU ' + lv.n, tp = ui.fitPx([title], W * 0.9, u * 0.01);
     text(ctx, title, cx, Y(0.1) - (win ? Math.max(0, 1 - t * 4) * u * 0.1 : 0), tp, win ? GOLD : '#ffffff', { align: 'center', skew: -0.2 });
     if (win) {
-      const cw = u * 0.56, s = cw / 26, ccx = cx, floor = Y(0.52), shakeT = U.clamp((t - 0.45) / 0.55, 0, 1), opened = t > 1.0, ot = t - 1.0;
+      const cw = u * 0.5, s = cw / 26, ccx = cx, floor = Y(0.49), shakeT = U.clamp((t - 0.45) / 0.55, 0, 1), opened = t > 1.0, ot = t - 1.0;
       // chute avec rebond
       const dropK = U.clamp(t / 0.45, 0, 1), drop = (1 - dropK) * (1 - dropK) * -u * 0.6 - (t > 0.45 && t < 0.62 ? Math.sin((t - 0.45) / 0.17 * Math.PI) * u * 0.03 : 0);
       const sh = opened ? 0 : Math.sin(t * 60) * shakeT * s * 1.2, cy = floor + drop, bodyY = cy - 14 * s, ccxs = ccx + sh;
@@ -176,8 +189,8 @@
       const shown = Math.round(lv.chest * U.clamp((t - 1.25) / 1.0, 0, 1)), np = ui.fitPx(['+000'], W * 0.5, u * 0.012);
       if (t > 1.2) {
         const lbl = '+' + shown, wl = F.measure(lbl, np), ic = np * 8, gx2 = cx - (wl + ic + np * 3) / 2, pop = t < 2.3 ? 1 + 0.06 * Math.sin(t * 40) : 1;
-        Home.drawCoinIcon(ctx, gx2 + ic / 2, Y(0.665) + np * 3.5, ic);
-        text(ctx, lbl, gx2 + ic + np * 3, Y(0.665) - (pop - 1) * np * 8, np * pop, GOLD, {});
+        Home.drawCoinIcon(ctx, gx2 + ic / 2, Y(0.6) + np * 3.5, ic);
+        text(ctx, lbl, gx2 + ic + np * 3, Y(0.6) - (pop - 1) * np * 8, np * pop, GOLD, {});
       }
       if (t < 2.3 && (r.tickAt || 0) + 0.06 < t && t > 1.25) { r.tickAt = t; game.audio.play('xpTick', null, Math.floor(shown / Math.max(1, lv.chest) * 8)); }
       // v082 : étoiles (apparaissent une à une), module(s) trouvé(s), XP du pass
@@ -188,10 +201,12 @@
           Home.gridDraw(ctx, 'star', px, Y(0.16), sz * (on && ta > 0 && ta < 1 ? 1.5 - 0.5 * ta : 1), on && ta > 0 ? '#ffd23a' : '#3a424c');
           if (on && ta >= 1 && !r.sd[i]) { r.sd[i] = 1; game.audio.play('door', null, i * 2 + 1); }
         }
+        if (t > 1.6 && lv.score !== undefined) { const isRec = lv.rec && (lv.rec.score || lv.rec.time), rt = lv.score + ' PTS   ' + (lv.time || 0).toFixed(1) + ' S' + (isRec ? '   RECORD !' : ''); text(ctx, rt, cx, Y(0.225), ui.fitPx([rt], W * 0.86, u * 0.0042), isRec ? '#ffd23a' : '#8a96a8', { align: 'center' }); }
+        if (t > 1.6 && lv.challenge) { const ct = 'DEFI RELEVE ! +CAISSE'; text(ctx, ct, cx, Y(0.195), ui.fitPx([ct], W * 0.8, u * 0.0042), '#6aff9a', { align: 'center' }); }
       }
-      if (t > 2.3) { let yy = Y(0.73); const fa = U.clamp((t - 2.3) / 0.4, 0, 1); ctx.globalAlpha = fa;
+      if (t > 2.3) { let yy = Y(0.655); const fa = U.clamp((t - 2.3) / 0.4, 0, 1); ctx.globalAlpha = fa;
         for (const dr of (lv.drops || []).slice(0, 2)) { const md = CC.Meta.MODS[dr.id]; Home.modIcon(ctx, dr.id, cx - u * 0.25, yy + u * 0.02, u * 0.07); text(ctx, md.name + (dr.up ? '  NIV ' + dr.lvl + ' !' : ' +1'), cx - u * 0.19, yy - u * 0.005, ui.fitPx(['MODULE 00000000'], W * 0.55, u * 0.0042), '#6aff9a', {}); yy += u * 0.085; }
-        if (lv.passXp) text(ctx, '+' + lv.passXp + ' XP PASS', cx, Y(0.78) + ((lv.drops || []).length > 1 ? u * 0.05 : 0), ui.fitPx(['+000 XP PASS'], W * 0.5, u * 0.0042), '#8fd0ff', { align: 'center' });
+        if (lv.passXp) text(ctx, '+' + lv.passXp + ' XP PASS', cx, Y(0.705) + ((lv.drops || []).length > 1 ? u * 0.05 : 0), ui.fitPx(['+000 XP PASS'], W * 0.5, u * 0.0042), '#8fd0ff', { align: 'center' });
         ctx.globalAlpha = 1; }
       if (!r.cheered && t > 1.0) { r.cheered = true; game.audio.play('levelUp'); if (CC.Haptics) CC.Haptics.pattern('levelUp'); }
       if (!r.thump && t > 0.45) { r.thump = true; game.audio.play('boom'); }
@@ -212,9 +227,22 @@
       Home.button3d(ctx, bx, yMain, bw, bh1, on ? '#f0d28a' : GOLD, GOLD, '#9a7126', 1 + 0.02 * Math.sin(t * 5));
       text(ctx, lbl, cx, yMain + bh1 / 2 - lp * 3.6 - bh1 * 0.03, lp, '#14181d', { align: 'center' });
       ui.buttons.push({ x: bx, y: yMain, w: bw, h: bh1, action: () => { const go = () => game.goHome({ autoLaunch: !win }); game.ads ? game.ads.beforeContinue(go) : go(); } });
-      Home.pill(ctx, bx, yMap, bw, bh0, 'rgba(38,45,54,0.97)', '#5a6674', bh0 * 0.3);
-      const mp = ui.fitPx(['NIVEAUX'], bw * 0.6, bh0 * 0.04); text(ctx, 'NIVEAUX', cx, yMap + bh0 / 2 - mp * 3.6, mp, '#ffffff', { align: 'center' });
-      ui.buttons.push({ x: bx, y: yMap, w: bw, h: bh0, action: () => { game.goHome({}); ui.overlay = 'map'; } });
+      const wA = bw * 0.58, wB = bw - wA - 8;
+      Home.pill(ctx, bx, yMap, wA, bh0, 'rgba(38,45,54,0.97)', '#5a6674', bh0 * 0.3);
+      const mp = ui.fitPx(['NIVEAUX'], wA * 0.7, bh0 * 0.04); text(ctx, 'NIVEAUX', bx + wA / 2, yMap + bh0 / 2 - mp * 3.6, mp, '#ffffff', { align: 'center' });
+      ui.buttons.push({ x: bx, y: yMap, w: wA, h: bh0, action: () => { game.goHome({}); ui.overlay = 'map'; } });
+      Home.pill(ctx, bx + wA + 8, yMap, wB, bh0, 'rgba(38,60,48,0.97)', '#56d98b', bh0 * 0.3);   // v083 : DEFIER UN AMI (lien à partager : son score et son temps)
+      const dp = ui.fitPx(['DEFIER'], wB * 0.7, bh0 * 0.04); text(ctx, 'DEFIER', bx + wA + 8 + wB / 2, yMap + bh0 / 2 - dp * 3.6, dp, '#56d98b', { align: 'center' });
+      ui.buttons.push({ x: bx + wA + 8, y: yMap, w: wB, h: bh0, action: () => Home.shareChallenge(game, lv) });
+      if (win && !lv.doubled && game.ads && game.ads.enabled() && !game.testMode) {   // v083 : publicité récompensée : le coffre double
+        const yD = yMap - bh0 - u * 0.02, on2 = ui.mouse && ui.mouse.y >= yD && ui.mouse.y <= yD + bh0;
+        Home.pill(ctx, bx, yD, bw, bh0, on2 ? 'rgba(52,62,74,0.97)' : 'rgba(38,45,54,0.97)', GOLD, bh0 * 0.3);
+        Home.icon.play(ctx, bx + bh0 * 0.5, yD + bh0 / 2 - bh0 * 0.03, bh0 * 0.2, GOLD);
+        const dl = ui.fitPx(['DOUBLER LE COFFRE'], bw * 0.7, bh0 * 0.04); text(ctx, 'DOUBLER LE COFFRE', bx + bh0 * 0.9, yD + bh0 / 2 - dl * 3.6, dl, GOLD, {});
+        text(ctx, 'PUB', bx + bw - bh0 * 0.35, yD + bh0 / 2 - dl * 3.6, dl, '#8fd0ff', { align: 'right' });
+        ui.buttons.push({ x: bx, y: yD, w: bw, h: bh0, action: () => game.ads.rewarded(() => { lv.doubled = true; game.progress.P.materials = (game.progress.P.materials || 0) + lv.chest; game.writeSave(); Home.toast(ui, 'COFFRE DOUBLE +' + lv.chest); }, null, 'chest') });
+      } else if (win && lv.doubled) text(ctx, 'COFFRE DOUBLE !', cx, yMap - bh0 * 0.7, ui.fitPx(['COFFRE DOUBLE !'], bw, u * 0.0042), '#6aff9a', { align: 'center' });
+      if (Home.drawToast) Home.drawToast(ui, ctx, L);
     }
   };
 })();
