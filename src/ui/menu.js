@@ -351,6 +351,7 @@
     drawResults(ctx, game, W, H) {
       if (game.results && game.results.endless) { CC.Home.drawResults(this, ctx, game, W, H); return; }   // v034 : récompenses animées
       if (game.results && game.results.challenge) { this.drawResultsV33(ctx, game, W, H); return; }
+      if (game.results && !game.generated) { this.buttons = []; CC.Home.drawLevelResults(this, ctx, game, W, H); return; }   // v059
       this.dim(ctx, W, H, 0.5);
       const r = game.results, col = CC.CONFIG.hud.colors;
       // v030 : en portrait sur téléphone, toute la hauteur de l'écran et des boutons ≥ 44 points bien espacés

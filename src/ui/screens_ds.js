@@ -46,9 +46,8 @@
     DS.iconButton(ui, ctx, W - m - 22 * k, ay + 25 * k, 42 * k, 'gear', () => { ui.overlay = 'msettings'; }, { k, shadow: false, color: '#FFFFFF' });
     // --- bas : navigation, MISSIONS, PLAY (de bas en haut)
     const lvl = prog.level, items = [];
-    items.push({ id: 'levels', icon: 'rocket', label: 'NIVEAUX' });   // v057 : les 9 niveaux d'origine, toujours accessibles depuis l'accueil
     if (lvl >= 2) items.push({ id: 'garage', icon: 'garage', label: 'GARAGE' });
-    if (lvl >= 3) items.push({ id: 'map', icon: 'world', label: 'WORLD' });
+    items.push({ id: 'map', icon: 'world', label: 'WORLD' });   // v059 : WORLD = la liste des niveaux, dès le départ
     if (lvl >= 5) items.push({ id: 'shop', icon: 'shop', label: 'SHOP' });
     let bottom = top + HH;
     const gutter = Math.max(14 * k, (W - colW(L, k)) / 2);
@@ -156,8 +155,8 @@
   };
   function rrClip(ctx, x, y, w, h, r) { DS.rr(ctx, x, y, w, h, r); ctx.clip(); }
   function navBar(ui, ctx, L, game, active) {
-    const lvl = game.progress.level, items = [{ id: 'levels', icon: 'rocket', label: 'NIVEAUX', lv: 1 }, { id: 'garage', icon: 'garage', label: 'GARAGE', lv: 2 }, { id: 'map', icon: 'world', label: 'WORLD', lv: 3 }, { id: 'shop', icon: 'shop', label: 'SHOP', lv: 5 }].filter((i) => lvl >= i.lv);
-    if (items.length) DS.nav(ui, ctx, L, items, active, (id) => { ui.overlay = id === active ? null : id; });
+    const lvl = game.progress.level, items = [{ id: 'garage', icon: 'garage', label: 'GARAGE', lv: 2 }, { id: 'map', icon: 'world', label: 'WORLD', lv: 1 }, { id: 'shop', icon: 'shop', label: 'SHOP', lv: 5 }].filter((i) => lvl >= i.lv);
+    if (items.length > 1) DS.nav(ui, ctx, L, items, active, (id) => { ui.overlay = id === active ? null : id; });
   }
   Home.drawProgress = Home.drawUpgrades = Home.drawGarage;
 
@@ -180,37 +179,56 @@
     if (!open) { ctx.fillStyle = 'rgba(4,12,22,0.62)'; ctx.fillRect(x, y, w, h); }
     ctx.restore();
   }
-  Home.drawMap = function (ui, ctx, game, W, H) {
-    const L = Home.layout(ui, W, H), { T: top, HH } = L, k = DS.kOf(L), prog = game.progress, cfg = CC.CONFIG.progress, cw = colW(L, k), x0 = W / 2 - cw / 2;
-    backdrop(ctx, L);
-    let y = header(ui, ctx, L, k, 'WORLD', game);
-    const ids = ['city', 'forest', 'usine', 'port', 'eau', 'tour', 'sky', 'chute', 'metro', 'mini'], gap = 8 * k, cwid = (cw - gap) / 2, chh = Math.min(104 * k, (HH - 76 * k - 100 * k - 6 * 8 * k) / 5);
-    ids.forEach((id, i) => {
-      const z = ZONES[id], open = prog.level >= cfg.worlds[id], x = x0 + (i % 2) * (cwid + gap), yy = y + Math.floor(i / 2) * (chh + gap);
-      DS.panel(ctx, x, yy, cwid, chh, { k, shadow: false, accent: open ? T.border : T.borderSoft, glow: open && i === 0 });
-      zoneArt(ctx, x + 5 * k, yy + 5 * k, cwid - 10 * k, chh * 0.56, z, open);
-      if (!open) DS.icon(ctx, 'lock', x + cwid / 2, yy + 5 * k + chh * 0.28, 26 * k, T.text2);
-      DS.text(ctx, String(i + 1).padStart(2, '0') + '  ' + z[0], x + 10 * k, yy + chh * 0.8, DS.fit(ctx, String(i + 1).padStart(2, '0') + '  ' + z[0], 15 * k, cwid - 20 * k), open ? T.white : T.muted, { weight: 700, ls: 0.5 });
-      if (!open) DS.text(ctx, 'LV ' + cfg.worlds[id], x + cwid - 10 * k, yy + chh * 0.8, 13 * k, T.gold, { align: 'right', weight: 700 });
-    });
-    // accès aux 9 niveaux d'origine
-    { const by = y + 5 * (chh + gap) + 2 * k; DS.btn(ui, ctx, x0, by, cw, 52 * k, { k, kind: 'secondary', label: 'NIVEAUX 1 A 9', icon: 'rocket', iconColor: T.cyanL, color: T.white, size: 20 * k, glow: true, key: 'lv9', action: () => { ui.overlay = 'levels'; } }); }
-    navBar(ui, ctx, L, game, 'map');
-  };
-  Home.drawLevels = function (ui, ctx, game, W, H) {
+  // WORLD : la liste des niveaux (débloqué ou non) ; toucher un niveau ouvert le lance directement
+  const LVART = { city: 'city', brick: 'usine', canyon: 'forest', cave: 'metro', woods: 'forest', construction: 'tour', night: 'chute', trench: 'metro', nightcanyon: 'sky' };
+  Home.drawMap = Home.drawLevels = function (ui, ctx, game, W, H) {
     const L = Home.layout(ui, W, H), { T: top, HH } = L, k = DS.kOf(L), cw = colW(L, k), x0 = W / 2 - cw / 2, best = game.save.best || {};
     backdrop(ctx, L);
-    let y = header(ui, ctx, L, k, 'NIVEAUX', game, { currency: false });
-    const n = CC.Levels.length, gap = 7 * k, rh = Math.min(58 * k, (HH - 76 * k - 70 * k - gap * n) / n);
+    let y = header(ui, ctx, L, k, 'WORLD', game);
+    const n = CC.Levels.length, gap = 7 * k, rh = Math.min(72 * k, (HH - 76 * k - 96 * k - gap * (n - 1)) / n);
     CC.Levels.forEach((lv, i) => {
-      const open = game.isUnlocked(i), b = best[lv.id], yy = y + i * (rh + gap);
-      DS.panel(ctx, x0, yy, cw, rh, { k, shadow: false, accent: open ? undefined : T.borderSoft });
-      DS.panel(ctx, x0 + 8 * k, yy + (rh - 38 * k) / 2, 38 * k, 38 * k, { k, r: 10 * k, shadow: false, accent: T.borderSoft }); DS.text(ctx, String(i + 1), x0 + 27 * k, yy + rh / 2 + 1 * k, 22 * k, open ? T.cyanL : T.muted, { align: 'center', weight: 700 });
-      DS.text(ctx, lv.name, x0 + 58 * k, yy + rh / 2, 21 * k, open ? T.white : T.muted, { weight: 700, ls: 1 });
-      if (open) { DS.text(ctx, b ? U.formatTime(b.time) : '--:--', x0 + cw - 62 * k, yy + rh / 2, 17 * k, b ? T.gold : T.muted, { align: 'right', weight: 700 }); DS.icon(ctx, 'play', x0 + cw - 30 * k, yy + rh / 2, 22 * k, T.cyanL); hit(ui, x0, yy, cw, rh, () => game.startLevel(i)); }
-      else DS.icon(ctx, 'lock', x0 + cw - 30 * k, yy + rh / 2, 22 * k, T.muted);
+      const open = game.isUnlocked(i), b = best[lv.id], done = !!b, yy = y + i * (rh + gap), z = ZONES[LVART[lv.id] || 'city'] || ZONES.city;
+      DS.panel(ctx, x0, yy, cw, rh, { k, shadow: false, accent: done ? T.green : open ? T.cyan : T.borderSoft, glow: open && !done });
+      zoneArt(ctx, x0 + 6 * k, yy + 6 * k, rh * 1.15, rh - 12 * k, z, open);
+      DS.text(ctx, String(i + 1), x0 + 6 * k + rh * 0.575, yy + rh / 2 + 1 * k, 24 * k, open ? T.white : T.muted, { align: 'center', weight: 700 });
+      const tx = x0 + rh * 1.15 + 18 * k, tw = cw - (rh * 1.15 + 18 * k) - 64 * k;
+      DS.text(ctx, lv.name, tx, yy + rh * 0.38, DS.fit(ctx, lv.name, 20 * k, tw), open ? T.white : T.muted, { weight: 700, ls: 1 });
+      const sub = done ? 'TERMINE  ' + U.formatTime(b.time) : open ? 'A JOUER' : 'TERMINE LE NIVEAU ' + i;
+      DS.text(ctx, sub, tx, yy + rh * 0.68, DS.fit(ctx, sub, 13 * k, tw), done ? T.green : open ? T.cyanL : T.muted, { weight: 500, ls: 0.5 });
+      if (open) {
+        const rw = game.levelReward(i, done);
+        DS.icon(ctx, done ? 'check' : 'play', x0 + cw - 30 * k, yy + rh * 0.36, 22 * k, done ? T.green : T.cyanL);
+        DS.text(ctx, '+' + rw, x0 + cw - 30 * k, yy + rh * 0.76, 14 * k, T.gold, { align: 'center', weight: 700 });
+        ui.buttons.push({ x: x0, y: yy, w: cw, h: rh, action: () => game.startLevel(i) });
+      } else DS.icon(ctx, 'lock', x0 + cw - 30 * k, yy + rh / 2, 22 * k, T.muted);
     });
-    DS.btn(ui, ctx, x0, y + n * (rh + gap) + 2 * k, cw, 48 * k, { k, kind: 'secondary', label: 'DEFIS ET MISSIONS LIBRES', size: 17 * k, color: T.white, key: 'defis', action: () => { ui.overlay = 'defi'; } });
+    DS.text(ctx, 'FINIS UN NIVEAU : TU GAGNES DES ECROUS POUR TES AMELIORATIONS', W / 2, y + n * (rh + gap) + 8 * k, DS.fit(ctx, 'FINIS UN NIVEAU : TU GAGNES DES ECROUS POUR TES AMELIORATIONS', 12 * k, cw), T.muted, { align: 'center', weight: 500, ls: 0.5 });
+    navBar(ui, ctx, L, game, 'map');
+  };
+
+  // résultats d'un niveau d'origine : temps, record, écrous gagnés, niveau suivant
+  Home.drawLevelResults = function (ui, ctx, game, W, H) {
+    const L = Home.layout(ui, W, H), { T: top, HH } = L, k = DS.kOf(L), r = game.results, cw = Math.min(W - 24 * k, 400 * k), cx = W / 2, x0 = cx - cw / 2;
+    ctx.fillStyle = 'rgba(4,12,22,0.8)'; ctx.fillRect(0, top, W, HH);
+    let y = top + 70 * k;
+    DS.text(ctx, 'NIVEAU TERMINE', cx, y, DS.fit(ctx, 'NIVEAU TERMINE', 38 * k, cw), T.white, { align: 'center', weight: 700, italic: true, ls: 2 }); y += 26 * k;
+    DS.text(ctx, game.level.name, cx, y, 20 * k, T.cyanL, { align: 'center', weight: 700, ls: 2 }); y += 24 * k;
+    DS.panel(ctx, x0, y, cw, 96 * k, { k, accent: T.cyan, glow: true });
+    DS.text(ctx, 'TEMPS', x0 + 18 * k, y + 28 * k, 15 * k, T.text2, { weight: 500, ls: 2 });
+    DS.text(ctx, U.formatTime(r.time), x0 + cw - 18 * k, y + 32 * k, 36 * k, T.white, { align: 'right', weight: 700 });
+    DS.text(ctx, r.newRecord ? 'NOUVEAU RECORD !' : 'RECORD ' + U.formatTime(r.bestTime), x0 + cw / 2, y + 72 * k, 18 * k, r.newRecord ? T.gold : T.text2, { align: 'center', weight: 700, ls: 1 });
+    y += 96 * k + 12 * k;
+    DS.panel(ctx, x0, y, cw, 64 * k, { k, accent: T.gold, glow: true });
+    DS.icon(ctx, 'coin', x0 + 38 * k, y + 32 * k, 36 * k, T.gold, { warm: true });
+    DS.text(ctx, r.firstClear ? 'PREMIERE VICTOIRE' : 'ECROUS GAGNES', x0 + 70 * k, y + 32 * k, DS.fit(ctx, 'PREMIERE VICTOIRE', 17 * k, cw - 190 * k), T.white, { weight: 700, ls: 1 });
+    DS.text(ctx, '+' + (r.reward || 0), x0 + cw - 18 * k, y + 34 * k, 32 * k, T.gold, { align: 'right', weight: 700 });
+    y += 64 * k + 8 * k;
+    DS.text(ctx, 'TOTAL  ' + (game.progress.P.materials || 0), cx, y + 8 * k, 16 * k, T.text2, { align: 'center', weight: 700, ls: 1 });
+    const gutter = Math.max(14 * k, (W - cw) / 2), bottom = top + HH - 18 * k, rh = 64 * k, nxt = game.levelIndex + 1 < CC.Levels.length;
+    let by = bottom - rh;
+    DS.btn(ui, ctx, gutter, by, W - 2 * gutter, rh, { k, kind: 'secondary', label: 'WORLD', icon: 'world', iconColor: T.cyanL, color: T.white, size: rh * 0.36, key: 'w', action: () => { game.toMenu(); ui.overlay = 'map'; } }); by -= rh + 10 * k;
+    DS.btn(ui, ctx, gutter, by, W - 2 * gutter, rh, { k, kind: 'secondary', label: 'REJOUER', icon: 'retry', iconColor: T.cyanL, color: T.white, size: rh * 0.36, key: 'rt', action: () => game.restartLevel() }); by -= rh + 10 * k;
+    if (nxt) DS.btn(ui, ctx, gutter, by, W - 2 * gutter, rh * 1.1, { k, kind: 'primary', label: 'NIVEAU SUIVANT', icon: 'play', size: rh * 0.4, breathe: true, glow: true, key: 'nx', action: () => game.startLevel(game.levelIndex + 1) });
   };
 
   // ============================================================================================================

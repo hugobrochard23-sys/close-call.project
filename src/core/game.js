@@ -258,6 +258,7 @@
     }
 
     startLevel(i) {
+      if (this.ui) this.ui.overlay = null;   // v059 : la liste des niveaux se ferme (sinon elle restait affichée par-dessus le niveau)
       this.loadLevel(i);
       this.restartLevel();
       if (!this.testMode) { this.input.requestLock(); this.audio.init(); this.audio.resume(); if (this.audio.music) this.audio.music.start(); }
@@ -657,7 +658,8 @@
     guideLevel(i, L) { return i >= 0 && i < CC.CONFIG.hud.guideArrowLevels && L.guide !== false && !!(L.routes || L.route); }   // v027 : `guide: false` dans la fiche du niveau → repères rouges
 
     // v023 : progression — un niveau est ouvert si c'est le premier ou si le précédent a déjà été terminé (record enregistré)
-    isUnlocked(i) { return true; }   // v054 : les 9 niveaux d origine sont tous accessibles
+    isUnlocked(i) { return i <= 0 || !!(CC.Levels[i - 1] && this.save.best[CC.Levels[i - 1].id]); }   // v059 : le premier est ouvert, chaque suivant s'ouvre quand le précédent est terminé
+    levelReward(i, done) { return done ? 10 : 50 + 15 * i; }   // écrous : première victoire / rejouer
     nextUnlocked() {
       const n = this.levelIndex + 1;
       return !this.generated && this.levelIndex >= 0 && n < CC.Levels.length && this.isUnlocked(n) ? n : -1;
@@ -694,6 +696,7 @@
       const r = { title: this.level.mode === 'targets' ? 'ALL TARGETS DESTROYED' : 'TARGET DESTROYED', time: this.runTime, style: this.style.total, newRecord: false };
       if (!best || this.runTime < best.time) { this.save.best[id] = { time: this.runTime, style: this.style.total }; r.newRecord = !!best || true; }
       r.bestTime = this.save.best[id].time;
+      if (!this.generated) { r.firstClear = !best; r.reward = this.levelReward(this.levelIndex, !!best); this.progress.P.materials = (this.progress.P.materials || 0) + r.reward; }   // v059 : écrous gagnés en finissant un niveau (ils paient les améliorations)
       if (this.generated && this.mission) this.recordMission(r);
       if (this.generated && this.mission && this.mission.challenge) this.recordChallenge(r);   // v033
       this.results = r; this.state = 'RESULTS'; this.centerMsg = null;
