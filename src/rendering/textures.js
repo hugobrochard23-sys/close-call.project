@@ -6,7 +6,7 @@
   // Taille réelle (m) couverte par une répétition de texture : [u, v]
   T.tile = {
     concrete: [2, 2], concreteDark: [2, 2], concreteWarm: [2, 2], facade: [12, 14], facadePink: [12, 14], facadeTan: [12, 14],
-    facadeDark: [12, 14], storefront: [8, 4.2], brick: [2.6, 2.6], planks: [2, 2], grass: [4, 4], rock: [6, 6], hazard: [1.2, 1.2],
+    facadeDark: [12, 14], facadeGlass: [12, 14], facadeSand: [12, 14], facadeBrick: [12, 14], facadeMint: [12, 14], facadeNavy: [12, 14], facadeLilac: [12, 14], facadeWhite: [12, 14], facadeOchre: [12, 14], storefront: [8, 4.2], brick: [2.6, 2.6], planks: [2, 2], grass: [4, 4], rock: [6, 6], hazard: [1.2, 1.2],
     metal: [2, 2], tankGreen: [2, 2], camo: [3, 3], blueFloor: [2, 2], cream: [2, 2], bark: [1.2, 2.4],
     houseWall: [2, 2], roofBrown: [1.5, 1.5], white: [2, 2], dirt: [4, 4], rail: [1, 1], asphalt: [4, 4],
     sand: [4, 4], water: [6, 6], waterSurf: [8, 8], corrugated: [2.4, 2.6], chainlink: [2, 2],   // v032 : générateur de missions
@@ -64,6 +64,15 @@
     facadePink: (g, w, h, r) => facade(g, w, h, r, '#cdc2bb'),
     facadeTan: (g, w, h, r) => facade(g, w, h, r, '#c6beb0'),
     facadeDark: (g, w, h, r) => facade(g, w, h, r, '#5b5552', true),
+    // v081 : variantes de façades (looks des niveaux) : mur + teinte du verre
+    facadeGlass: (g, w, h, r) => facade(g, w, h, r, '#5f7f90', false, [-14, 36, -22]),
+    facadeSand: (g, w, h, r) => facade(g, w, h, r, '#d6c39a', false, [6, 6, -16]),
+    facadeBrick: (g, w, h, r) => facade(g, w, h, r, '#9a5a48', false, [8, -4, -24]),
+    facadeMint: (g, w, h, r) => facade(g, w, h, r, '#a8c8b8', false, [-10, 28, -10]),
+    facadeNavy: (g, w, h, r) => facade(g, w, h, r, '#3a4560', true),
+    facadeLilac: (g, w, h, r) => facade(g, w, h, r, '#bcaad0', false, [20, -10, 10]),
+    facadeWhite: (g, w, h, r) => facade(g, w, h, r, '#ecebe6', false, [-4, 6, 0]),
+    facadeOchre: (g, w, h, r) => facade(g, w, h, r, '#d9a85c', false, [30, 10, -40]),
     storefront: (g, w, h, r) => storefront(g, w, h, r),
     brick: (g, w, h, r) => {
       g.fillStyle = '#d97a48'; g.fillRect(0, 0, w, h);          // joints éclairés (MESURÉ #d56229, éclairci en v002 : Δ luminance −29)
@@ -176,7 +185,8 @@
   /* Design : façade de 4 × 4 travées (une travée = 32 px ≈ 3 m × 3,5 m) : bandeau de dalle entre étages, fenêtre encadrée
    * avec meneau, imposte, appui et linteau ; chaque fenêtre tire un état (vitre qui reflète le ciel, store à demi baissé,
    * rideaux, pièce sombre, pièce éclairée) et parfois un climatiseur sous l'appui. Couleurs de vitre MESURÉES (bleu). */
-  function facade(g, w, h, r, wall, dark) {
+  function facade(g, w, h, r, wall, dark, tone) {
+    const tn = tone || [0, 0, 0], cl = (v) => Math.max(0, Math.min(255, Math.round(v)));
     noiseFill(g, w, h, r, wall, 8);
     const C = 32;
     for (let cy = 0; cy < h / C; cy++) for (let cx = 0; cx < w / C; cx++) {
@@ -194,7 +204,7 @@
         if (lit) col = 'rgb(' + Math.round(225 + 20 * t) + ',' + Math.round(185 + 25 * t) + ',' + Math.round(110 + 20 * t) + ')';
         else if (shut) col = 'rgb(' + Math.round(16 + 16 * t) + ',' + Math.round(30 + 26 * t) + ',' + Math.round(48 + 30 * t) + ')';
         else col = dark ? 'rgb(' + Math.round(20 + 30 * t) + ',' + Math.round(40 + 60 * t) + ',' + Math.round(70 + 60 * t) + ')'
-          : 'rgb(' + Math.round(22 + 40 * t) + ',' + Math.round(92 + 80 * t) + ',' + Math.round(168 + 50 * t) + ')';   // MESURÉ vitres bleues
+          : 'rgb(' + cl(22 + 40 * t + tn[0]) + ',' + cl(92 + 80 * t + tn[1]) + ',' + cl(168 + 50 * t + tn[2]) + ')';   // MESURÉ vitres bleues
         g.fillStyle = col; g.fillRect(x0, y, x1 - x0, 1);
       }
       if (!lit && !shut) {                                                          // reflet du ciel en diagonale

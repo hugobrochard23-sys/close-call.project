@@ -315,6 +315,7 @@
       if (opts.levelDef === undefined && !this.testMode && !this.params.has('endless')) ld = this.curLevelDef();
       if (opts.levelDef === undefined && this.params.has('level')) ld = CC.LM.def(parseInt(this.params.get('level'), 10) || 1);
       this.levelRun = ld; this.levelWin = false; this.coinFx = null;
+      if (CC.Look) CC.Look.set(ld ? CC.Look.forLevel(ld) : null);   // v081 : look du niveau (teinte, matériaux, ambiance)
       this.assistFuel = ld ? 3 * Math.min(5, ((this.save.lvl && this.save.lvl.tries && this.save.lvl.tries[ld.n]) || 0)) : 0;   // coup de pouce après plusieurs échecs
       if (ld) seed = ld.seed;
       const ordP = this.params.get('order'), L = CC.Endless.level(seed, { zones: this.testMode ? null : this.progress.unlockedWorlds(), order: ld ? ld.order : (ordP ? ordP.split(',') : null), env: this.params.get('env') || null, levelLen: ld && ld.len, difK: ld && ld.difK, bossHp: ld && ld.hp, bossType: ld && ld.boss, padStyle: ld && ld.n, theme: ld && ld.theme, mids: ld && ld.mids, bossTint: ld && ld.bossTint, bossVar: ld && ld.bossVar });

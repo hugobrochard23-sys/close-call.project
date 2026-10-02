@@ -32,11 +32,11 @@
       n, zone, seed: 7000 + n * 131, len,
       difK: 0.7 + 0.3 * (n - 1),                       // la difficulté (cibles, ouvertures, missiles) monte avec le numéro du niveau
       hp,                                              // les trois premiers boss tombent d'un coup, ensuite de plus en plus de points de vie
-      boss, bossTint: (k + ZN.indexOf(zone)) % 6, bossVar: k % 3, theme: th, mids,
+      boss, bossTint: (k + ZN.indexOf(zone)) % 6, bossVar: k % 3, look: (k + 2 * ZN.indexOf(zone)) % 6, theme: th, mids,
       // départ DIRECTEMENT dans la zone (même altitude que le lanceur) ; les zones en contrebas / en altitude (métro, profondeur, base aérienne) sont atteintes par une rampe très courte
       order: (flat ? [] : ['city']).concat(new Array(90).fill(zone)),
       chest: 25 + 10 * n,
     };
   };
-  CC.LM = { ZN, def, count: 60, THEMES, POOL };
+  CC.LM = { ZN, def, count: 120, THEMES, POOL };
 })();

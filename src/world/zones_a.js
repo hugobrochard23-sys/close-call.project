@@ -16,6 +16,7 @@
   // ============================================================== AVENUE
   // un quartier : style de façade, plage de hauteur, largeur des immeubles
   function district(S, lo, hi) {
+    const hk = (CC.Look && CC.Look.cur && CC.Look.cur.h) || 1; lo *= hk; hi *= hk;   // v081 : hauteur des immeubles selon le look
     const sr = S.sr, side = S.dark ? 'facadeDark' : sr.pick(['facade', 'facadePink', 'facadeTan']);
     return { mat: { side, top: 'concrete', bottom: 'concreteDark' }, tints: [sr.pick(['#ffffff', '#f2eee8', '#e8ecf0']), sr.pick(['#f2eee8', '#e8ecf0', '#ffffff'])], lo, hi };
   }
@@ -76,6 +77,15 @@
             if (r() < 0.4) S.neon(cx, s * (v - 1.2), r.between([9, 16]), 0.5, r.between([5, 9]), 1.3, r.pick(pal), 10);
             if (r() < 0.25) S.neon(cx, s * (v + w * 0.5), h + 1.6, 0.4, 2.4, dd * 0.7, r.pick(pal), 12);
           }
+          { const tp = CC.Look && CC.Look.cur && CC.Look.cur.top;   // v081 : le toit change avec le look (silhouettes différentes)
+            if (tp && r() < 0.75) {
+              const bx0 = s * (v + w / 2);
+              if (tp === 'spire') { S.bx(cx, bx0, h + 8, 0.9, 16, 0.9, 'col:#c8ccd2'); S.bx(cx, bx0, h + 16.6, 1.8, 1.8, 1.8, 'basic:#ff6a4a', undefined, false); S.bx(cx, bx0, h + 2.2, w * 0.5, 4, dd * 0.5, dist.mat, tint); }
+              else if (tp === 'gable') { for (const q of [-1, 1]) S.bxr(cx, bx0 + q * w * 0.23, h + w * 0.07, w * 0.58, 0.8, dd - 0.6, 'roofBrown', undefined, q * 30, 0, false); S.bx(cx, bx0, h + 0.2, w * 0.7, 1.4, dd - 0.6, dist.mat, tint, false); }
+              else if (tp === 'tank') { S.cyl(cx, bx0, h - 0.5, 2.2, 3.4, 'planks', undefined, 10, 2.2, false); S.cyl(cx, bx0, h + 2.9, 2.3, 0.5, 'col:#4a4034', undefined, 10, 0.2, false); for (const a of [-1, 1]) S.bx(cx + a * 1.2, bx0 + a * 1.2, h + 0.8, 0.25, 2.2, 0.25, 'col:#3a3028', undefined, false); }
+              else if (tp === 'mast') { S.bx(cx, bx0, h + 6, 0.3, 12, 0.3, 'col:#2a2a2e', undefined, false); S.bx(cx, bx0, h + 12.4, 0.7, 0.7, 0.7, 'basic:#ff2a2a', undefined, false); S.glow(cx, bx0, h + 12.4, '#ff2a2a', 7); }
+              else if (tp === 'snow') { S.bx(cx, bx0, h + 0.5, w + 0.5, 1.0, dd - 0.2, 'white', undefined, false); S.bx(cx, bx0 + w * 0.2, h + 1.6, w * 0.4, 1.6, dd * 0.5, 'white', undefined, false); }
+            } }
           if (h > 34 && roll < 0.4) { const w2 = w * 0.6, h2 = r.between([6, 14]); S.bx(cx, s * (v + w / 2 + 2), h + h2 / 2 - 0.5, w2, h2, dd * 0.6, dist.mat, tint); }
           if (roll > 0.72) { S.cyl(cx, s * (v + w * 0.65), h - 0.5, 1.7, 3, 'planks', undefined, 10, 1.7, false); for (const a of [-1, 1]) for (const c of [-1, 1]) S.bx(cx + c, s * (v + w * 0.65) + a, h + 1, 0.2, 2, 0.2, 'col:#3a3028', undefined, false); }
           else if (roll > 0.5) S.bx(cx, s * (v + w * 0.6), h + 4, 0.25, 8, 0.25, 'col:#2a2a2e', undefined, false);

@@ -1,4 +1,4 @@
-# COLD IMPACT — notes de projet (état v080)
+# COLD IMPACT — notes de projet (état v081)
 
 Jeu mobile de fusée (JS vanilla, Three.js r149, canvas 2D pour l'UI/HUD). Dépôt `hugobrochard23-sys/cold-impact.project`, branche `main`, déploiement GitHub Pages
 (https://hugobrochard23-sys.github.io/cold-impact.project/). Le propriétaire teste sur téléphone ; **toujours donner ce lien à la fin d'un message** (cache à vider / navigation privée).
@@ -50,12 +50,14 @@ Le pilote automatique ne sait pas viser, attendre un volet ni plonger verticalem
 - Banc de test : le pilote suit le relief (niveaux 2-5, 7-10, 12 finis de bout en bout) ; il échoue sur cheminee/city1 (anciennes scènes de ville).
 - Boss : fuit moins loin (≤120 m par coup) et n'est plus mangé par le brouillard (`fog=false`).
 
-## v080 — boss différents, surprises
-- `src/entities/models_boss.js` : 11 designs (gunship, mech, zeppelin, ufo, bomber, sub, ship, spider, drill, toybot, squid) + `golden` ; `userData {gen, flying, size, center, firePoints, anim}` ; teintes 0-5. Comportement commun : `Target.updateGeneric`. `CC.LM.POOL` : designs par zone ; `bossTint = floor((n-1)/10)`. Les mini-boss piochent dans le même pool. Les boss volants se placent à la hauteur de la trajectoire (tour/chute).
-- Le boss ENTRE en vol depuis le fond de l'arène (`opts.arrive`), sirène + secousse ; il tire plus vite à chaque coup (`rageK`) ; ≤120 m de fuite par coup.
-- Surprises sans texte : CIBLE DOREE (`golden`, 5 points, gros carburant, hors trajectoire, ~1 par 500 m), FORMATIONS de 5 hélicoptères (`grp`, bonus quand toutes détruites), son qui monte quand on enchaîne les cibles (`door` + série).
-- Mer : suppression des « longs blocs » traversables (rayons de lumière, algues, colonne du squelette).
-- Visionneuse des designs : `cctest/viewer/boss.html` (hors dépôt).
+## v081 — boss réalistes, looks
+- `models_boss.js` : UNIQUEMENT du matériel militaire réaliste, détaillé comme le char : ifv, spg (obusier), mlrs, aagun (radars qui tournent), destroyer, train blindé (« comme le char » : `userData.tankLike` → même IA de tourelle `updateTank`), gunship (hélico lourd tandem), jet, bomber furtif, sub (3 variantes) (`gen/flying` → `Target.updateGeneric`) ; livrées 0-5 (`bossTint`). `CC.LM.POOL` : 6 engins par zone dans l'ordre des 6 passages (niveau n, n+10…). Pas d'animaux ni de robots.
+- Entrée du boss en vol depuis le fond de l'arène (`opts.arrive`), sirène/secousse ; il tire plus vite à chaque coup (`rageK`). Mini-boss : mêmes designs.
+- Cible spéciale = HELICOPTERE DORE (`opts.gold`, `helicopter(camo, gold)`) : brille et scintille, dérive large, 5 points + carburant, feu d'artifice. Formations de 5 hélicoptères (`grp`) : bonus quand toutes détruites. Son qui monte en série (`door`).
+- `world/look.js` : 6 LOOKS (jour, couchant, nuit, givre, brique, jade) = teinte globale + remplacement de matériaux (`lookMat` dans `builder.js`) + ambiance (`Look.pool`, 5 nouveaux envs) + hauteur d'immeubles + toits différents (`top` : flèche, toit à pignon, château d'eau, mât, neige). Niveau n → look `(k + 2·zone) % 6`, k = ⌊(n−1)/10⌋ ; `?look=0..5` force. 8 nouvelles textures de façades (`facadeGlass/Sand/Brick/Mint/Navy/Lilac/White/Ochre`).
+- Scène `galerie` (tube à nervures) dans toutes les zones. 120 niveaux (`LM.count`).
+- Mer : plus de longs blocs traversables.
+- Visionneuse des engins : `cctest/viewer/boss2.html` (hors dépôt).
 
 ## À vérifier au doigt (jamais testé sur téléphone)
 Équilibrage des ennemis/missiles, difficulté des niveaux 2 à 5, taille de l'arène, caméra en virage, lisibilité des flèches (petites de loin), forêt dégagée.

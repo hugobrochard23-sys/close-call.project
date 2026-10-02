@@ -272,6 +272,22 @@
       });
     } };
 
+  // ===== GALERIE : un long tube à nervures et rubans lumineux (conduite, viaduc couvert, tunnel de verre…) dont l'intérieur est la trajectoire
+  SC.galerie = { len: [250, 310], noDoor: true, noChaos: true,
+    pin: pinFor(16),
+    build(S) {
+      const sk = skin(S), rad = S.R + 4.8, acc = ZK[S.zone].acc;
+      for (let dc = S.d0 + 22; dc < S.d1 - 22; dc += 16) S.item(dc + 8, (r) => {
+        const m = dc + 8, L0 = S.lane(m), rib = Math.round((m - S.d0) / 16) % 3 === 0;
+        S.tube(m, L0.lx, L0.y, rad, 16.6, sk.bm, sk.bt, 8, 1.4);
+        if (rib) S.tube(m, L0.lx, L0.y, rad + 0.2, 2.0, 'hazard', undefined, 8, 2.4, false);
+        S.bx(m, L0.lx, L0.y + rad - 0.5, 2.4, 0.18, 12, 'basic:' + (S.dark ? '#ffe8b0' : '#fff6d8'), undefined, false);
+        for (const sg of [-1, 1]) S.bx(m, L0.lx + sg * (rad - 0.5), L0.y - rad * 0.55, 0.16, 0.16, 12, 'basic:' + acc, undefined, false);
+      });
+      for (let dc = S.d0 + 30; dc < S.d1 - 30; dc += 30) S.gate(dc, S.lane(dc).lx, S.lane(dc).y);
+      scatterProps(S, 8, rad + 14);
+    } };
+
   // habillage par zone des parois et des barres
   function skin(S) {
     const m = Z.meta[S.zone] || Z.meta.city, w = m.wall(S.sr), o = m.obstacle || 'concrete';
@@ -298,5 +314,7 @@
   forest.notFirst = ['salle', 'chuteLibre', 'montee', 'pontPlongeon', 'gradins', 'soussol', 'defile', 'montagnesRusses'];
   Z.defs.forest = forest;
   for (const nm of ALL) forest.scenes[nm] = SC[nm];
+  for (const zone of Object.keys(ZK)) { if (zone === 'tour' || zone === 'chute') continue; const def = Z.defs[zone]; if (def) def.scenes.galerie = ENCL[zone] ? Object.assign({}, SC.galerie, { noDress: true }) : SC.galerie; }
+  forest.scenes.galerie = SC.galerie;
   Z.reliefNames = ALL;
 })();

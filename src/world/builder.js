@@ -45,6 +45,20 @@
     return [k + (shadow === false ? '#fefefe' : '#ffffff'), t];   // les boîtes sans ombre ont leur propre lot (un seul lot sans ombre désactiverait l'ombre de tout le lot)
   }
 
+  // v081 : LOOK du niveau (look.js) : remplacement de matériaux et teinte globale (jamais sur les lumières, vitres, eau)
+  const _lc = new THREE.Color(), _lm = new THREE.Color(), _lk = new Map();
+  function lookMat(mat, tint) {
+    const L = CC.Look && CC.Look.cur; if (!L) return [mat, tint];
+    if (typeof mat === 'string') {
+      if (/^(basic:|emis:|glass|hazard|water|cloud:|chainlink)/.test(mat)) return [mat, tint];
+      if (L.map[mat]) mat = L.map[mat];
+    } else if (mat && typeof mat === 'object') {
+      const m2 = Object.assign({}, mat); for (const k of ['side', 'top', 'bottom']) if (mat[k] && L.map[mat[k]]) m2[k] = L.map[mat[k]]; mat = m2;
+    }
+    if (L.mul !== '#ffffff') { const key = (tint || '') + '|' + L.mul; let t = _lk.get(key); if (!t) { _lc.set(tint || '#ffffff').multiply(_lm.set(L.mul)); t = '#' + _lc.getHexString(); _lk.set(key, t); } tint = t; }
+    return [mat, tint];
+  }
+
   class LevelBuilder {
     constructor(scene, world, level) {
       this.scene = scene; this.world = world; this.level = level;
@@ -112,6 +126,7 @@
     }
 
     addBoxGeometry(pos, q, w, h, d, mat, tint, tileOverride, shadow) {
+      [mat, tint] = lookMat(mat, tint);
       [mat, tint] = normMat(mat, tint, shadow);
       const faces = [
         { n: [1, 0, 0], k: 'side', a: (x, y, z) => d / 2 - z, b: (x, y, z) => y + h / 2, c: [[w / 2, -h / 2, d / 2], [w / 2, -h / 2, -d / 2], [w / 2, h / 2, -d / 2], [w / 2, h / 2, d / 2]] },
@@ -149,6 +164,7 @@
 
     /* Ajoute une BufferGeometry quelconque (cylindres, cônes...) transformée dans un lot. */
     addGeometry(geom, pos, q, scale, mat, tint, uvScale) {
+      [mat, tint] = lookMat(mat, tint);
       [mat, tint] = normMat(mat, tint);
       const bt = this.batch(mat);
       const g = geom;
