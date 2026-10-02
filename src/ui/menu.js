@@ -60,7 +60,6 @@
       else if (this.overlay === 'quests') { this.buttons = []; CC.Home.drawQuests(this, ctx, game, W, H); }        // v034
       else if (this.overlay === 'progress') { this.buttons = []; CC.Home.drawGarage(this, ctx, game, W, H); }
       else if (this.overlay === 'garage') { this.buttons = []; CC.Home.drawGarage(this, ctx, game, W, H); }
-      else if (this.overlay === 'levels') { this.buttons = []; CC.Home.drawLevels(this, ctx, game, W, H); }
       else if (this.overlay === 'map') { this.buttons = []; CC.Home.drawMap(this, ctx, game, W, H); }
       else if (this.overlay === 'msettings') { this.buttons = []; CC.Home.drawSettings(this, ctx, game, W, H); }
       else if (this.overlay === 'revive') { this.buttons = []; CC.Home.drawRevive(this, ctx, game, W, H); }
@@ -351,7 +350,6 @@
     drawResults(ctx, game, W, H) {
       if (game.results && game.results.endless) { CC.Home.drawResults(this, ctx, game, W, H); return; }   // v034 : récompenses animées
       if (game.results && game.results.challenge) { this.drawResultsV33(ctx, game, W, H); return; }
-      if (game.results && !game.generated) { this.buttons = []; CC.Home.drawLevelResults(this, ctx, game, W, H); return; }   // v059
       this.dim(ctx, W, H, 0.5);
       const r = game.results, col = CC.CONFIG.hud.colors;
       // v030 : en portrait sur téléphone, toute la hauteur de l'écran et des boutons ≥ 44 points bien espacés

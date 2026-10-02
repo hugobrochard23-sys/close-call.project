@@ -12,7 +12,7 @@
   const U = CC.U, F = CC.Font;
   const C = () => CC.CONFIG.hud.colors;
   // v039 : palette réduite en habillage pixel — blanc, jaune (seul accent), orange (essence), rouge (danger), bleu nuit (fonds)
-  const PXL = (new URLSearchParams(location.search).get('skin') || CC.CONFIG.hud.skin || 'premium') === 'pixel';
+  const PXL = (new URLSearchParams(location.search).get('skin') || CC.CONFIG.hud.skin || 'pixel') === 'pixel';
   const CY = PXL ? '#e8ecef' : '#39d4ff', GOLD = PXL ? '#d9a441' : '#d9a441', GREEN = PXL ? '#d9a441' : '#56ff5a', RED = PXL ? '#d0473e' : '#ff3b2e', ORANGE = PXL ? '#d9a441' : '#ff7c1f', MAG = PXL ? '#e8ecef' : '#ff5be0', INK = '#14181d';   // palette « nuit + jaune »
 
   const Home = {};
@@ -28,7 +28,7 @@
 
   // ---------- formes arrondies « jeu mobile » : pastilles, boutons 3D, jauges ----------
   // v038j : deux habillages — 'pixel' (par défaut : coins en escalier, aplats, police 5×7, icônes pixelisées) et 'glass' (?skin=glass : verre arrondi)
-  const SKIN = (new URLSearchParams(location.search).get('skin') || CC.CONFIG.hud.skin || 'premium');
+  const SKIN = (new URLSearchParams(location.search).get('skin') || CC.CONFIG.hud.skin || 'pixel');
   const PIX = SKIN === 'pixel';
   if (PIX) { CC.Font.skinPixel = true; const mark = () => document.body && document.body.classList.add('cc-skin-pixel'); if (document.body) mark(); else document.addEventListener('DOMContentLoaded', mark); }
   // forme à coins en escalier (deux marches) : c = taille d'une marche
