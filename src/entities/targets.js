@@ -42,10 +42,11 @@
       this.object = new THREE.Group();
       // design : variante de teinte par char (tirée de la position : stable d'une partie à l'autre)
       const vr = Math.abs(Math.round(pos[0] * 7 + pos[2] * 3)) % 3;
-      this.model = type === 'tank' ? CC.Models.tank(vr) : type === 'heli' ? CC.Models.helicopter(false) : type === 'heliCamo' ? CC.Models.helicopter(true)
-        : type === 'truck' ? CC.Models.truck() : CC.BossModels && CC.BossModels[type] ? CC.BossModels[type](opts.tint) : GEN_MODELS[type] ? GEN_MODELS[type]() : CC.Models.house();   // v032 : radar, dépôt, poste, lance-missiles
-      this.gen = this.model.userData.gen ? this.model.userData : null;   // v080 : design de boss générique (models_boss.js)
-      this.arrive = opts.arrive ? new V().fromArray(opts.arrive) : null; this.grp = opts.grp || null; this.golden = !!(this.gen && this.gen.golden); this.rageK = 1;   // le boss entre en vol depuis le fond de l'arène
+      this.model = type === 'tank' ? CC.Models.tank(opts.tint !== undefined ? opts.tint : vr) : type === 'heli' ? CC.Models.helicopter(false, !!opts.gold) : type === 'heliCamo' ? CC.Models.helicopter(true)
+        : type === 'truck' ? CC.Models.truck() : CC.BossModels && CC.BossModels[type] ? CC.BossModels[type](opts.tint, opts.variant) : GEN_MODELS[type] ? GEN_MODELS[type]() : CC.Models.house();   // v032 : radar, dépôt, poste, lance-missiles
+      this.gen = this.model.userData.gen ? this.model.userData : null; this.tl = !!this.model.userData.tankLike;   // tl : engin « comme le char » (même IA de tourelle)
+   // v080 : design de boss générique (models_boss.js)
+      this.arrive = opts.arrive ? new V().fromArray(opts.arrive) : null; this.grp = opts.grp || null; this.golden = !!opts.gold; this.rageK = 1;   // le boss entre en vol depuis le fond de l'arène
       this.ph = (vr + 1) * 1.7 + pos[0] * 0.13;             // phase propre (micro-mouvements désynchronisés)
       this.object.add(this.model);
       this.object.position.fromArray(pos);
@@ -123,7 +124,8 @@
       if (this.arrive && rk && rk.pos.distanceTo(this.base) < 600) { this.flyTo = this.arrive; this.flySpeed = 85; this.arrive = null; game.flash = Math.max(game.flash || 0, 0.28); game.flashColor = '#ff3a2a'; game.rig.shake = Math.max(game.rig.shake, 1.1); game.audio.play('alarm'); if (this.boss) game.audio.play('shipHorn'); }   // v080 : entrée du boss (sirène, secousse, éclat rouge)
       if (this.gen) this.updateGeneric(dt, game, rk);
       else if (this.type === 'heli' || this.type === 'heliCamo') this.updateHeli(dt, game, rk);
-      if (!this.gen && (this.type === 'tank' || this.type === 'sam')) this.updateTank(dt, game, rk);
+      if (!this.gen && (this.type === 'tank' || this.type === 'sam' || this.tl)) this.updateTank(dt, game, rk);
+      if (this.tl && this.model.userData.anim) this.model.userData.anim(dt, this.t);
       if (this.type === 'radar') this.model.userData.dish.rotation.y += dt * 1.1;
       if (this.model.userData.beacon) this.model.userData.beacon.visible = (this.t + this.ph) % 1.4 < 0.15;
       if (this.flyTo) { const dv = _v.subVectors(this.flyTo, this.base), dl = dv.length(); if (dl < 1) this.flyTo = null; else this.base.addScaledVector(dv, Math.min(1, (this.flySpeed || 90) * dt / dl)); }   // v076 : le boss s'éloigne après un coup
@@ -140,7 +142,7 @@
         if (!this.passed && dd < 30) { this.passed = true; if (game.audio) game.audio.play('whoosh', this.object.position); }   // bruit quand on passe à côté
       }
       // tirs anti-aériens : tanks et hélicoptères, sauf une cible qui s'enfuit (v023 : elle fuit, elle ne se bat pas)
-      if (rk && game.state === 'FLIGHT' && !this.path && !this.unarmed && (this.gen || this.type === 'tank' || this.type === 'sam' || this.type === 'heli' || this.type === 'heliCamo')) this.updateAA(dt, game, rk);
+      if (rk && game.state === 'FLIGHT' && !this.path && !this.unarmed && (this.gen || this.tl || this.type === 'tank' || this.type === 'sam' || this.type === 'heli' || this.type === 'heliCamo')) this.updateAA(dt, game, rk);
       if (this.alert.visible) this.alert.position.y = this.size[1] + 1.2 + Math.sin(this.t * 6) * 0.1;
     }
 
@@ -189,6 +191,7 @@
       // feux : gyrophare (éclat bref toutes les 1,2 s), feu de queue (double éclat)
       const bk = (t + ph) % 1.2;
       ud.beacon.visible = bk < 0.12;
+      if (ud.goldMats) { const k = 0.5 + 0.5 * Math.sin(t * 4 + ph); for (const gm of ud.goldMats) gm.emissiveIntensity = 0.5 + 0.9 * k; for (let i = 0; i < ud.glints.length; i++) { const gl = ud.glints[i]; gl.visible = ((t * 2.4 + i * 0.73) % 1.9) < 0.14; gl.quaternion.copy(game.camera.quaternion); } }   // v081 : l'hélicoptère doré scintille
       const tk = (t * 1.3 + ph) % 1.6;
       ud.lights[2].visible = tk < 0.06 || (tk > 0.16 && tk < 0.22);
       // poussière soulevée par le souffle du rotor, près du sol
@@ -276,7 +279,7 @@
     }
     onFire(game, from, rk) {
       const dir = _w.subVectors(rk.pos, from).normalize();
-      if (this.type === 'tank' || this.type === 'sam') {
+      if (this.type === 'tank' || this.type === 'sam' || this.tl) {
         this.recT = 0;
         const ud = this.model.userData, q = new THREE.Quaternion();
         ud.muzzle.getWorldQuaternion(q);
@@ -299,7 +302,7 @@
       this.aaCool = (this.aaCool || 0) - dt;
       // point de tir de gameplay (inchangé : visibilité, portée, trajectoire) ; le départ visuel se fait à la bouche du canon
       const from = _v2.copy(this.obb.c);
-      if (this.type === 'tank' || this.type === 'sam' || (this.gen && !this.gen.flying)) from.addScaledVector(this.obb.uy, this.obb.hy + 0.9); else from.addScaledVector(this.obb.uy, -(this.obb.hy + 0.6));
+      if (this.type === 'tank' || this.type === 'sam' || this.tl || (this.gen && !this.gen.flying)) from.addScaledVector(this.obb.uy, this.obb.hy + 0.9); else from.addScaledVector(this.obb.uy, -(this.obb.hy + 0.6));
       const to = _v.subVectors(rk.pos, from);
       const dist = to.length();
       if (dist > L(A.range) || dist < A.minRange) { this.aaSeen = 0; return; }
@@ -331,7 +334,7 @@
 
     kill(game) {
       this.alive = false; this.object.visible = false;
-      if (game && !this.golden) this.makeWreck(game);
+      if (game) this.makeWreck(game);
     }
 
     /* Design : épave. Copie calcinée du modèle (un seul matériau sombre partagé), qui brûle et fume ; char : tourelle
@@ -345,7 +348,7 @@
       root.position.copy(this.object.position); root.quaternion.copy(this.object.quaternion); root.scale.copy(this.object.scale); root.add(obj);
       game.scene.add(root);
       const r = U.fx, W = { root, obj, t: 0, fire: 0, parts: [], kind: this.type, landed: false, vel: new V(), spin: new V() };
-      if (this.type === 'tank') {
+      if (this.type === 'tank' || this.tl) {
         const tur = obj.getObjectByName('turret');
         if (tur) {
           tur.updateWorldMatrix(true, false);

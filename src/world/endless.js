@@ -148,7 +148,7 @@
     const cfg = C(), T = new Track(seed, opts && opts.zones);
     if (opts && opts.env) T.forceEnv = opts.env;   // banc de test : ?env=neonNight
     if (opts && opts.levelLen) {   // v075 : niveau à longueur fixe (arène + boss à la fin)
-      T.levelLen = opts.levelLen; T.difK = opts.difK || 1; T.bossHp = opts.bossHp || 1; T.bossType = opts.bossType || 'heli'; T.padStyle = opts.padStyle || 0; T.theme = opts.theme || null; T.mids = opts.mids || []; T.bossTint = opts.bossTint || 0;
+      T.levelLen = opts.levelLen; T.difK = opts.difK || 1; T.bossHp = opts.bossHp || 1; T.bossType = opts.bossType || 'heli'; T.padStyle = opts.padStyle || 0; T.theme = opts.theme || null; T.mids = opts.mids || []; T.bossTint = opts.bossTint || 0; T.bossVar = opts.bossVar || 0;
     }
     if (opts && opts.order && opts.order.length) { const o = opts.order.filter((z) => CC.Zones.PROFILE[z]); while (o.length < 90) o.push(o[o.length % Math.max(1, opts.order.length)]); T.zoneOrder = o; if (opts.levelLen) { const dE = o[1] && o[1] !== o[0] ? Math.abs(CC.Zones.PROFILE[o[1]].elev - CC.Zones.PROFILE[o[0]].elev) : 0; T.off = dE ? C().zoneLen - (Math.max(130, 1.8 * dE) + 40) : 0; } }   // banc de test : ?order=city,metro,…
     const L = {
@@ -292,7 +292,7 @@
           gs.tries++;
           if (!free(d, 14) || inRamp(d) || tr0(d).t !== 1) continue;
           const p = place(d, lx, yy, true, 6); if (!p) continue;
-          gs.placed++; b.target('golden', p, 0, { scale: 1.7, unarmed: true, drift: 2.5, driftSpeed: 0.6 }); busy.push(d); break;
+          gs.placed++; b.target('heli', p, T.yawAcross(d), { gold: true, scale: 2.3, unarmed: true, drift: 12, driftSpeed: 0.5 }); busy.push(d); break;
         }
       }
       if ((T.difK || 1) >= 1 && rf() < 0.3) {
@@ -311,7 +311,7 @@
       if (m.d < d0 + 10 || m.d >= d1 - 10) continue;
       const air = m.type === 'heli' || !!(CC.BossFlying && CC.BossFlying[m.type]), ly = T.laneY(m.d), p = place(m.d, T.laneX(m.d), air ? Math.max(ly, 16) : 0, air, air ? 12 : 9);
       if (!p) continue;
-      b.target(m.type, p, T.yawAcross(m.d) + (m.type === 'tank' || (CC.BossModels && CC.BossModels[m.type]) ? 180 : 0), { scale: 4.6, hp: m.hp, mini: true, unarmed: false, drift: air ? 6 : 2.5, driftSpeed: 0.4, tint: m.tint || 0 });
+      b.target(m.type, p, T.yawAcross(m.d) + (m.type === 'tank' || m.type === 'sam' || (CC.BossModels && CC.BossModels[m.type]) ? 180 : 0), { scale: 4.6, hp: m.hp, mini: true, unarmed: false, drift: air ? 6 : 2.5, driftSpeed: 0.4, tint: m.tint || 0, variant: m.variant || 0 });
       busy.push(m.d);
     }
 

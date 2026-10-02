@@ -478,9 +478,9 @@
     // v080 : le boss a SON design (CC.BossModels), il entre en vol depuis le fond de l'arène ; en altitude (tour, chute) il vole à la hauteur de la trajectoire
     const dB = T.levelLen + 110, dS = T.levelLen + 380;
     if (dS >= S.d0 && dS < S.d1) S.item(dS, () => {
-      const bt = T.bossType || 'heli', fly = bt === 'heli' || (CC.BossFlying && CC.BossFlying[bt]), yy = fly ? U.clamp(S.lane(dB).y, 24, 270) : 0, face = bt === 'tank' ? 180 : (CC.BossModels && CC.BossModels[bt] ? 180 : 0);
+      const bt = T.bossType || 'heli', fly = bt === 'heli' || (CC.BossFlying && CC.BossFlying[bt]), yy = fly ? U.clamp(S.lane(dB).y, 24, 270) : 0, face = bt === 'heli' ? 0 : 180;
       const st = S.at(dS, 0, yy), en = S.at(dB, 0, yy);
-      S.b.target(bt, st, S.yaw(dB) + face, { scale: 6.5, hp: T.bossHp || 1, boss: true, unarmed: false, drift: fly ? 7 : 3, driftSpeed: 0.35, tint: T.bossTint || 0, arrive: en });
+      S.b.target(bt, st, S.yaw(dB) + face, { scale: 6.5, hp: T.bossHp || 1, boss: true, unarmed: false, drift: fly ? 7 : 3, driftSpeed: 0.35, tint: T.bossTint || 0, variant: T.bossVar || 0, arrive: en });
     });
   }
 

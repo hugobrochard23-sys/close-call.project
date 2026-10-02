@@ -316,10 +316,13 @@
    * capot moteur + entrées d'air + échappements, mât et moyeu, 4 pales légèrement fléchies + disque flou, poutre de queue
    * effilée, dérive, stabilisateur, rotor anticouple, patins sur jambes de force, boule optronique, feux (rouge à gauche,
    * vert à droite, blanc à la queue, gyrophare rouge). Camouflé : ailettes + paniers de roquettes. */
-  M.helicopter = function (camo) {
+  M.helicopter = function (camo, gold) {
     const g = new THREE.Group();
-    const skin = camo ? new THREE.MeshLambertMaterial({ map: CC.Textures.get('camo') }) : lam('#1f2024');
-    const trim = lam(camo ? '#4a4f35' : '#2b2d32'), dark = lam('#141416'), metal = lam('#3a3c40');
+    // v081 : hélicoptère DORE (brillant, il rapporte plus) : métal doré à reflets, qui scintille
+    const gm = (c, em) => new THREE.MeshPhongMaterial({ color: c, specular: '#fff6c8', shininess: 120, emissive: em || '#4a3400' });
+    const goldMats = gold ? [gm('#f2c230'), gm('#d9a521'), gm('#8a6414', '#2a1c00'), gm('#e0b02a')] : null;
+    const skin = gold ? goldMats[0] : camo ? new THREE.MeshLambertMaterial({ map: CC.Textures.get('camo') }) : lam('#1f2024');
+    const trim = gold ? goldMats[1] : lam(camo ? '#4a4f35' : '#2b2d32'), dark = gold ? goldMats[2] : lam('#141416'), metal = gold ? goldMats[3] : lam('#3a3c40');
     const glass = new THREE.MeshPhongMaterial({ color: '#1c2c3e', specular: '#9ab8d8', shininess: 60 });
     // fuselage (profil extrudé, arêtes chanfreinées)
     profileX([[-3.9, -0.12], [-3.55, -0.58], [-2.6, -0.86], [1.9, -0.86], [2.75, -0.35], [2.6, 0.55], [1.2, 0.86], [-1.4, 0.86], [-2.35, 0.6], [-3.55, 0.15]], 1.7, skin, 0.18, g);
@@ -376,6 +379,10 @@
     }
     g.userData.rotor = rotor; g.userData.tailRotor = tail; g.userData.blur = blur; g.userData.tailBlur = tailBlur;
     g.userData.lights = lights; g.userData.beacon = beacon; g.userData.firePoints = firePoints;
+    if (gold) {
+      g.userData.goldMats = goldMats; g.userData.glints = [];
+      for (const [x, y, z] of [[0.9, 0.9, -2.2], [-0.8, 1.3, 0.8], [0, 0.3, 4.5], [1.0, -0.2, -0.3]]) { const gl = box(0.34, 0.34, 0.06, new THREE.MeshBasicMaterial({ color: '#ffffff' }), x, y, z, g); gl.castShadow = false; gl.userData.noBake = true; gl.visible = false; g.userData.glints.push(gl); }
+    }
     g.userData.size = [3.0, 3.2, 12.5]; g.userData.center = [0, 0.1, 2.0];
     for (const l of lights.concat([beacon])) l.userData.noBake = true;   // feux clignotants : restent des objets à part
     return bake(g, [rotor, tail]);

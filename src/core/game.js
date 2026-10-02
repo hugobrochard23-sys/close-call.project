@@ -317,7 +317,7 @@
       this.levelRun = ld; this.levelWin = false; this.coinFx = null;
       this.assistFuel = ld ? 3 * Math.min(5, ((this.save.lvl && this.save.lvl.tries && this.save.lvl.tries[ld.n]) || 0)) : 0;   // coup de pouce après plusieurs échecs
       if (ld) seed = ld.seed;
-      const ordP = this.params.get('order'), L = CC.Endless.level(seed, { zones: this.testMode ? null : this.progress.unlockedWorlds(), order: ld ? ld.order : (ordP ? ordP.split(',') : null), env: this.params.get('env') || null, levelLen: ld && ld.len, difK: ld && ld.difK, bossHp: ld && ld.hp, bossType: ld && ld.boss, padStyle: ld && ld.n, theme: ld && ld.theme, mids: ld && ld.mids, bossTint: ld && ld.bossTint });
+      const ordP = this.params.get('order'), L = CC.Endless.level(seed, { zones: this.testMode ? null : this.progress.unlockedWorlds(), order: ld ? ld.order : (ordP ? ordP.split(',') : null), env: this.params.get('env') || null, levelLen: ld && ld.len, difK: ld && ld.difK, bossHp: ld && ld.hp, bossType: ld && ld.boss, padStyle: ld && ld.n, theme: ld && ld.theme, mids: ld && ld.mids, bossTint: ld && ld.bossTint, bossVar: ld && ld.bossVar });
       this.loadLevelFrom(L, -1);
       this.endlessRun = new CC.Endless.Run(this, L);
       this.progress.beginRun(); this.reviveUsed = false; this.hudFeed.length = 0; this.cellHap = 0; this.cellSnd = 0;
