@@ -613,7 +613,6 @@
         this.rig.shake = Math.min(1.7, 0.8 + 0.13 * L);
         this.flash = Math.min(0.28, 0.1 + 0.03 * L); this.flashColor = L >= 4 ? '#bff4ff' : '#ffe0a0';
         this.hitStop = 0.07 + 0.016 * L;                                  // ralenti à l'impact
-        rocket.fbTime = Math.max(rocket.fbTime, rocket.age - rocket.cfg.ignitionDelay + 0.8 + 0.35 * L);   // la série offre du boost gratuit
         { const sz = t.size ? new V(t.size[0], t.size[1], t.size[2]) : new V(5, 3, 5); fx.shatter(c, sz, rocket.vel, 'brick'); fx.shatter(c, sz.clone().multiplyScalar(0.7), rocket.vel, 'glass');
           setTimeout(() => { try { fx.explosion(c.clone().add(new V((Math.random() - 0.5) * 6, 2 + Math.random() * 3, (Math.random() - 0.5) * 6)), null, true, 'orange'); } catch (e) { /* ignoré */ } }, 140); }   // v070 : débris + explosion secondaire
         this.audio.play('boom', c); this.audio.play('target');

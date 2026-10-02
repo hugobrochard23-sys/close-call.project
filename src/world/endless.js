@@ -180,7 +180,7 @@
     const inRamp = (d) => { const t = tr0(d); return !!t.k && T.elev(t.k) !== T.elev(t.k - 1); };
 
     // cibles en route, sur la colonne vertébrale (il faut parfois plonger vers le sol pour les prendre)
-    const nextT = (from) => from + U.lerp(46, 34, U.clamp(from / 7000, 0, 1)) * r.between([0.8, 1.25]);   // v069 : une cible tous les ~50 m, une par une, sur la ligne directrice   // v068 : peu de cibles au départ, de plus en plus ensuite
+    const nextT = (from) => from + U.lerp(110, 36, U.clamp(from / 6000, 0, 1)) * r.between([0.8, 1.25]);   // v071 : une cible tous les ~110 m au départ, ~36 m vers 6 000 m   // v069 : une cible tous les ~50 m, une par une, sur la ligne directrice   // v068 : peu de cibles au départ, de plus en plus ensuite
     if (T.nextTarget === undefined) T.nextTarget = 130;   // v040 : le premier réservoir vient APRES la première porte (tutoriel lisible)
     const tgt = [];
     while (T.nextTarget < d1) {
@@ -195,7 +195,7 @@
         tgt.push({ d, lx, zone });
         reserved.push({ d: d - 8, lx, w: 24, dd: 26 });
         // v070 : cibles ÉPARPILLEES : des extras partout dans le volume (côtés, haut, bas), de plus en plus souvent
-        const pe = U.clamp(0.4 + d / 9000, 0.4, 0.95), vv = T.vol(d);
+        const pe = U.clamp((d - 700) / 8000, 0, 0.95), vv = T.vol(d);
         for (let e = 0; e < 2; e++) if (r() < pe * (e ? 0.4 : 1)) { const sg = r() < 0.5 ? -1 : 1; tgt.push({ d: d + r.between([-16, 16]), lx: U.clamp(lx + sg * r.between([9, Math.max(10, vv - 6)]), -(vv - 5), vv - 5), zone, extra: true, dy: r.between([-12, 18]) }); }
       }
       T.nextTarget = nextT(d);
@@ -216,7 +216,7 @@
     for (const t of tgt) {
       const d = t.d, ly = T.laneY(d), type = t.zone === 'mini' ? 'fuel' : r.pick(ly < 15 ? ['tank', 'truck', 'heli', 'heli', 'sam'] : ['heli', 'heli', 'heli', 'heli', 'truck']), lx = t.lx, air = type === 'heli';   // v069 : sur la ligne directrice : hélicoptère à hauteur de la trajectoire, ou char / camion si elle descend
       const p = air ? T.at(d, lx, U.clamp(ly + (t.dy || 0) + r.between([-1.5, 1.5]), 8, 400)) : T.at(d, lx, 0);
-      b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0) + (type === 'tank' ? 180 : 0), { unarmed: d < 400 || r() > U.clamp(0.2 + d / 6000, 0, 1), scale: air ? 2.2 : type === 'fuel' ? 2.0 : 2.4, drift: air ? 5 : 2.2, driftSpeed: 0.45 });   // les premiers ne tirent pas ; ensuite de plus en plus souvent
+      b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0) + (type === 'tank' ? 180 : 0), { unarmed: d < 900 || r() > U.clamp((d - 600) / 6500, 0.05, 0.9), scale: air ? 2.2 : type === 'fuel' ? 2.0 : 2.4, drift: air ? 5 : 2.2, driftSpeed: 0.45 });   // les premiers ne tirent pas ; ensuite de plus en plus souvent
       busy.push(d);
       const hy = air ? p[1] - T.base(d) : type === 'fuel' ? 3.5 : 1.6;
       gates.push({ d: d - 55, lx: T.laneX(d - 55), y: T.laneY(d - 55) * 0.7 }, { d: d - 22, lx, y: hy + 3 }, { d, lx, y: hy }, { d: d + 30, lx: T.laneX(d + 30), y: T.laneY(d + 30) * 0.8 });
@@ -418,6 +418,11 @@
       if (rk.active && g.state === 'FLIGHT' && !g.useAutopilot && g.input && g.input.aimQ) {
         const a = this.T.theta(this.dist + Math.max(25, rk.speed) * dt) - this.T.theta(this.dist);
         if (a) { g.input.aimQ.premultiply(_qa.setFromAxisAngle(_ay, -a * 0.92)); g.input.aimQ.normalize(); }
+        // v071 : AIDE A LA VISEE — la visée se recale doucement vers la cible la plus proche quand elle est devant (moins de 22° d'écart, moins de 110 m)
+        _fa.set(0, 0, -1).applyQuaternion(g.input.aimQ);
+        let bt = null, ba = 0.38;
+        for (const q of g.targets) { if (!q.alive || q.hazard || !q.obb) continue; const dd = q.obb.c.distanceTo(rk.pos); if (dd > 110 || dd < 8) continue; _da.subVectors(q.obb.c, rk.pos).divideScalar(dd); const an = _fa.angleTo(_da); if (an < ba) { ba = an; bt = { dd, dir: _da.clone() }; } }
+        if (bt) { _xa.crossVectors(_fa, bt.dir); if (_xa.lengthSq() > 1e-8) { _xa.normalize(); g.input.aimQ.premultiply(_qa.setFromAxisAngle(_xa, Math.min(ba, 1.5 * dt * (1 - bt.dd / 130)))); g.input.aimQ.normalize(); } }
       }
       if (this.multT > 0) this.multT = Math.max(0, this.multT - dt);
       if (this.chainT > 0 && (this.chainT -= dt) <= 0) this.chain = 0;
@@ -444,7 +449,7 @@
   E.Run = Run;
 
   // ---------- interpolation d'ambiance (couleurs, nombres ; le reste bascule à mi-chemin) ----------
-  const _ca = new THREE.Color(), _cb = new THREE.Color(), _qa = new THREE.Quaternion(), _ay = new THREE.Vector3(0, 1, 0);
+  const _ca = new THREE.Color(), _cb = new THREE.Color(), _qa = new THREE.Quaternion(), _ay = new THREE.Vector3(0, 1, 0), _fa = new THREE.Vector3(), _da = new THREE.Vector3(), _xa = new THREE.Vector3();
   function lerpEnv(a, b, t) {
     const out = {};
     for (const k of new Set(Object.keys(a).concat(Object.keys(b)))) {

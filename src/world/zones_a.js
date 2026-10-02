@@ -501,7 +501,7 @@
   }
   function sandbags(S, dc, lx, n) { for (let i = 0; i < n; i++) S.item(dc + i * 3.2, () => S.bx(dc + i * 3.2, lx, 0.8, 3, 1.6, 1.4, 'col:#8a7a58', undefined, true)); }
   // CONVOI : une colonne de camions et de chars sur l'avenue, un hélicoptère de couverture au bout
-  city.scenes.convoi = { len: [250, 300], minD: 700, noDoor: true, noChaos: true, build(S) {
+  city.scenes.convoi = { len: [250, 300], minD: 1300, noDoor: true, noChaos: true, build(S) {
     const sr = S.sr, dist = district(S, sr.between([30, 44]), sr.between([48, 70]));
     avenueRoad(S, []); furniture(S, [], {});
     for (const s of [-1, 1]) buildingRow(S, s, dist, [], 0, { shops: true });
@@ -510,7 +510,7 @@
     farTowers(S, 80, 170, 4);
   } };
   // CAMP : une place dégagée avec un anneau de chars, des lance-missiles et un radar au centre
-  city.scenes.camp = { len: [230, 280], minD: 700, noDoor: true, noChaos: true, build(S) {
+  city.scenes.camp = { len: [230, 280], minD: 1300, noDoor: true, noChaos: true, build(S) {
     const sr = S.sr, dist = district(S, sr.between([30, 44]), sr.between([48, 70])), c = S.mid;
     avenueRoad(S, []); furniture(S, [], { noTrees: true });
     for (const s of [-1, 1]) buildingRow(S, s, dist, [], 0, { shops: true, skip: (cx) => Math.abs(cx - c) < 60 });
@@ -521,7 +521,7 @@
     farTowers(S, 80, 170, 4);
   } };
   // HELICOPTERES : un couloir d'immeubles hauts, trois hélicoptères en vol stationnaire et deux lance-missiles sur les toits
-  city.scenes.helis = { len: [230, 280], minD: 700, noDoor: true, noChaos: true, build(S) {
+  city.scenes.helis = { len: [230, 280], minD: 1300, noDoor: true, noChaos: true, build(S) {
     const sr = S.sr, dist = district(S, sr.between([60, 84]), sr.between([84, 110]));
     avenueRoad(S, []); furniture(S, [], {});
     for (const s of [-1, 1]) buildingRow(S, s, dist, [], 0, { shops: true });

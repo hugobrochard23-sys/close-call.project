@@ -562,6 +562,31 @@
   const levelOf = (prog, abs) => { let l = 1; while (abs >= prog.need(l)) { abs -= prog.need(l); l++; } return { level: l, xp: abs }; };
   const ease = (k) => 1 - Math.pow(1 - U.clamp(k, 0, 1), 3);
 
+
+  // v071 : animation de NOUVEAU RECORD — la fusée fait un looping (pixels), laisse une traînée, et le mot RECORD pulse
+  Home.recordAnim = function (ctx, cx, cy, w, h, t, S, fitq) {
+    const b = h * 0.34, c = b * 0.62, per = 3.2, ph = ((t * 0.9) % per) / per, th = (-2.4 + ph * 4.8) * Math.PI, px = Math.max(3, Math.round(h * 0.045));
+    const m = (w * 0.4) / (c * 2.4 * Math.PI + b), P = (a) => ({ x: cx + m * (c * a - b * Math.sin(a)), y: cy - h * 0.12 - b * Math.cos(a) * 0.9 });
+    const col = ['#ffd23a', '#ff8a2a', '#ff5a3a', '#7be8ff'];
+    for (let i = 26; i >= 1; i--) {   // traînée : carrés qui s'éteignent
+      const q = P(th - i * 0.05), a = 1 - i / 26; if (th - i * 0.05 < -2.4 * Math.PI) continue;
+      ctx.globalAlpha = a * 0.9; ctx.fillStyle = col[i % 3]; const s = Math.max(2, Math.round(px * (1.3 - i * 0.03))); ctx.fillRect(Math.round(q.x - s / 2), Math.round(q.y - s / 2), s, s);
+    }
+    ctx.globalAlpha = 1;
+    const p0 = P(th), p1 = P(th + 0.02), ang = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+    ctx.save(); ctx.translate(Math.round(p0.x), Math.round(p0.y)); ctx.rotate(ang);
+    const R = (x, y, ww, hh, cc) => { ctx.fillStyle = cc; ctx.fillRect(Math.round(x * px), Math.round(y * px), Math.round(ww * px), Math.round(hh * px)); };
+    R(-4, -1, 6, 2, '#f4f6f8'); R(2, -1, 2, 2, '#ff3b2e'); R(-4, -2, 2, 1, '#9aa6b4'); R(-4, 1, 2, 1, '#9aa6b4'); R(-3, -1, 1, 2, '#2a7ad0');
+    R(-6, -1, 2, 2, Math.floor(t * 18) % 2 ? '#ffd23a' : '#ff8a2a');
+    ctx.restore();
+    // étincelles
+    for (let i = 0; i < 8; i++) { const a = t * 2 + i * 0.8, rr = h * (0.35 + 0.15 * Math.sin(t * 5 + i)); ctx.globalAlpha = 0.5 + 0.5 * Math.sin(t * 9 + i * 2); ctx.fillStyle = '#ffd23a'; ctx.fillRect(Math.round(cx + Math.cos(a) * rr * 2.2), Math.round(cy + Math.sin(a * 1.3) * rr), px, px); }
+    ctx.globalAlpha = 0.75 + 0.25 * Math.sin(t * 8);
+    const lbl = 'RECORD !', lp = Math.min(S(6.2), (w * 0.8) / Math.max(1, F.measure(lbl, 1)));
+    text(null, ctx, lbl, cx, cy + h * 0.2, lp, '#ffd23a', { align: 'center' });
+    ctx.globalAlpha = 1;
+  };
+
   // ÉCRAN DE FIN — volontairement minimal : SCORE, niveau + barre d'XP (« +39 XP »), UNE mission, deux boutons.
   Home.drawResults = function (ui, ctx, game, W, H) {
     const L = Home.layout(ui, W, H), { T, HH, P, u, Y } = L, r = game.results, prog = game.progress;
@@ -579,13 +604,9 @@
     text(ui, ctx, 'SCORE', colA.x, y, S(2.0), '#9fb0c8', { align: 'center' }); y += S(2.0) * 7 + S(8);
     const spx = fitq('000.000', colA.w * 0.8, 8.5);
     text(ui, ctx, U.formatInt(shown), colA.x, y, spx, '#ffffff', { align: 'center', outline: '#0b0e14' }); y += spx * 7 + S(14);
-    const rk = r.newRecord ? 'NOUVEAU RECORD !' : 'MEILLEUR  ' + U.formatInt(r.best), rp = fitq(rk, colA.w, 2.8), pulse = r.newRecord ? 0.75 + 0.25 * Math.sin(t * 8) : 1;
-    ctx.globalAlpha = al(1.1, 0.3) * pulse;
-    text(ui, ctx, rk, colA.x, y, rp, r.newRecord ? GOLD : '#c8d0dc', { align: 'center' });
-    y += rp * 7 + S(8);
-    if (!r.newRecord && r.best > r.score) { const mq = "IL T'A MANQUE " + U.formatInt(r.best - r.score), mpx2 = fitq(mq, colA.w, 3.2); text(ui, ctx, mq, colA.x, y, mpx2, GOLD, { align: 'center' }); y += mpx2 * 7 + S(8); }
+    ctx.globalAlpha = al(1.1, 0.3);
+    if (r.newRecord) { const ah = S(P ? 110 : 80); Home.recordAnim(ctx, colA.x, y + ah * 0.5, colA.w, ah, t, S, fitq); y += ah + S(8); }   // v071 : nouveau record = looping de la fusée, rien d'autre
     if (r.materials > 0) { const nl = '+' + r.materials, nplx = fitq(nl, colA.w * 0.4, 3.0), nw2 = F.measure(nl, nplx) + nplx * 9; ICON.nut(ctx, colA.x - nw2 / 2 + nplx * 3, y + nplx * 3.6, nplx * 3.4, '#d9a441'); text(ui, ctx, nl, colA.x - nw2 / 2 + nplx * 9, y, nplx, '#d9a441', {}); y += nplx * 7 + S(8); }
-    if (r.cause) { const cq = 'TOUCHE : ' + r.cause, cpx2 = fitq(cq, colA.w, 2.2); text(ui, ctx, cq, colA.x, y, cpx2, RED, { align: 'center' }); y += cpx2 * 7 + S(4); }
     ctx.globalAlpha = 1;
     y += S(P ? 26 : 16);
     // -- XP : niveau + barre qui se remplit (et monte de niveau)
@@ -605,7 +626,7 @@
     ctx.globalAlpha = 1;
     y += bs + S(P ? 36 : 20);
     // -- UNE mission
-    const m = r.mission, tM = tBar + dur0 * 0.6;
+    const m = null, tM = tBar + dur0 * 0.6;   // v071 : plus de mission sur l'écran de fin
     let my = P ? y : T + S(40);
     if (m) {
       const a = al(tM, 0.3), mx = colB.x - colB.w / 2, mh = S(74);
