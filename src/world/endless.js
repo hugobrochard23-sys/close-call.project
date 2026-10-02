@@ -149,7 +149,7 @@
     const cfg = C(), T = new Track(seed, opts && opts.zones);
     if (opts && opts.env) T.forceEnv = opts.env;   // banc de test : ?env=neonNight
     if (opts && opts.levelLen) {   // v075 : niveau à longueur fixe (arène + boss à la fin)
-      T.levelLen = opts.levelLen; T.difK = opts.difK || 1; T.bossHp = opts.bossHp || 1; T.bossType = opts.bossType || 'heli'; T.padStyle = opts.padStyle || 0; T.theme = opts.theme || null; T.mids = opts.mids || []; T.bossTint = opts.bossTint || 0; T.bossVar = opts.bossVar || 0; T.event = opts.event || null; T.storm = opts.event && opts.event.type === 'storm' ? { d0: opts.event.d - 30, d1: opts.event.d + 280 } : null;
+      T.levelLen = opts.levelLen; T.difK = opts.difK || 1; T.bossHp = opts.bossHp || 1; T.bossType = opts.bossType || 'heli'; T.padStyle = opts.padStyle || 0; T.theme = opts.theme || null; T.mids = opts.mids || []; T.bossTint = opts.bossTint || 0; T.bossVar = opts.bossVar || 0; T.event = opts.event || null; T.ease = opts.ease === undefined ? 1 : opts.ease; T.storm = opts.event && opts.event.type === 'storm' ? { d0: opts.event.d - 30, d1: opts.event.d + 280 } : null;
     }
     if (opts && opts.order && opts.order.length) { const o = opts.order.filter((z) => CC.Zones.PROFILE[z]); while (o.length < 90) o.push(o[o.length % Math.max(1, opts.order.length)]); T.zoneOrder = o; if (opts.levelLen) { const dE = o[1] && o[1] !== o[0] ? Math.abs(CC.Zones.PROFILE[o[1]].elev - CC.Zones.PROFILE[o[0]].elev) : 0; T.off = dE ? C().zoneLen - (Math.max(130, 1.8 * dE) + 40) : 0; } }   // banc de test : ?order=city,metro,…
     const L = {
@@ -253,7 +253,7 @@
     if (T.levelLen) for (let d = Math.ceil(Math.max(d0, 40) / 45) * 45; d < d1 - 1; d += 45) {
       const sA = (CC.Zones.plan(T, T.zoneIndex(d)).scenes.find((q) => d >= q.d0 && d < q.d1)) || null;
       if (!sA || sA.name === 'arene' || d > T.levelLen - 30) continue;
-      if (!((T.difK || 1) < 1.3 || sA.name === 'city1' || sA.name === 'escalier' || (CC.Zones.reliefNames || []).indexOf(sA.name) >= 0)) continue;
+      if (!((T.ease === undefined ? 1 : T.ease) < 0.25 || sA.name === 'city1' || sA.name === 'escalier' || (CC.Zones.reliefNames || []).indexOf(sA.name) >= 0)) continue;
       const pa = T.at(d, T.laneX(d), T.laneY(d) - 2.2), pb = T.at(d + 12, T.laneX(d + 12), T.laneY(d + 12) - 2.2), o = CC.Models.guideArrow(), P = new THREE.Vector3(pa[0], pa[1], pa[2]);
       o.position.copy(P); o.lookAt(new THREE.Vector3(pb[0], pb[1], pb[2])); o.rotateX(0.6); o.scale.setScalar(2.4);
       b.entity({ object: o, t: Math.random() * 6, base: P.y, update(dt) { this.t += dt; this.object.position.y = this.base + Math.sin(this.t * 3) * 0.3; } });
@@ -302,7 +302,7 @@
           gs.placed++; b.target(gt, p, T.yawAcross(d) + RO.face(gt), RO.opts(gt, { gold: true, unarmed: true, drift: gair ? 12 : 4, driftSpeed: 0.5 })); busy.push(d); break;
         }
       }
-      if ((T.difK || 1) >= 1 && rf() < 0.3) {
+      if ((T.difK || 1) >= 0.5 && rf() < 0.3) {
         const V5 = rf() < 0.5, pat = V5 ? [[0, -14], [12, -7], [24, 0], [12, 7], [0, 14]] : [[0, -14], [11, -7], [22, 0], [33, 7], [44, 14]];
         for (let a = 0; a < 4; a++) {
           const d = d0 + cfg.chunkLen * (0.1 + 0.5 * rf()), pts = [], RO = CC.Roster, fu = RO.formationType(zoneAt(d)), fair = RO.isAir(fu);   // v083 : la formation est faite d'engins de la zone
@@ -521,6 +521,14 @@
       }
       if (this.multT > 0) this.multT = Math.max(0, this.multT - dt);
       if (this.chainT > 0 && (this.chainT -= dt) <= 0) this.chain = 0;
+      // v084 : LIMITES DU JEU — on ne peut plus sortir de la carte : un plafond invisible à 26 m au-dessus de la trajectoire (on ne passe plus par-dessus les obstacles)
+      // et des bords latéraux ; la fusée glisse le long de la limite sans mourir
+      if (rk.active && g.state === 'FLIGHT' && this.T.levelLen) {
+        const T = this.T, d = this.dist, cap = T.base(d) + T.laneY(d) + 26;
+        if (rk.pos.y > cap) { rk.pos.y = cap; if (rk.vel.y > 0) rk.vel.y = 0; }
+        const c0 = T.at(d, 0, 0), c1 = T.at(d, 1, 0), sx = c1[0] - c0[0], sz = c1[2] - c0[2], sl = Math.hypot(sx, sz) || 1, nx = sx / sl, nz = sz / sl, lat = (rk.pos.x - c0[0]) * nx + (rk.pos.z - c0[2]) * nz, B = Math.max(T.vol(d) + 8, 24);
+        if (Math.abs(lat) > B) { const ex = lat - Math.sign(lat) * B; rk.pos.x -= ex * nx; rk.pos.z -= ex * nz; const vl = rk.vel.x * nx + rk.vel.z * nz; if (vl * Math.sign(lat) > 0) { rk.vel.x -= vl * nx; rk.vel.z -= vl * nz; } }
+      }
       // plafond : au-dessus, alarme puis explosion (le couloir est le terrain de jeu)
       if (rk.active && g.state === 'FLIGHT') {
         this.altT = rk.pos.y - this.T.base(this.dist) > cfg.ceiling ? this.altT + dt : 0;

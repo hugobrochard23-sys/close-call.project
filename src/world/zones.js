@@ -201,7 +201,7 @@
     }
     const r = G.stream(T.seed, 'plan' + zi);
     const skipQ = (new URLSearchParams(location.search).get('skip') || '').split(',');
-    if (T.levelLen && (T.difK || 1) < 1.3) skipQ.push('city1', 'escalier', 'cheminee', 'plongee', 'toits', 'epingle', 'chicane', 'slalom', 'ruelle', 'enfilade', 'chuteLibre', 'montee', 'pontPlongeon', 'gradins');   // niveaux faciles : pas de montée / plongeon ni de virage serré
+    if (T.levelLen && (T.ease === undefined ? 1 : T.ease) < 0.12) skipQ.push('slalom', 'defile', 'salle', 'galerie', 'city1', 'escalier', 'cheminee', 'plongee', 'toits', 'epingle', 'chicane', 'slalom', 'ruelle', 'enfilade', 'chuteLibre', 'montee', 'pontPlongeon', 'gradins');   // niveaux faciles : pas de montée / plongeon ni de virage serré
     skipQ.push('rame', 'presses', 'bras', 'chaine', 'grues', 'squelette', 'arche', 'levant', 'convoi', 'camp', 'helis', 'convoi2', 'camp2', 'helis2', 'banc');   // v083 : + « banc » (baleine qui traverse : un obstacle mobile qui tuait sans raison)   // v073 : scènes avec éléments mobiles ou superflus   // banc de test : ?skip=city1,escalier
     const names = Object.keys(def.scenes).filter((n) => n !== def.signature && skipQ.indexOf(n) < 0);
     for (let i = names.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = names[i]; names[i] = names[j]; names[j] = t; }
@@ -264,7 +264,7 @@
     constructor(ctx, sc) {
       this.ctx = ctx; this.b = ctx.b; this.T = ctx.T; this.game = ctx.game; this.sc = sc; this.zone = sc.zone;
       this.c0 = ctx.d0; this.c1 = ctx.d1; this.d0 = sc.d0; this.d1 = sc.d1; this.len = sc.d1 - sc.d0; this.mid = (sc.d0 + sc.d1) / 2;
-      this.stage = sc.stage; this.R = U.lerp(9.6, 6.3, U.clamp(sc.d0 * (ctx.T.difK || 1) / 8000, 0, 1));   // v072 : le tube de dégagement se rétrécit à mesure qu'on avance
+      this.stage = sc.stage; this.R = U.lerp(ctx.T.levelLen ? 12.5 : 9.6, 6.6, U.clamp(sc.d0 * (ctx.T.difK || 1) / 8000, 0, 1));   // v084 : au départ le tube de dégagement est très large   // v072 : le tube de dégagement se rétrécit à mesure qu'on avance
       this.sr = G.stream(ctx.T.seed, 'sc' + sc.key); this.sr.pick = (a) => a[Math.floor(this.sr() * a.length)];
       this.ic = 0; this.rects = ctx.reserved.slice(); this.env = ctx.T.env(sc.zi); this.dark = !!(this.env && this.env.dark > 0.4);
       this.vol = (dc) => ctx.T.vol(dc);

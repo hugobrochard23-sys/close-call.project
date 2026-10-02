@@ -227,11 +227,11 @@
   // ===== DEFILE : tranchée en S, des blocs barrent un côté puis l'autre (slalom dans un creux)
   SC.defile = { len: [300, 370], noDoor: true, noChaos: true,
     relief(T, sc, r) { const A = Math.max(12, 14 * kA(T, sc.zone)), L = sc.d1 - sc.d0; return mkRel(sc, (d) => -A * Math.pow(Math.sin(Math.PI * U.clamp((d - sc.d0) / L, 0, 1)), 2), A, false); },
-    pin(T, sc) { const a = 11, per = 74, o = sc.d0 + 36; sc.slal = { a, per, o }; return { lx: 0, y: 14, fx: (d) => a * Math.sin(2 * Math.PI * (d - o) / per) * U.clamp((sc.d1 - 34 - d) / 50, 0, 1), from: 34, to: sc.d1 - sc.d0 - 34 }; },
+    pin(T, sc) { const ez = T.ease === undefined ? 1 : T.ease, a = U.lerp(4.5, 11, ez), per = U.lerp(140, 74, ez), o = sc.d0 + 36; sc.slal = { a, per, o }; return { lx: 0, y: 14, fx: (d) => a * Math.sin(2 * Math.PI * (d - o) / per) * U.clamp((sc.d1 - 34 - d) / 50, 0, 1), from: 34, to: sc.d1 - sc.d0 - 34 }; },
     build(S) {
       const sk = skin(S), sl = S.sc.slal || { a: 11, per: 74, o: S.d0 + 36 }, A = S.sc.A;
       for (let k = 0, dc = sl.o + sl.per / 4; dc < S.d1 - 40; dc += sl.per / 2, k++) {
-        const sg = k % 2 === 0 ? 1 : -1, L0 = S.lane(dc), v = S.vol(dc) + 6, edge = L0.lx - sg * (S.R + 3.4);
+        const sg = k % 2 === 0 ? 1 : -1, L0 = S.lane(dc), v = S.vol(dc) + 6, edge = L0.lx - sg * (S.R + 6);
         S.item(dc, () => { const fl = S.T.rel(dc), x0 = sg > 0 ? -v : edge, x1 = sg > 0 ? edge : v; if (x1 - x0 < 1) return; S.bx(dc, (x0 + x1) / 2, 30 - fl, x1 - x0, 120, 12, sk.wm, sk.wt); S.bx(dc, edge + sg * 0.3, 30 - fl, 0.5, 120, 12.4, 'hazard', undefined, false); });
         S.reserve(dc, 0, 2 * v, 14); S.gate(dc, L0.lx, L0.y);
       }
@@ -243,7 +243,7 @@
     city: 'GLASS', usine: 'VATS', port: 'CONT', forest: 'CAVE', tour: 'RACK', sky: 'RIBS', metro: 'COL', mini: 'TOY', eau: 'RIBS', chute: 'RING',
   };
   SC.salle = { len: [300, 360], noDoor: true, noChaos: true,
-    pin(T, sc) { const a = 7, per = 50, o = sc.d0 + 70; sc.slal = { a, per, o }; return { lx: 0, y: 14, fx: (d) => a * Math.sin(2 * Math.PI * (d - o) / per) * U.clamp((sc.d1 - 70 - d) / 40, 0, 1), from: 30, to: sc.d1 - sc.d0 - 30 }; },
+    pin(T, sc) { const ez = T.ease === undefined ? 1 : T.ease, a = U.lerp(3.5, 7, ez), per = U.lerp(95, 50, ez), o = sc.d0 + 70; sc.slal = { a, per, o }; return { lx: 0, y: 14, fx: (d) => a * Math.sin(2 * Math.PI * (d - o) / per) * U.clamp((sc.d1 - 70 - d) / 40, 0, 1), from: 30, to: sc.d1 - sc.d0 - 30 }; },
     build(S) {
       const sk = skin(S), sl = S.sc.slal, L = S.len, v = Math.min(34, S.vol(S.mid) + 4), hh = S.R * 2 + 12, ceil = 46, kind = HALL[S.zone] || 'COL', d0 = S.d0 + 40, d1 = S.d1 - 40;
       // entrée et sortie : un mur percé à la hauteur de la trajectoire
@@ -252,7 +252,7 @@
       for (let dc = d0; dc < d1; dc += 12) S.item(dc + 6, () => { const m = dc + 6, L0 = S.lane(m); for (const s of [-1, 1]) S.bx(m, s * (v + 6), ceil / 2, 12, ceil + 8, 12.8, sk.wm, sk.wt); S.bx(m, 0, ceil + 4, 2 * v + 24, 8, 12.8, sk.wm, sk.wt); S.bx(m, 0, ceil - 1, 2 * v, 0.4, 3, 'basic:' + (S.dark ? '#ffe0a8' : '#fff4d0'), undefined, false); });
       // colonnes en quinconce (comme le slalom de la ville) : un bloc barre un côté, puis l'autre
       for (let k = 0, dc = sl.o + sl.per / 4; dc < d1 - 20; dc += sl.per / 2, k++) {
-        const sg = k % 2 === 0 ? 1 : -1, L0 = S.lane(dc), edge = L0.lx - sg * (S.R + 3);
+        const sg = k % 2 === 0 ? 1 : -1, L0 = S.lane(dc), edge = L0.lx - sg * (S.R + 6);
         S.item(dc, () => { const x0 = sg > 0 ? -v : edge, x1 = sg > 0 ? edge : v; if (x1 - x0 < 1) return; S.bx(dc, (x0 + x1) / 2, ceil / 2, x1 - x0, ceil, 8, sk.bm, sk.bt); S.bx(dc, edge + sg * 0.3, 20, 0.5, 40, 8.4, 'hazard', undefined, false); });
         S.reserve(dc, 0, 2 * v, 12); S.gate(dc, L0.lx, L0.y);
       }

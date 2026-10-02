@@ -336,7 +336,7 @@
   // SLALOM : la trajectoire tourne de gauche à droite, un bloc d'immeuble barre alternativement chaque côté du couloir
   city.scenes.slalom = { len: [240, 320],
     pin(T, sc) {
-      const a = 11, per = 76, o = sc.d0 + 34; sc.slal = { a, per, o };
+      const ez = T.ease === undefined ? 1 : T.ease, a = U.lerp(4.5, 11, ez), per = U.lerp(150, 76, ez), o = sc.d0 + 34; sc.slal = { a, per, o };   // v084 : slalom très doux au début
       return { lx: 0, y: U.clamp(T.laneY0((sc.d0 + sc.d1) / 2), 12, 24), fx: (d) => a * Math.sin(2 * Math.PI * (d - o) / per) * U.clamp((sc.d1 - 30 - d) / 50, 0, 1), from: 34, to: sc.d1 - sc.d0 - 34 };
     },
     build(S) {
@@ -344,7 +344,7 @@
       avenueRoad(S, []); furniture(S, [], { noTrees: true });
       for (const s of [-1, 1]) buildingRow(S, s, dist, [], 0, { shops: true });
       for (let k = 0, dc = sl.o + sl.per / 4; dc < S.d1 - 40; dc += sl.per / 2, k++) {
-        const sg = k % 2 === 0 ? 1 : -1, L = S.lane(dc), v = S.vol(dc) + 6, tint = sr.pick(dist.tints), edge = L.lx - sg * (S.R + 3.4);
+        const sg = k % 2 === 0 ? 1 : -1, L = S.lane(dc), v = S.vol(dc) + 6, tint = sr.pick(dist.tints), edge = L.lx - sg * (S.R + 6);
         S.item(dc, () => {
           const x0 = sg > 0 ? -v : edge, x1 = sg > 0 ? edge : v;
           if (x1 - x0 < 1) return;

@@ -1,4 +1,4 @@
-# COLD IMPACT — notes de projet (état v083)
+# COLD IMPACT — notes de projet (état v084)
 
 Jeu mobile de fusée (JS vanilla, Three.js r149, canvas 2D pour l'UI/HUD). Dépôt `hugobrochard23-sys/cold-impact.project`, branche `main`, déploiement GitHub Pages
 (https://hugobrochard23-sys.github.io/cold-impact.project/). Le propriétaire teste sur téléphone ; **toujours donner ce lien à la fin d'un message** (cache à vider / navigation privée).
@@ -73,6 +73,11 @@ Le pilote automatique ne sait pas viser, attendre un volet ni plonger verticalem
 - G · FANTOME du meilleur essai (`ghostRec/ghostPlay`, localStorage `coldimpact.ghosts`), RECORDS par niveau (`meta.rec`), DEFI D'AMI par lien `?c=niveau.score.temps` (bouton DEFIER, bannière sur l'accueil, caisse offerte si relevé). Un vrai classement mondial demande un serveur (non fait).
 - H · PUB RECOMPENSEE : coffre de fin de niveau doublé, cadeau et coffre quotidiens ×2 ; achat SANS PUB (`CONFIG.shop.noAdsLink`, retour `utm_content=noads`) qui supprime seulement les interstitielles ; retour du pass premium (`utm_content=pass`).
 - I · explications ponctuelles (première caisse verte, premier engin doré), CODE DE SAUVEGARDE (réglages : copier / coller), vibrations sur engin doré, caisse, formation.
+
+## v084 — difficulté douce + limites de la carte
+- `difK = 0.35 + 0.075·(n-1)` (niveau 1 : 0,35 ; niveau 10 : 1 ; niveau 40 : 3,3) et `ease = min(1,(n-1)/35)` (`T.ease`) : tout ce qui est technique (slaloms, portes serrées, virages en épingle, chutes, volets) en dépend.
+- Niveau 1 : aucune porte serrée ; niveaux 2-5 : pas de slalom/défilé/salle ni scènes verticales (`ease < 0.12`) ; portes : trou de 26 m au départ (→ 8,5 m), 2,6× plus rares au début ; tube de dégagement `S.R` 12,5 m au départ (→ 6,6) ; slalom : amplitude 4,5 → 11 m, période 150 → 76 m, blocs à `R+6`.
+- LIMITES (`Run.update`, endless.js) : plafond invisible à +26 m au-dessus de la trajectoire et bords latéraux (`vol+8`) ; la fusée glisse sans mourir. Plus de passage par-dessus les obstacles ni de sortie de carte.
 
 ## À vérifier au doigt (jamais testé sur téléphone)
 Équilibrage des ennemis/missiles, difficulté des niveaux 2 à 5, taille de l'arène, caméra en virage, lisibilité des flèches (petites de loin), forêt dégagée.

@@ -25,7 +25,7 @@
     while (L.next < dmax) {
       let d = L.next; const m = d % C().chunkLen;
       if (m < 14) d += 14 - m; else if (m > C().chunkLen - 14) d -= m - (C().chunkLen - 14);   // un panneau ne chevauche jamais deux tronçons
-      L.pos.push(d); L.next += gap(L.next) * L.r.between([0.78, 1.3]);
+      L.pos.push(d); L.next += gap(L.next) * L.r.between([0.78, 1.3]) * (T.levelLen ? 1 + 1.6 * (1 - (T.ease === undefined ? 1 : T.ease)) : 1);   // v084 : moins de portes au début
     }
     return L.pos;
   }
@@ -40,6 +40,7 @@
     const at = sceneAt(T, d); if (!at) return null;
     const { sc, zone } = at, def = Z.defs[zone];
     if (SKIP[zone] || !THEME[zone]) return null;
+    if (T.levelLen && T.ease !== undefined && T.ease < 0.03) return null;   // niveau 1 : aucune porte serrée
     if (sc.name === 'arene') return null;
     if (def && def.signature === sc.name) return null;
     if (def && def.scenes[sc.name] && def.scenes[sc.name].noDoor) return null;   // v056 : scènes déjà percées
@@ -62,7 +63,7 @@
       const { sc, zone } = at, th = THEME[zone], st = U.clamp(Math.floor(d / cfg.stageLen), 0, 3);
       const S = new Z.Scene(ctx, { name: 'tight', d0: d - 10, d1: d + 10, zone, zi: sc.zi, key: 't' + Math.round(d), stage: st });
       let yc0 = 0, wd0 = 8, hd0 = 8;
-      const Ln = S.lane(d), v = T.vol(d) + (zone === 'usine' || zone === 'eau' ? 3 : zone === 'city' || zone === 'tour' || zone === 'chute' ? 46 : 26), hole = U.lerp(13.5, 6.2, U.clamp(d * (T.difK || 1) / 8000, 0, 1));   // v072 : plus on avance, plus l'ouverture est petite   // v038b : le panneau déborde largement sur les côtés (on n'en voit plus le bord)
+      const Ln = S.lane(d), v = T.vol(d) + (zone === 'usine' || zone === 'eau' ? 3 : zone === 'city' || zone === 'tour' || zone === 'chute' ? 46 : 26), hole = U.lerp(T.levelLen ? 26 : 13.5, 8.5, U.clamp(d * (T.difK || 1) / 8000, 0, 1));   // v084 : énormes au début (100 % de réussite), elles ne rétrécissent que très lentement   // v072 : plus on avance, plus l'ouverture est petite   // v038b : le panneau déborde largement sur les côtés (on n'en voit plus le bord)
       S.item(d, (r) => {
         const shape = r.weighted({ win: 3, slit: 1.6, slot: 1.6, shutter: U.clamp((d * (T.difK || 1) - 1100) / 3500, 0, 1) * 2.6 });
         if (shape === 'shutter') {   // v072 : VOLETS — deux panneaux qui s'ouvrent et se ferment, il faut passer quand c'est ouvert

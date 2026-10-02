@@ -30,7 +30,8 @@
     for (let i = 0; i < nm; i++) { let mt = pool[(k + 1 + 2 * i) % pool.length]; if (mt === boss && zone !== 'eau') mt = pool[(k + 2 + 2 * i) % pool.length]; if (mt === boss && zone !== 'eau') mt = MINI[(n + i) % MINI.length]; mids.push({ d: Math.round(len * (i + 1) / (nm + 1)), type: mt, tint: (k + i + 3) % 6, variant: (k + i + 1) % 3, hp: Math.min(5, 2 + Math.floor(n / 12)) }); }
     return {
       n, zone, seed: 7000 + n * 131, len,
-      difK: 0.7 + 0.3 * (n - 1),                       // la difficulté (cibles, ouvertures, missiles) monte avec le numéro du niveau
+      difK: 0.35 + 0.075 * (n - 1),                    // v084 : la difficulté (cibles, ouvertures, missiles) monte DOUCEMENT avec le numéro du niveau (niveau 1 : 0,35 ; niveau 10 : 1 ; niveau 40 : 3,3)
+      ease: Math.min(1, (n - 1) / 35),                 // 0 → 1 sur 35 niveaux : ouvertures, slaloms et virages passent de très larges à serrés
       hp,                                              // les trois premiers boss tombent d'un coup, ensuite de plus en plus de points de vie
       boss, bossTint: (k + ZN.indexOf(zone)) % 6, bossVar: k % 3, look: (k + 2 * ZN.indexOf(zone)) % 6, theme: th, mids,
       event: n < 3 ? null : { type: ['rain', 'storm', 'convoy'][(n + k) % 3], d: Math.round(len * (0.5 + 0.1 * ((n * 7) % 3))) },   // v083 : un événement par niveau (dès le niveau 3)
