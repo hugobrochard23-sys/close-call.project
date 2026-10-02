@@ -1,4 +1,4 @@
-# COLD IMPACT — notes de projet (état v077)
+# COLD IMPACT — notes de projet (état v078)
 
 Jeu mobile de fusée (JS vanilla, Three.js r149, canvas 2D pour l'UI/HUD). Dépôt `hugobrochard23-sys/cold-impact.project`, branche `main`, déploiement GitHub Pages
 (https://hugobrochard23-sys.github.io/cold-impact.project/). Le propriétaire teste sur téléphone ; **toujours donner ce lien à la fin d'un message** (cache à vider / navigation privée).
@@ -35,6 +35,12 @@ Tag `subway-v061` = ancien design « premium arcade » (abandonné).
 Puppeteer + Chrome headless. Serveur statique `node srv.js <dossier du jeu>` (port 8123). Paramètres d'URL utiles :
 `?test=1&autopilot=1&fps=30&endless=1` + `&level=N` (niveau N) · `&notgt=1` (sans cibles) · `&skip=city1,escalier` (exclure des scènes) · `&order=city,forest` (ordre des zones).
 Le pilote automatique ne sait pas viser, attendre un volet ni plonger verticalement : il s'écrase dans ces cas (limite du pilote, pas du jeu).
+
+## v078
+- 60 niveaux (carte en 2 pages). Chaque niveau a un THEME (`CC.LM.THEMES` : mixte, chasse aux hélicos, blindés, batteries de missiles, convoi, escadron, forteresse) qui règle le tirage des cibles et le poids des ennemis de garde.
+- MINI-BOSS (`T.mids`, option `mini` des cibles) dès le niveau 4 : 1 à 3 par niveau, plusieurs PV, ils fuient à chaque coup, 3 points.
+- `Z.noTargets` vidé : il y a des cibles dans toutes les zones (avant, tour/eau/chute n'en avaient pas : niveaux infinissables).
+- Écran de fin : coffre pixel animé (`ui/levelmap.js`) ; icônes pièce/réglages pixel ; bouton NIVEAUX retiré de l'accueil (carte via l'onglet MAP).
 
 ## À vérifier au doigt (jamais testé sur téléphone)
 Équilibrage des ennemis/missiles, difficulté des niveaux 2 à 5, taille de l'arène, caméra en virage, lisibilité des flèches (petites de loin), forêt dégagée.

@@ -317,7 +317,7 @@
       this.levelRun = ld; this.levelWin = false; this.coinFx = null;
       this.assistFuel = ld ? 3 * Math.min(5, ((this.save.lvl && this.save.lvl.tries && this.save.lvl.tries[ld.n]) || 0)) : 0;   // coup de pouce après plusieurs échecs
       if (ld) seed = ld.seed;
-      const ordP = this.params.get('order'), L = CC.Endless.level(seed, { zones: this.testMode ? null : this.progress.unlockedWorlds(), order: ld ? ld.order : (ordP ? ordP.split(',') : null), env: this.params.get('env') || null, levelLen: ld && ld.len, difK: ld && ld.difK, bossHp: ld && ld.hp, bossType: ld && ld.boss, padStyle: ld && ld.n });
+      const ordP = this.params.get('order'), L = CC.Endless.level(seed, { zones: this.testMode ? null : this.progress.unlockedWorlds(), order: ld ? ld.order : (ordP ? ordP.split(',') : null), env: this.params.get('env') || null, levelLen: ld && ld.len, difK: ld && ld.difK, bossHp: ld && ld.hp, bossType: ld && ld.boss, padStyle: ld && ld.n, theme: ld && ld.theme, mids: ld && ld.mids });
       this.loadLevelFrom(L, -1);
       this.endlessRun = new CC.Endless.Run(this, L);
       this.progress.beginRun(); this.reviveUsed = false; this.hudFeed.length = 0; this.cellHap = 0; this.cellSnd = 0;
@@ -615,7 +615,7 @@
     hitBoss(t, rocket) {
       t.hp--; t.hitCool = 0.9;
       { const run0 = this.endlessRun, T0 = run0.T, lv0 = this.levelRun; let dN = 0, best = 1e18; for (let d = Math.max(0, run0.dist - 40); d < run0.dist + 900; d += 6) { const p = T0.at(d, 0, 0), dx = p[0] - t.base.x, dz = p[2] - t.base.z, q = dx * dx + dz * dz; if (q < best) { best = q; dN = d; } }
-        const step = 420 / Math.max(1, t.hpMax), dT = Math.min(dN + step, (lv0 ? lv0.len : 0) + 640), lx = (Math.random() - 0.5) * 50, yy = t.type === 'heli' ? 20 + Math.random() * 22 : 0, np = T0.at(dT, lx, yy);
+        const step = (t.mini ? 110 : 420) / Math.max(1, t.hpMax), dT = Math.min(dN + step, (lv0 ? lv0.len : 0) + 640), lx = (Math.random() - 0.5) * 50, yy = t.type === 'heli' ? 20 + Math.random() * 22 : 0, np = T0.at(dT, lx, yy);
         t.flyTo = new V(np[0], np[1], np[2]); t.flySpeed = 110; }   // il fuit vers le fond de l'arène et continue de tirer
       const run = this.endlessRun, fx = this.effects, c = rocket.pos.clone();
       fx.explosion(c, null, true, 'orange'); fx.ring(c, new V(0, 1, 0), 2, 36, 0.6, '#ffd060', 0.95); fx.flash(c, '#ffb040', 9, 110, 0.4, '#ff5020');
@@ -636,7 +636,7 @@
       t.kill(this);
       if (this.endlessRun) {   // v033 : la roquette traverse la cible et continue ; essence rechargée
         const run = this.endlessRun, fx = this.effects, up = new V(0, 1, 0), dir = rocket.vel.clone().normalize();
-        const val = (({ sam: 2, radar: 3 })[t.type] || 1) * this.progress.pointMult(); run.points = (run.points || 0) + val; run.kills = (run.kills || 0) + 1;
+        const val = (({ sam: 2, radar: 3 })[t.type] || 1) * (t.mini ? 3 : 1) * this.progress.pointMult(); if (t.mini) run.addFuel(CC.CONFIG.endless.fuelTarget * 1.5); run.points = (run.points || 0) + val; run.kills = (run.kills || 0) + 1;
         run.stats.targets++; this.progress.event('targets'); this.progress.event('nuts', val); run.stats.nuts = (run.stats.nuts || 0) + val;
         run.addFuel(CC.CONFIG.endless.fuelTarget);
         // v073 : animation de destruction (simple, sans texte) : explosions, onde de choc, débris, fumée, secousse, ralenti très court

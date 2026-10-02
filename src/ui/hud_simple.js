@@ -19,11 +19,11 @@
     if (game.levelRun) {
       const pct = U.clamp(run.dist / game.levelRun.len, 0, 1), th = Math.max(3, Math.round(px * 0.9));
       ctx.fillStyle = 'rgba(8,12,18,0.4)'; ctx.fillRect(0, 0, W, th); ctx.fillStyle = '#d9a441'; ctx.fillRect(0, 0, Math.round(W * pct), th);
-      const boss = game.targets.find((q) => q.boss && q.alive);
-      if (boss && rk.active && rk.pos.distanceTo(boss.obb.c) < 700) {
+      let boss = null, bd = 1e9; for (const q of game.targets) if ((q.boss || q.mini) && q.alive && q.obb && rk.active) { const dq = rk.pos.distanceTo(q.obb.c); if (dq < (q.boss ? 700 : 260) && dq < bd) { bd = dq; boss = q; } }
+      if (boss) {
         const bw = Math.round(W * 0.42), bx = Math.round(W / 2 - bw / 2), by = Math.round(top + px * 10), bh = Math.max(6, Math.round(px * 1.6));
         ctx.fillStyle = 'rgba(8,12,18,0.45)'; ctx.fillRect(bx, by, bw, bh); ctx.fillStyle = '#ff3b2e'; ctx.fillRect(bx, by, Math.round(bw * boss.hp / boss.hpMax), bh);
-        F.draw(ctx, 'BOSS', W / 2, by + bh + px, px * 0.7, '#ffffff', { align: 'center' });
+        F.draw(ctx, boss.boss ? 'BOSS' : 'MINI BOSS', W / 2, by + bh + px, px * 0.7, '#ffffff', { align: 'center' });
       }
     }
   };

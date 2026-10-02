@@ -512,8 +512,8 @@
   }
 
   // allures des ennemis autorisés par zone (chars au sol, lance-missiles, hélicoptères)
-  Z.noTargets = { chute: 1, tour: 1, eau: 1 };
-  Z.enemies = (zone) => ({ city: { tank: 1, sam: 1, heli: 1 }, forest: { tank: 1, sam: 1, heli: 1 }, metro: { tank: 0, sam: 0, heli: 0 }, chute: { tank: 0, sam: 0, heli: 1 }, tour: { tank: 0, sam: 0, heli: 0 }, eau: { tank: 0, sam: 0, heli: 0 }, usine: { tank: 0, sam: 0, heli: 0 }, port: { tank: 1, sam: 1, heli: 1 }, sky: { tank: 0, sam: 1, heli: 1 }, mini: { tank: 0, sam: 0, heli: 0 } }[zone] || { tank: 1, sam: 1, heli: 1 });
+  Z.noTargets = {};   // v078 : des cibles dans TOUTES les zones (sinon un niveau « tour » ou « eau » ne pouvait pas être fini)
+  Z.enemies = (zone) => ({ city: { tank: 1, sam: 1, heli: 1 }, forest: { tank: 1, sam: 1, heli: 1 }, metro: { tank: 1, sam: 1, heli: 0 }, chute: { tank: 0, sam: 1, heli: 1 }, tour: { tank: 0, sam: 1, heli: 1 }, eau: { tank: 1, sam: 1, heli: 1 }, usine: { tank: 1, sam: 1, heli: 1 }, port: { tank: 1, sam: 1, heli: 1 }, sky: { tank: 1, sam: 1, heli: 1 }, mini: { tank: 1, sam: 1, heli: 1 } }[zone] || { tank: 1, sam: 1, heli: 1 });
   // où poser une cible (sol) : sur la colonne vertébrale
   Z.targetLx = (T, d, zone) => { const lim = { port: 10, metro: 9, sky: 18, mini: 20, city: 12, forest: 14, usine: 14 }[zone] || 12; return U.clamp(T.laneX(d), -lim, lim); };
   Z.edgeLx = (T, d, side, zone) => side * (zone === 'port' ? 12 : zone === 'sky' ? 34 : Math.max(8, T.vol(d) - 6));

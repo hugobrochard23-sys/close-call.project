@@ -146,7 +146,7 @@
     const cfg = C(), T = new Track(seed, opts && opts.zones);
     if (opts && opts.env) T.forceEnv = opts.env;   // banc de test : ?env=neonNight
     if (opts && opts.levelLen) {   // v075 : niveau à longueur fixe (arène + boss à la fin)
-      T.levelLen = opts.levelLen; T.difK = opts.difK || 1; T.bossHp = opts.bossHp || 1; T.bossType = opts.bossType || 'heli'; T.padStyle = opts.padStyle || 0;
+      T.levelLen = opts.levelLen; T.difK = opts.difK || 1; T.bossHp = opts.bossHp || 1; T.bossType = opts.bossType || 'heli'; T.padStyle = opts.padStyle || 0; T.theme = opts.theme || null; T.mids = opts.mids || [];
     }
     if (opts && opts.order && opts.order.length) { const o = opts.order.filter((z) => CC.Zones.PROFILE[z]); while (o.length < 90) o.push(o[o.length % Math.max(1, opts.order.length)]); T.zoneOrder = o; if (opts.levelLen) { const dE = o[1] && o[1] !== o[0] ? Math.abs(CC.Zones.PROFILE[o[1]].elev - CC.Zones.PROFILE[o[0]].elev) : 0; T.off = dE ? C().zoneLen - (Math.max(130, 1.8 * dE) + 40) : 0; } }   // banc de test : ?order=city,metro,…
     const L = {
@@ -161,7 +161,7 @@
         // v034 : le décor du lanceur (dalle, rail, pylônes, feux) est CC.Pad ; ici seulement la collision de la dalle et son pilier
         b.box({ p: [0, 11.1, 40], s: [2.6, 0.5, 5.2], mat: 'metal', render: false });
         b.box({ p: [0, 5.45, 40], s: [1.6, 10.9, 1.6], mat: 'metal', tint: '#6a717c' });
-        const PW = [[{ side: 'facadeDark', top: 'concreteDark' }, '#c8ccd4'], [{ side: 'brick', top: 'concreteDark' }, '#d8c8c0'], [{ side: 'corrugated', top: 'metal' }, '#b8c4d0'], [{ side: 'concreteWarm', top: 'concrete' }, '#e8dcc8'], [{ side: 'rock', top: 'dirt' }, '#c8b8a0'], [{ side: 'metal', top: 'concreteDark' }, '#a8b4c0'], [{ side: 'planks', top: 'roofBrown' }, '#e0c8a0'], [{ side: 'facade', top: 'concrete' }, '#ffffff']], pw = PW[(T.padStyle || 0) % PW.length];
+        const PW = [[{ side: 'facadeDark', top: 'concreteDark' }, '#c8ccd4'], [{ side: 'brick', top: 'concreteDark' }, '#d8c8c0'], [{ side: 'corrugated', top: 'metal' }, '#b8c4d0'], [{ side: 'concreteWarm', top: 'concrete' }, '#e8dcc8'], [{ side: 'rock', top: 'dirt' }, '#c8b8a0'], [{ side: 'metal', top: 'concreteDark' }, '#a8b4c0'], [{ side: 'planks', top: 'roofBrown' }, '#e0c8a0'], [{ side: 'facade', top: 'concrete' }, '#ffffff'], [{ side: 'sand', top: 'planks' }, '#f0d8a0'], [{ side: 'white', top: 'metal' }, '#c0d8f0'], [{ side: 'rock', top: 'concreteDark' }, '#8890a0'], [{ side: 'brick', top: 'roofBrown' }, '#e8b0a0'], [{ side: 'corrugated', top: 'concreteWarm' }, '#a8d0b0'], [{ side: 'concreteDark', top: 'dirt' }, '#d0a8e0']], pw = PW[(T.padStyle || 0) % PW.length];
         b.box({ p: [0, 40, 64], s: [120, 80, 4], mat: pw[0], tint: pw[1] });   // v076 : fond derrière le lanceur (change à chaque niveau)
       },
     };
@@ -231,7 +231,7 @@
       return null;
     };
     for (const t of tgt) {
-      const d = t.d, ly = T.laneY(d), type = t.zone === 'mini' ? 'fuel' : r.pick(ly < 15 ? ['tank', 'truck', 'heli', 'heli', 'sam'] : ['heli', 'heli', 'heli', 'heli', 'truck']), lx = t.lx, air = type === 'heli';   // v069 : sur la ligne directrice : hélicoptère à hauteur de la trajectoire, ou char / camion si elle descend
+      const d = t.d, ly = T.laneY(d), type = t.zone === 'mini' ? 'fuel' : r.pick(ly < 15 ? (T.theme ? T.theme.ground : ['tank', 'truck', 'heli', 'heli', 'sam']) : (T.theme ? T.theme.air : ['heli', 'heli', 'heli', 'heli', 'truck'])), lx = t.lx, air = type === 'heli';   // v069 : sur la ligne directrice : hélicoptère à hauteur de la trajectoire, ou char / camion si elle descend
       const p = place(d, lx, ly + (t.dy || 0) + r.between([-1.5, 1.5]), air, air ? 8 : type === 'sam' ? 4.5 : 5.5);
       if (!p) continue;   // pas de place libre : pas de cible (jamais dans un mur)
       b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0) + (type === 'tank' ? 180 : 0), { unarmed: d * dk < 250 || r() > U.clamp(0.3 + (d * dk - 250) / 3000, 0.3, 0.9), scale: air ? 2.2 : type === 'fuel' ? 2.0 : 2.4, drift: air ? 5 : 2.2, driftSpeed: 0.45 });   // les premiers ne tirent pas ; ensuite de plus en plus souvent
@@ -265,18 +265,27 @@
     }
 
     // ennemis (faibles, en nombre limité) : chars et lance-missiles en bordure du volume, hélicoptères en altitude ; selon la zone
-    const ramp = U.clamp(d0 * dk / 3500, 0, 1), tanks = [], nT = Math.round(2 * ramp);   // v077 : ennemis de garde (chars, lance-missiles, hélicoptères) qui tirent, de plus en plus nombreux   // v068 : ennemis de garde en nombre croissant
+    const ramp = U.clamp(d0 * dk / 3500, 0, 1), tanks = [], foe = (T.theme && T.theme.foe) || { tank: 1, sam: 1, heli: 1 }, fk = Math.min(2.2, 0.85 + 0.15 * dk), nT = Math.round(2 * ramp * foe.tank * fk);   // v078 : nombre d'ennemis selon le thème du niveau et sa difficulté   // v077 : ennemis de garde (chars, lance-missiles, hélicoptères) qui tirent, de plus en plus nombreux   // v068 : ennemis de garde en nombre croissant
     for (let i = 0; i < nT; i++) {
       const d = d0 + cfg.chunkLen * (i + r.between([0.2, 0.8])) / nT, zn = zoneAt(d); if (!free(d, 14) || inRamp(d) || tr0(d).t < 1 || !CC.Zones.enemies(zn).tank) continue;
       const lx = CC.Zones.edgeLx(T, d, r() < 0.5 ? -1 : 1, zn); tanks.push({ type: 'tank', pos: T.at(d, lx, 0), yaw: 180 - Math.sign(lx) * 20 }); busy.push(d);
     }
-    for (let i = 0; i < Math.round(1.6 * ramp); i++) {
+    for (let i = 0; i < Math.round(1.6 * ramp * foe.sam * fk); i++) {
       const d = d0 + cfg.chunkLen * r.between([0.15, 0.85]), zn = zoneAt(d); if (!free(d, 20) || inRamp(d) || tr0(d).t < 1 || !CC.Zones.enemies(zn).sam) continue;
       const lx = CC.Zones.edgeLx(T, d, r() < 0.5 ? -1 : 1, zn); tanks.push({ type: 'sam', pos: T.at(d, lx, 0), yaw: 180 - Math.sign(lx) * 15 }); busy.push(d);
     }
-    for (let i = 0; i < Math.round(1.6 * ramp); i++) {
+    for (let i = 0; i < Math.round(1.6 * ramp * foe.heli * fk); i++) {
       const d = d0 + cfg.chunkLen * r.between([0.2, 0.8]), zn = zoneAt(d); if (!free(d, 25) || inRamp(d) || tr0(d).t < 1 || !CC.Zones.enemies(zn).heli) continue;
       tanks.push({ type: 'heli', pos: T.at(d, T.laneX(d) + (r() < 0.5 ? -1 : 1) * 26, r.between([24, 36])), yaw: 180 }); busy.push(d);
+    }
+
+    // v078 : MINI-BOSS (gros, plusieurs points de vie, armé, il s'enfuit à chaque coup) répartis sur le parcours avant le boss final
+    for (const m of (T.mids || [])) {
+      if (m.d < d0 + 10 || m.d >= d1 - 10) continue;
+      const air = m.type === 'heli', ly = T.laneY(m.d), p = place(m.d, T.laneX(m.d), air ? Math.max(ly, 16) : 0, air, air ? 12 : 9);
+      if (!p) continue;
+      b.target(m.type, p, T.yawAcross(m.d) + (m.type === 'tank' ? 180 : 0), { scale: 4.6, hp: m.hp, mini: true, unarmed: false, drift: air ? 6 : 2.5, driftSpeed: 0.4 });
+      busy.push(m.d);
     }
 
     b.finish();
