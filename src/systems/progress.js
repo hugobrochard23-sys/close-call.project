@@ -47,7 +47,7 @@
     // coût en écrous du niveau suivant ; chaque amélioration a 5 niveaux
     static get UPG() {
       return [
-        { id: 'mult', name: 'MULTIPLICATEUR', icon: 'mult', max: 5, cost: [15, 30, 60, 110, 180], desc: (l) => 'MAXIMUM X' + (2 + l) },
+        { id: 'mult', name: 'PRECISION', icon: 'target', max: 5, cost: [15, 30, 60, 110, 180], desc: (l) => 'TOUCHE ' + (0.6 * l).toFixed(1) + ' M PLUS LARGE' },   // v082 : remplace le multiplicateur (qui n'existe plus) : la roquette touche les cibles de plus loin
         { id: 'tank', name: 'RESERVOIR', icon: 'tank', max: 5, cost: [10, 25, 50, 90, 150], desc: (l) => '+' + 3 * l + ' S D ESSENCE' },
         { id: 'eff', name: 'RENDEMENT', icon: 'bolt', max: 5, cost: [12, 28, 55, 100, 160], desc: (l) => '-' + 8 * l + '% CONSOMMATION' },
         { id: 'hull', name: 'POINTS', icon: 'star', max: 5, cost: [20, 40, 80, 130, 200], desc: (l) => 'POINTS X' + (1 + 0.1 * l).toFixed(1) },
@@ -56,6 +56,7 @@
     static hullCharges(l) { return [0, 1, 1, 2, 2, 3][l] || 0; }
     upLevel(id) { return this.P.up[id] || 0; }
     multCap() { return 2 + this.upLevel('mult'); }
+    hitPad() { return 0.6 * this.upLevel('mult'); }   // v082 : PRECISION : rayon de touche en plus (m)
     fuelBonus() { return 3 * this.upLevel('tank'); }
     drainK() { return 1 - 0.08 * this.upLevel('eff'); }
     hullCharges() { return 0; }   // v074 : plus de coque (elle traversait les murs)

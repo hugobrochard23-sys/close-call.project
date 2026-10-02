@@ -83,7 +83,8 @@
       const col = i % cols, row = Math.floor(i / cols), x = R(x0 + col * cell), y = R(y0 + row * cell), open = n <= max, isDone = !!done[n], isCur = n === cur;
       const blink = isCur && Math.floor(t * 2.5) % 2 === 0;
       Home.pill(ctx, x, y, size, size, isDone ? 'rgba(20,70,40,0.95)' : open ? (blink ? 'rgba(90,70,24,0.97)' : 'rgba(38,45,54,0.97)') : 'rgba(18,22,28,0.95)', isCur ? GOLD : isDone ? GREEN : open ? '#5a6674' : '#2a313a', size * 0.14);
-      if (open) text(ctx, String(n), x + size / 2, y + size * 0.3, ui.fitPx([String(n)], size * 0.6, size * 0.03), isDone ? GREEN : '#ffffff', { align: 'center' });
+      if (open) text(ctx, String(n), x + size / 2, y + size * 0.24, ui.fitPx([String(n)], size * 0.6, size * 0.03), isDone ? GREEN : '#ffffff', { align: 'center' });
+      if (open && game.meta && Home.drawStars) Home.drawStars(ctx, x + size / 2, y + size * 0.74, size * 0.17, game.meta.starsOf(n), 3);   // v082 : étoiles du niveau
       else if (Home.icon.lock) Home.icon.lock(ctx, x + size / 2, y + size / 2, size * 0.16, '#5a6674');
       if (open) ui.buttons.push({ x, y, w: size, h: size, action: () => { game.setLevel(n); ui.overlay = null; game.goHome({}); } });
     }
@@ -102,6 +103,7 @@
     const info = 'NIVEAU ' + cur + '   ' + zn, ip = ui.fitPx([info], W * 0.86, u * 0.0042), iy = yb + bh + u * 0.025;
     text(ctx, info, W / 2, iy, ip, '#c8d0dc', { align: 'center' });
     text(ctx, def.theme.name, W / 2, iy + ip * 9, ui.fitPx([def.theme.name], W * 0.86, u * 0.0034), GOLD, { align: 'center' });
+    if (game.meta) { const st = 'ETOILES ' + game.meta.total() + ' / ' + CC.LM.count * 3; text(ctx, st, W / 2, iy + ip * 18, ui.fitPx([st], W * 0.7, u * 0.003), '#ffd23a', { align: 'center' }); }
     Home.backButton(ui, ctx, L, ui.key('RETOUR', 'ESC'), () => { ui.overlay = null; ui.mapPage = null; });
   };
 
@@ -112,6 +114,13 @@
     const L = Home.layout(ui, W, H), { u, Y } = L, lv = game.levelRun;
     const label = lv ? 'NIVEAU ' + lv.n : '', lp = ui.fitPx([label], W * 0.6, u * 0.009);
     text(ctx, label, W / 2, Y(0.27), lp, '#ffffff', { align: 'center' });
+    if (game.meta && Home.crateIcon) {   // v082 : QUOTIDIEN (cadeau, missions du jour, coffre) — pastille rouge quand il y a quelque chose à prendre
+      const hdr = L.T + L.HH * 0.1, gr = u * 0.055, gx = u * 0.04 + gr, gy = hdr + u * 0.04 * 0.8 + gr, hov = !ui.isTouch() && ui.mouse.x > gx - gr && ui.mouse.x < gx + gr && ui.mouse.y > gy - gr && ui.mouse.y < gy + gr;
+      Home.pill(ctx, gx - gr, gy - gr, 2 * gr, 2 * gr, hov ? 'rgba(50,59,70,0.97)' : 'rgba(38,45,54,0.97)', game.meta.badge() ? GOLD : '#5a6674', gr * 0.35);
+      Home.crateIcon(ctx, gx, gy, gr * 1.1);
+      if (game.meta.badge() && Math.floor(performance.now() / 500) % 2 === 0) { ctx.fillStyle = '#d0473e'; ctx.fillRect(R(gx + gr * 0.55), R(gy - gr * 1.05), R(gr * 0.5), R(gr * 0.5)); }
+      ui.buttons.push({ x: gx - gr, y: gy - gr, w: 2 * gr, h: 2 * gr, action: () => { ui.overlay = 'daily'; } });
+    }
     if (lv && lv.theme) { const th = lv.theme.name, tp2 = ui.fitPx([th], W * 0.8, u * 0.0042); text(ctx, th, W / 2, Y(0.27) + lp * 9, tp2, GOLD, { align: 'center' }); }
   };
 
@@ -124,7 +133,7 @@
     const title = win ? 'NIVEAU ' + lv.n + ' REUSSI !' : 'NIVEAU ' + lv.n, tp = ui.fitPx([title], W * 0.9, u * 0.01);
     text(ctx, title, cx, Y(0.1) - (win ? Math.max(0, 1 - t * 4) * u * 0.1 : 0), tp, win ? GOLD : '#ffffff', { align: 'center', skew: -0.2 });
     if (win) {
-      const cw = u * 0.56, s = cw / 26, ccx = cx, floor = Y(0.46), shakeT = U.clamp((t - 0.45) / 0.55, 0, 1), opened = t > 1.0, ot = t - 1.0;
+      const cw = u * 0.56, s = cw / 26, ccx = cx, floor = Y(0.52), shakeT = U.clamp((t - 0.45) / 0.55, 0, 1), opened = t > 1.0, ot = t - 1.0;
       // chute avec rebond
       const dropK = U.clamp(t / 0.45, 0, 1), drop = (1 - dropK) * (1 - dropK) * -u * 0.6 - (t > 0.45 && t < 0.62 ? Math.sin((t - 0.45) / 0.17 * Math.PI) * u * 0.03 : 0);
       const sh = opened ? 0 : Math.sin(t * 60) * shakeT * s * 1.2, cy = floor + drop, bodyY = cy - 14 * s, ccxs = ccx + sh;
@@ -161,16 +170,29 @@
           const wk = Math.abs(Math.cos(tt * 11 + i)), cwid = Math.max(s, R(s * 4.2 * wk)), chh = R(s * 4.2), al = tt > 2.1 ? 1 - (tt - 2.1) / 0.5 : 1;
           ctx.globalAlpha = al; ctx.fillStyle = OUT; ctx.fillRect(R(px0 - cwid / 2 - s * 0.6), R(py0 - chh / 2 - s * 0.6), R(cwid + s * 1.2), R(chh + s * 1.2)); ctx.fillStyle = i % 3 ? '#ffd23a' : '#fff2a8'; ctx.fillRect(R(px0 - cwid / 2), R(py0 - chh / 2), R(cwid), R(chh)); ctx.fillStyle = '#c98a1c'; ctx.fillRect(R(px0 - cwid / 2), R(py0 + chh / 2 - s), R(cwid), R(s)); ctx.globalAlpha = 1;
         }
-        for (let i = 0; i < 9; i++) { const q = (ot * 1.4 + rnd(i, 5)) % 1, ax = ccx + (rnd(i, 6) - 0.5) * W * 0.8, ay = bodyY - rnd(i, 7) * u * 0.5, sz = R(s * (1 + Math.sin(q * Math.PI) * 1.6)); ctx.globalAlpha = Math.sin(q * Math.PI); ctx.fillStyle = '#ffffff'; ctx.fillRect(R(ax - sz / 2), R(ay - sz * 1.5), sz, sz * 3); ctx.fillRect(R(ax - sz * 1.5), R(ay - sz / 2), sz * 3, sz); ctx.globalAlpha = 1; }
+        for (let i = 0; i < 9; i++) { const q = (ot * 1.4 + rnd(i, 5)) % 1, ax = ccx + (rnd(i, 6) - 0.5) * W * 0.8, ay = Math.max(Y(0.22), bodyY - rnd(i, 7) * u * 0.5), sz = R(s * (1 + Math.sin(q * Math.PI) * 1.6)); ctx.globalAlpha = Math.sin(q * Math.PI); ctx.fillStyle = '#ffffff'; ctx.fillRect(R(ax - sz / 2), R(ay - sz * 1.5), sz, sz * 3); ctx.fillRect(R(ax - sz * 1.5), R(ay - sz / 2), sz * 3, sz); ctx.globalAlpha = 1; }
       }
       // total d'écrous : compte à rebours, pièce pixel à gauche
       const shown = Math.round(lv.chest * U.clamp((t - 1.25) / 1.0, 0, 1)), np = ui.fitPx(['+000'], W * 0.5, u * 0.012);
       if (t > 1.2) {
         const lbl = '+' + shown, wl = F.measure(lbl, np), ic = np * 8, gx2 = cx - (wl + ic + np * 3) / 2, pop = t < 2.3 ? 1 + 0.06 * Math.sin(t * 40) : 1;
-        Home.drawCoinIcon(ctx, gx2 + ic / 2, Y(0.63) + np * 3.5, ic);
-        text(ctx, lbl, gx2 + ic + np * 3, Y(0.63) - (pop - 1) * np * 8, np * pop, GOLD, {});
+        Home.drawCoinIcon(ctx, gx2 + ic / 2, Y(0.665) + np * 3.5, ic);
+        text(ctx, lbl, gx2 + ic + np * 3, Y(0.665) - (pop - 1) * np * 8, np * pop, GOLD, {});
       }
       if (t < 2.3 && (r.tickAt || 0) + 0.06 < t && t > 1.25) { r.tickAt = t; game.audio.play('xpTick', null, Math.floor(shown / Math.max(1, lv.chest) * 8)); }
+      // v082 : étoiles (apparaissent une à une), module(s) trouvé(s), XP du pass
+      if (lv.stars !== undefined && Home.drawStars) {
+        const sz = u * 0.085; r.sd = r.sd || {};
+        for (let i = 0; i < 3; i++) {
+          const on = i < lv.stars, ta = U.clamp((t - 0.5 - 0.45 * i) / 0.25, 0, 1), px = cx + (i - 1) * sz * 1.5;
+          Home.gridDraw(ctx, 'star', px, Y(0.16), sz * (on && ta > 0 && ta < 1 ? 1.5 - 0.5 * ta : 1), on && ta > 0 ? '#ffd23a' : '#3a424c');
+          if (on && ta >= 1 && !r.sd[i]) { r.sd[i] = 1; game.audio.play('door', null, i * 2 + 1); }
+        }
+      }
+      if (t > 2.3) { let yy = Y(0.73); const fa = U.clamp((t - 2.3) / 0.4, 0, 1); ctx.globalAlpha = fa;
+        for (const dr of (lv.drops || []).slice(0, 2)) { const md = CC.Meta.MODS[dr.id]; Home.modIcon(ctx, dr.id, cx - u * 0.25, yy + u * 0.02, u * 0.07); text(ctx, md.name + (dr.up ? '  NIV ' + dr.lvl + ' !' : ' +1'), cx - u * 0.19, yy - u * 0.005, ui.fitPx(['MODULE 00000000'], W * 0.55, u * 0.0042), '#6aff9a', {}); yy += u * 0.085; }
+        if (lv.passXp) text(ctx, '+' + lv.passXp + ' XP PASS', cx, Y(0.78) + ((lv.drops || []).length > 1 ? u * 0.05 : 0), ui.fitPx(['+000 XP PASS'], W * 0.5, u * 0.0042), '#8fd0ff', { align: 'center' });
+        ctx.globalAlpha = 1; }
       if (!r.cheered && t > 1.0) { r.cheered = true; game.audio.play('levelUp'); if (CC.Haptics) CC.Haptics.pattern('levelUp'); }
       if (!r.thump && t > 0.45) { r.thump = true; game.audio.play('boom'); }
     } else {
@@ -180,6 +202,8 @@
       const pp = ui.fitPx(['100 %'], W * 0.5, u * 0.014);
       text(ctx, Math.round(pct * 100) + ' %', cx, by + bh + u * 0.04, pp, '#ffffff', { align: 'center' });
       if (lv.boss) text(ctx, 'BOSS ATTEINT', cx, Y(0.56), ui.fitPx(['BOSS ATTEINT'], W * 0.8, u * 0.006), '#ff6a5a', { align: 'center' });
+      { let yy = Y(0.64); for (const dr of (lv.drops || []).slice(0, 2)) { const md = CC.Meta.MODS[dr.id]; Home.modIcon(ctx, dr.id, cx - u * 0.25, yy + u * 0.02, u * 0.07); text(ctx, md.name + (dr.up ? '  NIV ' + dr.lvl + ' !' : ' +1'), cx - u * 0.19, yy - u * 0.005, ui.fitPx(['MODULE 00000000'], W * 0.55, u * 0.0042), '#6aff9a', {}); yy += u * 0.085; }
+        if (lv.passXp) text(ctx, '+' + lv.passXp + ' XP PASS', cx, Math.max(yy, Y(0.7)), ui.fitPx(['+000 XP PASS'], W * 0.5, u * 0.0042), '#8fd0ff', { align: 'center' }); }
     }
     // boutons
     const bw = W * 0.8, bx = cx - bw / 2, bh1 = Math.max(u * 0.17, 60 * ui.pixelRatio()), bh0 = Math.max(u * 0.1, 40 * ui.pixelRatio()), yMain = Y(0.975) - bh1, yMap = yMain - bh0 - u * 0.03;

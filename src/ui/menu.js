@@ -61,6 +61,8 @@
       else if (this.overlay === 'progress') { this.buttons = []; CC.Home.drawGarage(this, ctx, game, W, H); }
       else if (this.overlay === 'garage') { this.buttons = []; CC.Home.drawGarage(this, ctx, game, W, H); }
       else if (this.overlay === 'map') { this.buttons = []; CC.Home.drawMap(this, ctx, game, W, H); }
+      else if (this.overlay === 'pass') { this.buttons = []; CC.Home.drawPass(this, ctx, game, W, H); }          // v082
+      else if (this.overlay === 'daily') { this.buttons = []; CC.Home.drawDaily(this, ctx, game, W, H); }
       else if (this.overlay === 'msettings') { this.buttons = []; CC.Home.drawSettings(this, ctx, game, W, H); }
       else if (this.overlay === 'revive') { this.buttons = []; CC.Home.drawRevive(this, ctx, game, W, H); }
       else if (this.overlay === 'generating') { this.buttons = []; this.drawGenerating(ctx, game, W, H); }

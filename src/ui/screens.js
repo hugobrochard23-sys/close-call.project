@@ -28,6 +28,7 @@
   ICONS.paint = mk((R) => { R(4, 4, 8, 10, M); R(3, 3, 10, 2, L); R(4, 7, 8, 1, '#8995a1'); R(4, 8, 8, 1, '#aab4bf'); R(4, 9, 8, 1, '#7f8b97'); R(4, 10, 8, 1, '#5a6674'); R(5, 1, 6, 2, L); });
   ICONS.coins = mk((R) => { for (const [x, y] of [[2, 10], [8, 10], [5, 6], [5, 12]]) { R(x, y, 6, 3, '#d9a441'); R(x, y, 6, 1, '#f0d28a'); R(x, y + 2, 6, 1, '#9a7126'); } R(5, 2, 6, 3, '#d9a441'); R(5, 2, 6, 1, '#f0d28a'); R(5, 4, 6, 1, '#9a7126'); });
   ICONS.pilot = mk((R) => { R(3, 5, 10, 9, '#d7b79a'); R(2, 2, 12, 4, '#5b6b7b'); R(2, 5, 12, 1, '#3c4856'); R(2, 6, 2, 6, '#6b5b7b'); R(12, 6, 2, 6, '#6b5b7b'); R(5, 8, 2, 2, K); R(9, 8, 2, 2, K); R(7, 12, 2, 1, '#a05040'); R(6, 0, 4, 2, '#5b6b7b'); });
+  ICONS.star = mk((R) => { R(7, 0, 2, 3, Y); R(6, 3, 4, 2, Y); R(0, 5, 16, 3, Y); R(2, 8, 12, 2, Y); R(3, 10, 10, 2, O); R(2, 12, 4, 3, O); R(10, 12, 4, 3, O); R(7, 4, 2, 3, '#f0d28a'); });
   ICONS.trophy = mk((R) => { R(3, 1, 10, 2, Y); R(4, 3, 8, 5, Y); R(1, 2, 3, 4, Y); R(12, 2, 3, 4, Y); R(2, 3, 1, 2, null); R(13, 3, 1, 2, null); R(6, 8, 4, 3, '#9a7126'); R(4, 11, 8, 2, Y); R(5, 3, 2, 4, '#f0d28a'); });
   // v045 : icônes 3D (CC.Icons3D) en priorité ; l'ancienne grille 16×16 sert de repli le temps du rendu
   const ALIAS = { coins: 'nut' };
@@ -70,14 +71,13 @@
     const sh = HH * 0.05, sy = T + hh + 2;
     ctx.fillStyle = NAVY; ctx.fillRect(0, sy, W * 0.58, sh); ctx.fillRect(W * 0.78, sy, W * 0.22, sh);
     txt(ctx, 'SCORE: ', m, sy + sh * 0.3, W * 0.2, 1.5, CREAM); txt(ctx, U.formatInt(P.best || 0), m + F.measure('SCORE: ', 1.5), sy + sh * 0.3, W * 0.3, 1.5, GOLD);
-    txt(ctx, 'COMBO: X' + (P.bestMult || 1), W * 0.78 + m, sy + sh * 0.3, W * 0.22 - m * 1.5, 1.5, CREAM);
     return sy + sh;
   };
 
   // ---------- barre de trois onglets ----------
   Home.drawTabs = function (ui, ctx, game, L, active) {
     const { W, HH, T, u } = L, lvl = game.progress.level;
-    const list = [{ id: 'garage', icon: 'wrench', label: 'GARAGE', lv: 2 }, { id: 'map', icon: 'pin', label: 'MAP', lv: 3 }, { id: 'shop', icon: 'shop', label: 'BOUTIQUE', lv: 5 }].filter((t) => lvl >= t.lv);
+    const list = [{ id: 'garage', icon: 'wrench', label: 'GARAGE', lv: 2 }, { id: 'pass', icon: 'star', label: 'PASS', lv: 2 }, { id: 'map', icon: 'pin', label: 'MAP', lv: 3 }, { id: 'shop', icon: 'shop', label: 'BOUTIQUE', lv: 5 }].filter((t) => lvl >= t.lv);
     if (!list.length) return 0;
     const bh = HH * 0.085, bw = Math.min(W * 0.94, W * 0.31 * list.length), bx = (W - bw) / 2, by = T + HH - bh - HH * 0.03, cw = bw / list.length;
     panel(ctx, bx, by, bw, bh, NAVY, EDGE, bh * 0.14);
@@ -133,7 +133,7 @@
     ctx.fillStyle = STEEL2; ctx.fillRect(Math.round(m + 5), Math.round(vy + 5), Math.round(pw - 5), Math.round(vh - 10));
     ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(Math.round(m + 5), Math.round(vy + vh * 0.62), Math.round(pw - 5), Math.round(vh * 0.38 - 5));
     if (CC.Icons3D && CC.Icons3D.ready('rocket_big')) { const d = Math.min(pw - 5, vh - 10) * 1.15; ctx.imageSmoothingEnabled = true; ctx.drawImage(CC.Icons3D.get('rocket_big'), m + 5 + (pw - 5 - d) / 2, vy + 5 + (vh - 10 - d) / 2 + Math.sin(t * 2) * 2, d, d); } else rocketSide(ctx, m + 5, vy + 5, pw - 5, vh - 10, t);
-    const slots = [['tank', 'engine', 'ESSENCE'], ['eff', 'boost', 'RENDEMENT'], ['hull', 'body', 'COQUE'], ['mult', 'paint', 'MULTI']];
+    const slots = [['tank', 'engine', 'ESSENCE'], ['eff', 'boost', 'RENDEMENT'], ['hull', 'body', 'POINTS'], ['mult', 'paint', 'PRECISION']];
     const gx0 = m + pw + 8, sw = (vw - pw - 8 - 8) / 2, sh = (vh - 24) / 2;
     slots.forEach(([up, ic, lab], i) => {
       const sx = gx0 + (i % 2) * (sw + 4), sy = vy + 8 + Math.floor(i / 2) * (sh + 8), lv = prog.upLevel(up);
@@ -145,7 +145,7 @@
     // jauges
     const ry = vy + vh + HH * 0.014, rh = HH * 0.3;
     panel(ctx, m, ry, vw, rh, PANEL, EDGE, 12);
-    const rows = [['ESSENCE', 'tank'], ['RENDEMENT', 'eff'], ['COQUE', 'hull'], ['MULTI', 'mult']], rowH = rh / rows.length;
+    const rows = [['ESSENCE', 'tank'], ['RENDEMENT', 'eff'], ['POINTS', 'hull'], ['PRECISION', 'mult']], rowH = rh / rows.length;
     rows.forEach(([lab, id], i) => {
       const up = CC.Progress.UPG.find((q) => q.id === id), lv = prog.upLevel(id), cost = prog.upCost(id), can = prog.canBuy(id), y0 = ry + i * rowH;
       const lw = vw * 0.3, bx = m + 8 + lw, bwid = vw - lw - 16 - vw * 0.2, bh = rowH * 0.34, byy = y0 + (rowH - bh) / 2;

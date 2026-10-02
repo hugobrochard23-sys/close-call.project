@@ -169,7 +169,7 @@
         if (!t.alive || t.hitCool > 0) continue;
         if (t.hazard && this.shieldT > 0) continue;   // v034 : le bouclier traverse aussi les drones
         const d = _d.subVectors(p1, this.pos);
-        const hit = CC.World.segBox(t.obb, this.pos, d, r + 0.1, _hit);
+        const hit = CC.World.segBox(t.obb, this.pos, d, r + 0.1 + (game.progress && game.progress.hitPad ? game.progress.hitPad() : 0), _hit);   // v082 : PRECISION
         if (hit) { this.pos.addScaledVector(d, hit.t); game.onTargetHit(t, this); return; }
       }
       // v034 : bouclier du revive — la roquette traverse le décor (elle repart au milieu d'un couloir qu'elle n'a pas fini de franchir)

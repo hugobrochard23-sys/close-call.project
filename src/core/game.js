@@ -59,6 +59,7 @@
       this.initEnvironment();
       this.loadSave();
       this.progress = new CC.Progress(this);   // v034 : XP, niveaux, missions
+      this.meta = new CC.Meta(this); this.pickups = []; this.modRun = { shield: 0, drops: [] };   // v082 : étoiles, pass, modules, quotidien
       this.pad = new CC.Pad(this);             // v034 : lanceur (accueil du mode CLASSIQUE)
       this.shadow = new CC.RocketShadow(this); // v034 : ombre de la roquette
       this.horizon = new CC.Horizon(this);     // v036 : silhouettes lointaines
@@ -203,6 +204,7 @@
 
     // ---------- niveaux ----------
     unloadLevel() {
+      this.clearPickups();
       if (this.endlessRun) { this.endlessRun.dispose(); this.endlessRun = null; }   // v033 : tronçons du couloir infini
       if (this.builder) { this.builder.dispose(); this.builder = null; }
       for (const m of this.missiles) this.scene.remove(m.object);
@@ -315,6 +317,7 @@
       if (opts.levelDef === undefined && !this.testMode && !this.params.has('endless')) ld = this.curLevelDef();
       if (opts.levelDef === undefined && this.params.has('level')) ld = CC.LM.def(parseInt(this.params.get('level'), 10) || 1);
       this.levelRun = ld; this.levelWin = false; this.coinFx = null;
+      this.clearPickups(); this.modRun = { shield: this.meta.shieldCharges(), drops: [] };   // v082 : modules équipés pour ce vol
       if (CC.Look) CC.Look.set(ld ? CC.Look.forLevel(ld) : null);   // v081 : look du niveau (teinte, matériaux, ambiance)
       this.assistFuel = ld ? 3 * Math.min(5, ((this.save.lvl && this.save.lvl.tries && this.save.lvl.tries[ld.n]) || 0)) : 0;   // coup de pouce après plusieurs échecs
       if (ld) seed = ld.seed;
@@ -426,6 +429,11 @@
       if (this.levelRun) {   // v075 : résultat du niveau (victoire = coffre + niveau suivant ; échec = % parcouru, un coup de pouce après plusieurs essais)
         const lv = this.levelRun, L = (S.lvl = S.lvl || { cur: 1, max: 1, done: {}, tries: {}, mode: 'level' }); L.tries = L.tries || {}; L.done = L.done || {};
         const win = !!this.levelWin; this.results.level = { n: lv.n, len: lv.len, win, pct: win ? 1 : Math.min(0.99, run.dist / lv.len), chest: win ? lv.chest : 0, boss: !!(run.dist > lv.len - 80) };
+        { const T = run.T, ratio = Math.min(1, (run.kills || 0) / ((T.spawned || 0) + 1)), M = this.meta, stars = M.starsFor(win, ratio), lr = this.results.level;
+          lr.stars = stars; lr.ratio = ratio; lr.newStars = win ? M.setStars(lv.n, stars) : 0;
+          lr.passXp = M.addPassXp(win ? 60 + 25 * stars : 8 + Math.round(lr.pct * 20));
+          if (win) M.event('wins', 1);
+          lr.drops = (this.modRun ? this.modRun.drops : []).map((id) => M.addMod(id, 1)); M.save(); }
         if (win) { L.done[lv.n] = 1; L.max = Math.max(L.max || 1, lv.n + 1); L.cur = lv.n + 1; L.tries[lv.n] = 0; this.progress.P.materials = (this.progress.P.materials || 0) + lv.chest; }
         else L.tries[lv.n] = (L.tries[lv.n] || 0) + 1;
       }
@@ -612,6 +620,32 @@
       else this.restartLevel();
     }
 
+    // v082 : CAISSES VERTES (modules) lâchées par les hélicoptères dorés : à attraper en passant près d'elles
+    clearPickups() { for (const q of (this.pickups || [])) this.scene.remove(q.obj); this.pickups = []; }
+    spawnModPickup(c) {
+      const run = this.endlessRun; if (!run) return;
+      const id = this.meta.rollMod(), g = new THREE.Group(), core = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.6, 2.6), new THREE.MeshBasicMaterial({ color: '#3aff6a' }));
+      g.add(core); g.add(new THREE.LineSegments(new THREE.EdgesGeometry(core.geometry), new THREE.LineBasicMaterial({ color: '#ffffff' })));
+      const halo = new THREE.Mesh(new THREE.CircleGeometry(4.6, 24), new THREE.MeshBasicMaterial({ color: '#6aff9a', transparent: true, opacity: 0.3, depthWrite: false, side: THREE.DoubleSide })); g.add(halo);
+      const T = run.T, d = run.dist + 40, side = Math.random() < 0.5 ? -1 : 1; let lx = T.laneX(d) + side * (6 + Math.random() * 5), y = T.laneY(d) + 2 + Math.random() * 4, p = T.at(d, lx, y);
+      const tmp = new V(p[0], p[1], p[2]), out = {}; this.world.nearest(tmp, 5, out); if (out.wall < 4) { lx = T.laneX(d); p = T.at(d, lx, T.laneY(d)); }
+      g.position.set(p[0], p[1], p[2]); this.scene.add(g);
+      this.pickups.push({ obj: g, core, halo, id, life: 9, t: 0 });
+    }
+    updatePickups(dt) {
+      const rk = this.rocket; if (!this.pickups || !this.pickups.length) return;
+      for (let i = this.pickups.length - 1; i >= 0; i--) {
+        const q = this.pickups[i]; q.t += dt; q.life -= dt; q.obj.rotation.y += dt * 2.4; q.obj.rotation.x += dt * 1.1; q.halo.quaternion.copy(this.camera.quaternion); q.halo.material.opacity = 0.22 + 0.12 * Math.sin(q.t * 6);
+        const near = rk.active && rk.pos.distanceTo(q.obj.position) < 6.5;
+        if (near) {
+          const c = q.obj.position.clone(); this.modRun.drops.push(q.id);
+          this.effects.ring(c, new V(0, 1, 0), 2, 30, 0.7, '#6aff9a', 0.95); this.effects.flash(c, '#6aff9a', 8, 90, 0.4, '#2aff6a'); this.flash = 0.2; this.flashColor = '#bfffd0';
+          this.audio.play('ringSeries'); (this.killPops = this.killPops || []).push({ p: c, t0: performance.now(), txt: 'MODULE' });
+        }
+        if (near || q.life <= 0) { this.scene.remove(q.obj); this.pickups.splice(i, 1); }
+      }
+    }
+
     // v075 : coup sur un boss (il a plusieurs points de vie, la fusée traverse et doit revenir)
     hitBoss(t, rocket) {
       t.hp--; t.hitCool = 0.9; t.rageK = Math.max(0.45, (t.rageK || 1) * 0.78);
@@ -626,6 +660,7 @@
       (this.killPops = this.killPops || []).push({ p: c, t0: performance.now(), txt: t.hp + ' / ' + t.hpMax });
     }
     onBossDead(t, c, rocket) {
+      this.meta.event('boss', 1);
       this.levelWin = true; this.hitStop = 1.4; this.hitScale = 0.2; this.chromaBurst = 0.03; this.flash = 0.5; this.flashColor = '#ffffff';
       for (let i = 0; i < 7; i++) setTimeout(() => { try { this.effects.explosion(c.clone().add(new V((Math.random() - 0.5) * 16, Math.random() * 9, (Math.random() - 0.5) * 16)), null, true, i % 2 ? 'cyan' : 'orange'); this.audio.play('boom', c); } catch (e) { /* ignoré */ } }, i * 170);
       setTimeout(() => { if (this.state === 'FLIGHT' && this.endlessRun) { const rk = this.rocket; rk.active = false; rk.mesh.visible = false; rk.light.intensity = 0; rk.rope.visible = false; this.finishEndless(); } }, 2000);
@@ -638,8 +673,9 @@
       if (this.endlessRun) {   // v033 : la roquette traverse la cible et continue ; essence rechargée
         const run = this.endlessRun, fx = this.effects, up = new V(0, 1, 0), dir = rocket.vel.clone().normalize();
         const val = (({ sam: 2, radar: 3, golden: 5 })[t.type] || 1) * (t.mini ? 3 : 1) * this.progress.pointMult(); if (t.mini) run.addFuel(CC.CONFIG.endless.fuelTarget * 1.5); if (t.golden) run.addFuel(CC.CONFIG.endless.fuelTarget * 2.2); run.points = (run.points || 0) + val; run.kills = (run.kills || 0) + 1;
-        run.stats.targets++; this.progress.event('targets'); this.progress.event('nuts', val); run.stats.nuts = (run.stats.nuts || 0) + val;
-        run.addFuel(CC.CONFIG.endless.fuelTarget);
+        run.stats.targets++; this.progress.event('targets'); this.progress.event('nuts', Math.max(val, Math.round(val * this.meta.nutsK())));   // v082 : module FORTUNE
+        this.meta.event('kills', 1); if (t.golden) this.meta.event('golden', 1); run.stats.nuts = (run.stats.nuts || 0) + val;
+        run.addFuel(CC.CONFIG.endless.fuelTarget * this.meta.fuelK());   // v082 : module SIPHON
         // v073 : animation de destruction (simple, sans texte) : explosions, onde de choc, débris, fumée, secousse, ralenti très court
         fx.explosion(c, null, true, 'orange'); fx.explosion(c.clone().add(new V(0, 2.5, 0)), null, true, 'cyan');
         fx.ring(c, up, 2, 30, 0.6, '#ffd060', 0.95); fx.ring(c, dir, 1, 22, 0.5, '#ffffff', 0.85);
@@ -654,6 +690,9 @@
         if (t.golden) { this.audio.play('ringSeries'); fx.ring(c, up, 3, 46, 0.9, '#ffd23a', 0.95); fx.ring(c, new V(1, 0, 0), 2, 38, 0.8, '#fff4b0', 0.9); fx.flash(c, '#ffd23a', 12, 130, 0.6, '#ffb020'); this.flash = 0.3; this.flashColor = '#ffe9a0'; this.hitStop = 0.14; }
         if (t.grp && this.targets.every((x) => x.grp !== t.grp || !x.alive)) { run.points = (run.points || 0) + 3 * this.progress.pointMult(); run.addFuel(CC.CONFIG.endless.fuelTarget * 1.5); this.audio.play('levelUp'); fx.ring(c, up, 3, 50, 1.0, '#ffd23a', 0.95); fx.flash(c, '#ffd23a', 10, 120, 0.5, '#ffb020'); this.hitStop = 0.12; }
         (this.killPops = this.killPops || []).push({ p: c.clone(), t0: performance.now(), txt: '+' + (Math.round(val * 10) / 10) });
+        if (t.golden) this.spawnModPickup(c);   // v082 : l'hélicoptère doré lâche une caisse verte (un module)
+        { const rad = this.meta.warRadius();   // v082 : module OGIVE : tout ce qui est proche explose aussi
+          if (rad > 0 && !t.boss) for (const q of this.targets) { if (q === t || !q.alive || q.boss || q.mini || q.hazard || !q.obb || q.obb.c.distanceTo(c) > rad) continue; const c2 = q.obb.c.clone(); q.kill(this); run.points = (run.points || 0) + this.progress.pointMult(); run.kills = (run.kills || 0) + 1; run.stats.targets++; this.progress.event('targets'); this.meta.event('kills', 1); run.addFuel(CC.CONFIG.endless.fuelTarget * 0.6); fx.explosion(c2, null, true, 'cyan'); fx.ring(c2, up, 2, 24, 0.5, '#ffd060', 0.9); } }
         if (t.boss) this.onBossDead(t, c, rocket);
         if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('warn');
         this.telemetry.event('targetHit', { target: t.type, speed: +rocket.vel.length().toFixed(2), runTime: +this.runTime.toFixed(3) });
@@ -681,6 +720,11 @@
 
     onRocketCrash(kind, pos, normal) {
       if (!this.rocket.active) return;
+      if (kind === 'missile' && this.modRun && this.modRun.shield > 0) {   // v082 : module BOUCLIER : il arrête un missile
+        this.modRun.shield--; const fx = this.effects, up = new V(0, 1, 0);
+        fx.ring(pos, up, 2, 34, 0.7, '#8fd0ff', 0.95); fx.ring(pos, new V(1, 0, 0), 1, 26, 0.6, '#ffffff', 0.9); fx.flash(pos, '#8fd0ff', 8, 90, 0.35, '#4a9aff');
+        this.flash = 0.25; this.flashColor = '#bfe4ff'; this.audio.play('levelUp'); this.rig.shake = 0.8; return;
+      }
       if (this.rocket.shieldT > 0 && kind !== 'outOfBounds' && kind !== 'stalled') return;   // v034 : bouclier du revive
       const rk = this.rocket, runH = this.endlessRun;
       this.lastSpeed = 0; this.crashKind = kind;
@@ -902,6 +946,7 @@
       if (this.state === 'RESULTS' && this.results && this.results.endless) this.results.t += dt;   // v034 : chronologie de l'écran de récompenses
       if (this.endlessRun && this.state !== 'MENU' && this.state !== 'RESULTS') this.endlessRun.update(dt);   // v033 : tronçons, paliers, zones
       for (const e of this.entities) if (e.update) e.update(dt, this);
+      this.updatePickups(dt);
       for (const m of this.missiles) m.update(dt, this);
       this.missiles = this.missiles.filter((m) => { if (!m.alive) this.scene.remove(m.object); return m.alive; });
       if (this.centerMsgT > 0 && (this.centerMsgT -= dt) <= 0) { this.centerMsg = null; this.centerMsgT = 0; }   // message passager (graine de la carte générée)

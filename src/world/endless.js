@@ -316,6 +316,7 @@
       busy.push(m.d);
     }
 
+    if (k >= 0) T.spawned = (T.spawned || 0) + b.targets.filter((q) => !q.boss && !q.hazard).length;   // v082 : nombre de cibles du niveau (étoiles)
     b.finish();
     const boxes = world.boxes.slice(nBoxes);
     // route du pilote automatique et des matériaux : la trajectoire, tous les 14 m, sauf près des passages obligés (cibles, portails)

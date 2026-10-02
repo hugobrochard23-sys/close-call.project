@@ -1,4 +1,4 @@
-# COLD IMPACT — notes de projet (état v081)
+# COLD IMPACT — notes de projet (état v082)
 
 Jeu mobile de fusée (JS vanilla, Three.js r149, canvas 2D pour l'UI/HUD). Dépôt `hugobrochard23-sys/cold-impact.project`, branche `main`, déploiement GitHub Pages
 (https://hugobrochard23-sys.github.io/cold-impact.project/). Le propriétaire teste sur téléphone ; **toujours donner ce lien à la fin d'un message** (cache à vider / navigation privée).
@@ -58,6 +58,14 @@ Le pilote automatique ne sait pas viser, attendre un volet ni plonger verticalem
 - Scène `galerie` (tube à nervures) dans toutes les zones. 120 niveaux (`LM.count`).
 - Mer : plus de longs blocs traversables.
 - Visionneuse des engins : `cctest/viewer/boss2.html` (hors dépôt).
+
+## v082 — méta-progression (src/systems/meta.js + src/ui/meta_ui.js, sauvegarde `save.meta`)
+- ETOILES par niveau : ★ fini, ★★ ≥ 65 % des cibles, ★★★ ≥ 90 % (`T.spawned` = cibles construites, `run.kills`). Affichées sur la carte et l'écran de fin.
+- PASS de saison : 40 paliers de 100 XP, piste gratuite + premium, saison = mois (reset). XP : niveau fini 60 + 25/étoile, échec 8-28, quotidien. Premium : `CONFIG.shop.passLink` (lien Stripe, VIDE : le bouton affiche « bientôt ») ; `?premium=1` pour tester.
+- MODULES (2 emplacements, 5 niveaux, doublons 2/4/8/16) : OGIVE (explose autour), BOUCLIER (arrête des missiles), SIPHON (+% essence), RADAR (portée du repère), FORTUNE (+% écrous). Trouvés dans les CAISSES VERTES lâchées par les hélicoptères dorés (`spawnModPickup`), le pass, les cadeaux. Page MODULES dans le garage (bouton dans le titre).
+- QUOTIDIEN (bouton avec pastille sur l'accueil) : cadeau 7 jours, 3 missions du jour (kills, golden, wins, boss, stars), coffre gratuit toutes les 4 h.
+- Amélioration MULTIPLICATEUR (morte) remplacée par PRECISION (`hitPad` : la roquette touche de plus loin).
+- Test des écrans : activer le tactile (`CC.Touch.active=true; document.body.classList.add('cc-touch'); game.resize()`) pour avoir la mise en page portrait plein écran.
 
 ## À vérifier au doigt (jamais testé sur téléphone)
 Équilibrage des ennemis/missiles, difficulté des niveaux 2 à 5, taille de l'arène, caméra en virage, lisibilité des flèches (petites de loin), forêt dégagée.

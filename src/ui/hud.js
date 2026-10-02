@@ -379,13 +379,14 @@
     const W = this.canvas.width, H = this.canvas.height, ctx = this.ctx, cam = game.camera, rk = game.rocket;
     const px = Math.max(5, Math.round(H * 0.012)), base = H * 0.03;
     // v070 : un SEUL index (la cible la plus proche) et seulement tout près : fondu entre 150 m et 100 m
-    let best = null, bd = 150;
+    const R0 = game.meta ? game.meta.radarRange() : 150;   // v082 : module RADAR
+    let best = null, bd = R0;
     for (const q of game.targets) { if (!q.alive || q.hazard || !q.obb) continue; const d = rk.pos.distanceTo(q.obb.c); if (d < bd && _bk.subVectors(q.obb.c, rk.pos).dot(rk.fwd) > 0) { bd = d; best = q; } }
     if (!best) return;
     const p = CC.Curve.apply(this._v.copy(best.obb.c), cam).project(cam);
     if (p.z > 1 || Math.abs(p.x) > 1 || Math.abs(p.y) > 1) return;
     const rect = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
-    const hot = best.guard ? '#ff9a2a' : '#ff3b2e', fade = U.clamp((150 - bd) / 50, 0, 1), sx = (p.x * 0.5 + 0.5) * W, sy = (-p.y * 0.5 + 0.5) * H;
+    const hot = best.guard ? '#ff9a2a' : '#ff3b2e', fade = U.clamp((R0 - bd) / 50, 0, 1), sx = (p.x * 0.5 + 0.5) * W, sy = (-p.y * 0.5 + 0.5) * H;
     const r = px * 3, arm = px * 2;   // taille fixe : trois pixels de demi-côté, bras de deux pixels
     ctx.save(); ctx.globalAlpha = fade;
     for (const [col, off] of [['rgba(30,6,4,0.9)', px * 0.7], [hot, 0]]) for (const [ax, ay] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
