@@ -207,10 +207,11 @@
         b.box({ p: T.at(gd, 0, 0.12), s: [2 * hf, 0.1, 1.6], r: [0, yw, 0], mat: 'basic:#ffd23a', collide: false, shadow: false });
       } }
     for (const t of tgt) {
-      const d = t.d, type = t.zone === 'mini' ? 'fuel' : r.pick(['tank', 'tank', 'tank', 'truck', 'fuel']), lx = t.lx, p = T.at(d, lx, 0);   // v065 : on fonce surtout sur des CHARS (ils recharge l'essence)
-      b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0) + (type === 'tank' ? 180 : 0), { unarmed: st < 1 });
+      const d = t.d, type = t.zone === 'mini' ? 'fuel' : r.pick(['tank', 'tank', 'tank', 'truck', 'heli', 'heli', 'sam', 'fuel']), lx = t.lx, air = type === 'heli';   // v066 : chars, camions, hélicoptères, lance-missiles
+      const p = air ? T.at(d, lx + r.between([-8, 8]), U.clamp(T.laneY(d) + r.between([-4, 8]), 10, 60)) : T.at(d, lx, 0);
+      b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0) + (type === 'tank' ? 180 : 0), { unarmed: d < 500 });
       busy.push(d);
-      const hy = type === 'fuel' ? 3.5 : 1.6;
+      const hy = air ? p[1] - T.base(d) : type === 'fuel' ? 3.5 : 1.6;
       gates.push({ d: d - 55, lx: T.laneX(d - 55), y: T.laneY(d - 55) * 0.7 }, { d: d - 22, lx, y: hy + 3 }, { d, lx, y: hy }, { d: d + 30, lx: T.laneX(d + 30), y: T.laneY(d + 30) * 0.8 });
     }
 
@@ -404,6 +405,13 @@
         g.applyEnvironment(L.env);
       }
       if (this.fuelGainT > 0) this.fuelGainT -= dt;
+      // v066 : série de cibles détruites (COMBO) : elle retombe après 6 s sans destruction
+      if (this.killChain && (g.flightTime || 0) - this.killT > 6) this.killChain = 0;
+      // v066 : MANIABILITE — le couloir tourne : la visée suit automatiquement le virage, le joueur ne corrige que l'écart
+      if (rk.active && g.state === 'FLIGHT' && !g.useAutopilot && g.input && g.input.aimQ) {
+        const a = this.T.theta(this.dist + Math.max(25, rk.speed) * dt) - this.T.theta(this.dist);
+        if (a) { g.input.aimQ.premultiply(_qa.setFromAxisAngle(_ay, -a * 0.92)); g.input.aimQ.normalize(); }
+      }
       if (this.multT > 0) this.multT = Math.max(0, this.multT - dt);
       if (this.chainT > 0 && (this.chainT -= dt) <= 0) this.chain = 0;
       // plafond : au-dessus, alarme puis explosion (le couloir est le terrain de jeu)
@@ -429,7 +437,7 @@
   E.Run = Run;
 
   // ---------- interpolation d'ambiance (couleurs, nombres ; le reste bascule à mi-chemin) ----------
-  const _ca = new THREE.Color(), _cb = new THREE.Color();
+  const _ca = new THREE.Color(), _cb = new THREE.Color(), _qa = new THREE.Quaternion(), _ay = new THREE.Vector3(0, 1, 0);
   function lerpEnv(a, b, t) {
     const out = {};
     for (const k of new Set(Object.keys(a).concat(Object.keys(b)))) {

@@ -87,12 +87,12 @@ CC.CONFIG = {
     sensitivity: 0.0021, invertY: false, maxPitchDeg: 88, autoLevel: 1.5,
     // CHOIX v022 (Hugo) : commandes tactiles sans bouton (src/input/touch.js), remplacent le joystick de v017-v021
     touch: {
-      dragGain: 2.2,             // rad de visée pour un glissé de la largeur (ou hauteur, la plus petite) de l'écran
+      dragGain: 3.0,             // rad de visée pour un glissé de la largeur (ou hauteur, la plus petite) de l'écran
       tapMaxMs: 250, tapMaxMove: 12,   // un toucher court (ms) et presque immobile (px) = tap
       longPressMs: 400,          // v026 : 500 → 400 ms (Hugo) ; v024 : appui long (doigt immobile) qui déclenche le boost, maintenu tant que le doigt est posé
       reboostMs: 600,            // v029 : 1000 → 600 ms (Hugo) ; v026 : après un boost, fenêtre (ms) où reposer le doigt relance le boost sans appui long
       edgeBand: 0.22,            // v024 : bande latérale (fraction de la largeur) où le doigt fait tourner sans fin
-      edgeTurnRate: 1.8,         // v024 : virage (rad/s) quand le doigt est tout au bord
+      edgeTurnRate: 2.6,         // v024 : virage (rad/s) quand le doigt est tout au bord
       pixelRatio: 1,             // fluidité : rendu à 1 pixel par point d'écran (au lieu de 1,5)
       shadowMapSize: 1024,       // fluidité : ombres 1024 au lieu de 2048
       fovMinH: 66,               // debout : angle de vue horizontal minimal (°), la vue verticale s'élargit en conséquence
@@ -235,14 +235,14 @@ CC.CONFIG = {
     fuelMax: 46,                 // s : taille du réservoir
     fuelPerStyle: 0.0035,        // s d'essence gagnées par point de STYLE (COLD IMPACT X2 = 200 pts → +0,7 s)
     fuelTarget: 10,              // s d'essence par cible détruite en route
-    targetGap: [200, 300],       // m entre deux cibles à détruire
-    threat: [0.08, 0.2, 0.36, 0.55],     // menace des tirs ennemis par palier (v034b : adoucie, on ne progressait plus vers 3 000 m)
-    tanks: [0, 1, 1, 2],         // chars ennemis par tronçon et par palier
-    sams: [0, 0, 1, 1],          // v034b : lance-missiles par tronçon
-    helis: [0, 0, 0, 1],         // v034b : hélicoptères de garde par tronçon
+    targetGap: [95, 150],       // m entre deux cibles à détruire
+    threat: [0.15, 0.3, 0.45, 0.6],     // menace des tirs ennemis par palier (v034b : adoucie, on ne progressait plus vers 3 000 m)
+    tanks: [1, 2, 2, 3],         // chars ennemis par tronçon et par palier
+    sams: [0, 1, 2, 2],          // v034b : lance-missiles par tronçon
+    helis: [0, 1, 1, 2],         // v034b : hélicoptères de garde par tronçon
     drones: [0, 1, 1, 2],        // v034 : drones (obstacle mobile) par tronçon et par palier
     droneSpeed: [4.5, 4.0, 3.4, 2.9],   // s par aller-retour d'un drone, par palier (plus court = plus vif)
-    maxMissiles: [1, 2, 2, 3],   // missiles ennemis en vol en même temps, par palier
+    maxMissiles: [2, 3, 3, 4],   // missiles ennemis en vol en même temps, par palier
   },
 
   // v033 : mode DÉFI — série fixe de cartes générées par difficulté, 1 à 3 étoiles au temps, trophées par difficulté.

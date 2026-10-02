@@ -18,7 +18,8 @@
     draw(game, dt) {
       this.dt = dt;
       const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
-      this.portrait = !!game.portrait; this.modern = !!game.endlessRun;   // CLASSIQUE : police moderne ; niveaux d'origine : police pixel de la vidéo
+      this.portrait = !!game.portrait; this.modern = false;   // v066 : tout en pixels
+         // CLASSIQUE : police moderne ; niveaux d'origine : police pixel de la vidéo
       this.refH = this.portrait ? Math.min(H, W * 0.95) : H;
       ctx.clearRect(0, 0, W, H);
       ctx.imageSmoothingEnabled = false;
@@ -336,6 +337,7 @@
 
     // Point rouge au bord de l'écran vers les cibles hors champ (ESTIMATION, vu séq. 3/4).
     drawIndicators(game) {
+      if (game.endlessRun) { this.drawMarks(game); this.drawCombo(game); return; }   // v066
       if (game.state !== 'FLIGHT' && game.state !== 'AIM') return;
       if (game.guideLevel(game.levelIndex, game.level)) return;   // v023 : niveaux 1 à 3 → flèches vertes à la place
       const W = this.canvas.width, H = this.canvas.height, ctx = this.ctx, cam = game.camera;
@@ -371,6 +373,68 @@
       }
     }
   }
+
+  // v066 : REPERES DE CIBLES — grands crochets rouges en pixels (taille croissante à l'approche), distance, flèche de bord pour les cibles hors champ
+  HUD.prototype.drawMarks = function (game) {
+    if (game.state !== 'FLIGHT' && game.state !== 'AIM') return;
+    const W = this.canvas.width, H = this.canvas.height, ctx = this.ctx, cam = game.camera, rk = game.rocket, t = performance.now() / 1000;
+    const px = Math.max(3, Math.round(H * 0.0072)), base = H * 0.055;
+    const list = game.targets.filter((q) => q.alive && !q.hazard && q.obb).map((q) => ({ q, d: rk.pos.distanceTo(q.obb.c) })).filter((o) => o.d < 800).sort((a, b) => a.d - b.d).slice(0, 7);
+    const rect = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
+    list.forEach((o, i) => {
+      const q = o.q, p = CC.Curve.apply(this._v.copy(q.obb.c), cam).project(cam), behind = p.z > 1, first = i === 0;
+      const hot = q.guard ? '#ff9a2a' : '#ff3b2e', hot2 = q.guard ? '#ffd080' : '#ff9a80';
+      if (!behind && Math.abs(p.x) < 1 && Math.abs(p.y) < 1) {
+        const sx = (p.x * 0.5 + 0.5) * W, sy = (-p.y * 0.5 + 0.5) * H;
+        const near = U.clamp((420 - o.d) / 420, 0, 1), r = base * (1 + 0.55 * near) * (1 + 0.07 * Math.sin(t * 9 + i)) * (first ? 1.15 : 1), arm = r * 0.62;
+        for (const [col, off] of [['rgba(30,6,4,0.9)', px * 0.7], [hot, 0]]) {
+          for (const [ax, ay] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+            const cx = sx + ax * r + off, cy = sy + ay * r + off;
+            rect(ax > 0 ? cx - arm : cx, ay > 0 ? cy - px : cy, arm, px, col);
+            rect(ax > 0 ? cx - px : cx, ay > 0 ? cy - arm : cy, px, arm, col);
+          }
+        }
+        rect(sx - px, sy - px * 0.5, px * 2, px, hot2); rect(sx - px * 0.5, sy - px, px, px * 2, hot2);   // croix centrale
+        if (first && o.d < 260 && Math.floor(t * 8) % 2) { const s2 = r * 0.5; for (const [ax, ay] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) rect(sx + ax * s2 - px / 2, sy + ay * s2 - px / 2, px, px, hot2); }
+        this.text(Math.round(o.d) + ' M', sx, sy + r + H * 0.034, 0.0036, hot2, { align: 'center' });
+        return;
+      }
+      let x = p.x, y = p.y; if (behind) { x = -x; y = -y; }
+      const m = Math.max(Math.abs(x), Math.abs(y)) || 1; x /= m; y /= m;
+      const s = H * 0.03 * (first ? 1.2 : 1), mg = s * 2.4, ex = U.clamp((x * 0.5 + 0.5) * W, mg, W - mg), ey = U.clamp((-y * 0.5 + 0.5) * H, mg, H - mg), ang = Math.atan2(-y, x);
+      ctx.save(); ctx.translate(ex, ey); ctx.rotate(ang);
+      for (const [col, off] of [['rgba(30,6,4,0.9)', px * 0.7], [hot, 0]]) for (let k = 0; k < 6; k++) { const hh = (5 - k) * px * 0.95; rect((k - 3) * px + off, -hh + off, px, 2 * hh, col); }
+      ctx.restore();
+      this.text(Math.round(o.d) + ' M', U.clamp(ex - Math.cos(ang) * s * 2.4, 40, W - 40), U.clamp(ey - Math.sin(ang) * s * 2.4 + H * 0.012, 20, H - 10), 0.0032, hot2, { align: 'center' });
+    });
+  };
+  // v066 : bannière de COMBO au centre-haut, jauge de temps, points qui s'envolent depuis la cible
+  HUD.prototype.drawCombo = function (game) {
+    const run = game.endlessRun, W = this.canvas.width, H = this.canvas.height, ctx = this.ctx, now = performance.now(), ft = game.flightTime || 0;
+    const chain = run.killChain || 0;
+    if (chain >= 2 && ft - run.killT < 6) {
+      const age = ft - run.killT, pop = age < 0.4 ? 1 + 0.7 * Math.pow(1 - age / 0.4, 2) : 1, tier = chain >= 6 ? 3 : chain >= 4 ? 2 : 1;
+      const col = tier === 3 ? (Math.floor(now / 90) % 2 ? '#ffffff' : '#7be8ff') : tier === 2 ? '#ff8a2a' : '#ffd23a';
+      const cx = W / 2, cy = H * 0.2;
+      ctx.save(); ctx.translate(cx, cy); ctx.scale(pop, pop);
+      this.text('COMBO X' + chain, 0, 0, 0.0056 + 0.0004 * Math.min(chain, 8), col, { align: 'center' });
+      ctx.restore();
+      const bw = W * 0.34, bx = cx - bw / 2, by = cy + H * 0.085, k = U.clamp(1 - age / 6, 0, 1), px = Math.max(3, Math.round(H * 0.006));
+      ctx.fillStyle = 'rgba(20,24,30,0.8)'; ctx.fillRect(bx - px, by - px, bw + px * 2, px * 3); ctx.fillStyle = col; ctx.fillRect(bx, by, bw * k, px);
+      if (chain >= 3) {   // halo orangé sur les bords : la fusée « chauffe »
+        const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.85); g.addColorStop(0, 'rgba(255,140,40,0)'); g.addColorStop(1, 'rgba(255,' + (tier === 3 ? '230,160' : '120,30') + ',' + (0.1 + 0.04 * Math.min(chain, 8)) + ')');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      }
+    }
+    const pops = game.killPops; if (pops && pops.length) {
+      for (let i = pops.length - 1; i >= 0; i--) {
+        const q = pops[i], a = (now - q.t0) / 1100; if (a >= 1) { pops.splice(i, 1); continue; }
+        const p = CC.Curve.apply(this._v.copy(q.p), game.camera).project(game.camera); if (p.z > 1) continue;
+        const sx = (p.x * 0.5 + 0.5) * W, sy = (-p.y * 0.5 + 0.5) * H - a * H * 0.12;
+        ctx.save(); ctx.globalAlpha = 1 - a * a; this.text(q.txt, sx, sy, 0.0044 + 0.0004 * Math.min(q.chain, 6), q.chain >= 4 ? '#7be8ff' : '#ffd23a', { align: 'center' }); ctx.restore();
+      }
+    }
+  };
 
   CC.HUD = HUD;
 })();

@@ -345,12 +345,13 @@
         // flamme : débit fixe (≈ 260 cubes/s), points répartis le long du trajet de la tuyère pendant l'image
         const seg = _a.subVectors(noz, this.lastNozzle);
         const len = seg.length();
-        this.emitAcc += dt * 260;
+        const chainL = this.game.endlessRun ? Math.min(6, this.game.endlessRun.killChain || 0) : 0;   // v066 : la fusée s'enflamme avec la série
+        this.emitAcc += dt * 260 * (1 + 0.3 * chainL);
         let n = 0;
         const total = Math.floor(this.emitAcc);
         while (this.emitAcc >= 1 && n < 30) {
           this.emitAcc -= 1; n++;
-          fx.exhaust(_b.copy(this.lastNozzle).addScaledVector(seg, n / Math.max(1, total)), this.fwd, this.vel, k * (0.85 + 0.3 * this.flick), this.flick);
+          fx.exhaust(_b.copy(this.lastNozzle).addScaledVector(seg, n / Math.max(1, total)), this.fwd, this.vel, k * (0.85 + 0.3 * this.flick) * (1 + 0.12 * chainL), this.flick);
         }
         fx.exhaustCore(noz, this.fwd, this.vel, k, dt);
         // fumée : une bouffée tous les 0,32 m, un peu derrière la flamme

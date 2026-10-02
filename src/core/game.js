@@ -599,20 +599,33 @@
       const c = t.obb.c.clone();
       t.kill(this);
       if (this.endlessRun) {   // v033 : la roquette traverse la cible et continue ; essence rechargée
-        this.effects.explosion(c, null, true, 'orange');
-        this.rig.shake = 0.7;
+        const run = this.endlessRun, ft = this.flightTime || 0, fx = this.effects;
+        run.killChain = (run.killT !== undefined && ft - run.killT < 6 && run.killChain) ? run.killChain + 1 : 1; run.killT = ft;
+        run.kills = (run.kills || 0) + 1; run.bestChain = Math.max(run.bestChain || 0, run.killChain);
+        const L = Math.min(6, run.killChain), up = new V(0, 1, 0), dir = rocket.vel.clone().normalize();
+        // v066 : DOPAMINE — plus la série est longue, plus la destruction est violente
+        fx.explosion(c, null, true, 'orange');
+        if (L >= 2) fx.explosion(c.clone().add(new V(0, 2.5, 0)), null, true, 'cyan');
+        if (L >= 4) { fx.explosion(c.clone().add(new V(4, 1, 0)), null, true, 'orange'); fx.explosion(c.clone().add(new V(-4, 1, 2)), null, true, 'cyan'); }
+        fx.ring(c, up, 2, 22 + 7 * L, 0.6, L >= 3 ? '#7be8ff' : '#ffd060', 0.95);
+        fx.ring(c, dir, 1, 16 + 6 * L, 0.5, '#ffffff', 0.85);
+        fx.flash(c, '#ffb040', 7 + 2 * L, 100, 0.4, '#ff5020');
+        this.rig.shake = Math.min(1.7, 0.8 + 0.13 * L);
+        this.flash = Math.min(0.45, 0.12 + 0.05 * L); this.flashColor = L >= 4 ? '#bff4ff' : '#ffe0a0';
+        this.hitStop = 0.07 + 0.016 * L;                                  // ralenti à l'impact
+        rocket.fbTime = Math.max(rocket.fbTime, rocket.age - rocket.cfg.ignitionDelay + 0.8 + 0.35 * L);   // la série offre du boost gratuit
         this.audio.play('boom', c); this.audio.play('target');
-        this.endlessRun.addFuel(CC.CONFIG.endless.fuelTarget);
-        if (!t.guard && (t.type === 'fuel' || t.type === 'truck')) {   // v042 : un RESERVOIR touché rapporte des écrous (monnaie des améliorations), multipliés par la série
-          const n = (t.type === 'fuel' ? 3 : 2) * this.endlessRun.mult;
-          this.progress.event('nuts', n); this.endlessRun.stats.nuts = (this.endlessRun.stats.nuts || 0) + n;
-          this.feed('RESERVOIR  +' + n, '#d9a441');
+        if (L >= 3) { try { this.audio.play('record'); } catch (e) { /* son absent */ } if (CC.Haptics) CC.Haptics.pattern('record'); }
+        run.addFuel(CC.CONFIG.endless.fuelTarget + Math.min(L - 1, 4) * 2);
+        if (!t.guard && (t.type === 'fuel' || t.type === 'truck' || t.type === 'tank' || t.type === 'heli')) {   // un char / camion / réservoir touché rapporte des écrous, multipliés par la série de portes
+          const n = (t.type === 'fuel' ? 3 : 2) * run.mult;
+          this.progress.event('nuts', n); run.stats.nuts = (run.stats.nuts || 0) + n;
         }
-        if (!t.guard) {   // v034 : cible détruite = 100 points (un char de garde ne rapporte rien : il tirait sur nous)
-          const v = Math.round(this.endlessRun.addBonus(CC.CONFIG.score.target));
-          this.endlessRun.stats.targets++; this.progress.event('targets');
-          this.feed('CIBLE  +' + v, CC.CONFIG.hud.colors.green); this.cellBump = 1.3;
-        }
+        const pts = Math.round(run.addBonus((t.guard ? 50 : CC.CONFIG.score.target) * run.killChain));
+        if (!t.guard) { run.stats.targets++; this.progress.event('targets'); }
+        this.feed((run.killChain >= 2 ? 'COMBO X' + run.killChain + '  +' : (t.guard ? 'ENNEMI  +' : 'CIBLE  +')) + pts, run.killChain >= 4 ? '#7be8ff' : run.killChain >= 2 ? '#ffd23a' : CC.CONFIG.hud.colors.green);
+        this.cellBump = 1.3;
+        (this.killPops = this.killPops || []).push({ p: c.clone(), t0: performance.now(), txt: '+' + pts, chain: run.killChain });
         if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('warn');
         this.telemetry.event('targetHit', { target: t.type, speed: +rocket.vel.length().toFixed(2), runTime: +this.runTime.toFixed(3) });
         return;
@@ -1007,7 +1020,8 @@
         const k = keys.shift(); if (k) { try { this.builderMat = this.builderMat || new CC.LevelBuilder(this.scene, this.world, { seed: 1, env: { sky: {} }, routes: [] }); this.builderMat.mat(k); } catch (e) { /* texture inconnue */ } } else { this.warmDone = true; if (this.builderMat) { this.scene.remove(this.builderMat.root); this.builderMat = null; } }
       }
       if (this.fadeIn > 0) this.fadeIn = Math.max(0, this.fadeIn - dt);
-      if (!this.paused && this.state !== 'BOOT') this.safe(() => this.update(this.endlessRun && this.state === 'CRASHED' && this.impactT < 0.3 ? dt * 0.4 : dt));   // v040 : ralenti sur la collision
+      let sdt = dt; if (this.hitStop > 0) { this.hitStop -= dt; sdt = dt * 0.18; }   // v066 : ralenti à chaque destruction
+      if (!this.paused && this.state !== 'BOOT') this.safe(() => this.update(this.endlessRun && this.state === 'CRASHED' && this.impactT < 0.3 ? sdt * 0.4 : sdt));   // v040 : ralenti sur la collision
       else { this.input.poll(0); this.rig.update(0); }
       try { this.render(performance.now() / 1000); this.renderErr = 0; }
       catch (e) { (window.__errs || (window.__errs = [])).push(String(e && e.stack || e).slice(0, 300)); if (this.testMode) throw e; if ((this.renderErr = (this.renderErr || 0) + 1) === 20) this.recoverBlack('exception'); }

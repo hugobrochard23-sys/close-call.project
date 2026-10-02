@@ -184,7 +184,7 @@
     return Array.isArray(a) ? [a[0] + (b[0] - a[0]) * tr.t, a[1] + (b[1] - a[1]) * tr.t] : a + (b - a) * tr.t;
   };
 
-  Z.TURN_PRESETS = [[[0.1, 0.9, 90]], [[0.1, 0.9, 90]], [[0.06, 0.46, 55], [0.54, 0.94, -55]], [[0.08, 0.92, 150]], [[0.1, 0.9, 60]], [[0.05, 0.5, 70], [0.5, 0.95, 70]]];   // virages : [début, fin, degrés] en fractions de la scène
+  Z.TURN_PRESETS = [[[0.1, 0.9, 55]], [[0.1, 0.9, 40]], [[0.06, 0.46, 35], [0.54, 0.94, -35]], [[0.1, 0.9, 70]], [[0.1, 0.9, 30]]];   // virages : [début, fin, degrés] en fractions de la scène
   // ---------- plan des scènes d'une zone ----------
   Z.plan = function (T, zi) {
     T._plans = T._plans || {};
@@ -196,7 +196,7 @@
     if (!def) {
       const lsc = { name: 'legacy', d0: start + padIn, d1: end - padOut, zone, zi, key: zi + '_0', stage: 0 }; plan.scenes.push(lsc);
       const lr = G.stream(T.seed, 'lturn' + zi); lsc.turns = []; let at = lsc.d0 + 320 + lr() * 200;   // v064 : la forêt tourne aussi (scène unique : virages répartis)
-      while (at + 260 < lsc.d1 - 100) { lsc.turns.push({ d0: at, d1: at + 240, ang: [90, 60, 150, 70][Math.floor(lr() * 4)] * (lr() < 0.5 ? -1 : 1) * Math.PI / 180 }); at += 240 + 320 + lr() * 400; }
+      while (at + 260 < lsc.d1 - 100) { lsc.turns.push({ d0: at, d1: at + 240, ang: [55, 40, 70, 35][Math.floor(lr() * 4)] * (lr() < 0.5 ? -1 : 1) * Math.PI / 180 }); at += 240 + 320 + lr() * 400; }
       return plan;
     }
     const r = G.stream(T.seed, 'plan' + zi);

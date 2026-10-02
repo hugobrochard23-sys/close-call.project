@@ -510,9 +510,9 @@
     });
     farTowers(S, 80, 170, 4);
   }
-  city.scenes.virage = { len: [240, 290], turns: [[0.1, 0.9, 90]], build(S) { turnScene(S, { gantry: true }); } };
-  city.scenes.chicane = { len: [270, 330], turns: [[0.06, 0.46, 55], [0.54, 0.94, -55]], build(S) { turnScene(S, { gantry: true, noTrees: true }); } };
-  city.scenes.epingle = { len: [290, 350], turns: [[0.08, 0.92, 150]], build(S) { turnScene(S, { lo: [34, 50], hi: [60, 90] }); } };
+  city.scenes.virage = { len: [240, 290], turns: [[0.1, 0.9, 60]], build(S) { turnScene(S, { gantry: true }); } };
+  city.scenes.chicane = { len: [270, 330], turns: [[0.06, 0.46, 35], [0.54, 0.94, -35]], build(S) { turnScene(S, { gantry: true, noTrees: true }); } };
+  city.scenes.epingle = { len: [290, 350], turns: [[0.08, 0.92, 90]], build(S) { turnScene(S, { lo: [34, 50], hi: [60, 90] }); } };
 
   // ============================================================== METRO
   const H = 24;
