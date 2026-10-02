@@ -43,7 +43,7 @@
     let d = d0;
     while (d < d1 - 0.01) {
       const zone = T.zoneId(Math.max(0, d + 10)), Z = ZONES[zone], prof = PROFILE[zone];
-      const len = Math.min(d1 - d, r.between([30, 70])), e = d + len;
+      const turning = Math.abs(T.theta(d + 40) - T.theta(d)) > 0.03 || Math.abs(T.theta(d + 10) - T.theta(d)) > 0.008, len = Math.min(d1 - d, turning ? r.between([9, 14]) : r.between([30, 70])), e = d + len;
       const kind = r.weighted(prof);
       const pa = T.at(d, side * T.vol(d), 0), pb = T.at(e, side * T.vol(e), 0), ax = pa[0], az = pa[2], bx = pb[0], bz = pb[2];
       const dx = bx - ax, dz = bz - az, cl = Math.hypot(dx, dz), psi = Math.atan2(dx, dz);

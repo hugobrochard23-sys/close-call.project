@@ -184,6 +184,7 @@
     return Array.isArray(a) ? [a[0] + (b[0] - a[0]) * tr.t, a[1] + (b[1] - a[1]) * tr.t] : a + (b - a) * tr.t;
   };
 
+  Z.TURN_PRESETS = [[[0.1, 0.9, 90]], [[0.1, 0.9, 90]], [[0.06, 0.46, 55], [0.54, 0.94, -55]], [[0.08, 0.92, 150]], [[0.1, 0.9, 60]], [[0.05, 0.5, 70], [0.5, 0.95, 70]]];   // virages : [début, fin, degrés] en fractions de la scène
   // ---------- plan des scènes d'une zone ----------
   Z.plan = function (T, zi) {
     T._plans = T._plans || {};
@@ -192,7 +193,12 @@
     const plan = T._plans[zi] = { zone, zi, scenes: [], pins: [] };
     const dIn = zi > 0 && T.elev(zi) !== T.elev(zi - 1), dOut = T.elev(zi + 1) !== T.elev(zi), tight = def && def.tight;
     const padIn = zi === 0 ? 0 : dIn ? Z.hw(T, zi) + (tight ? 4 : 50) : 40, padOut = dOut ? Z.hw(T, zi + 1) + (tight ? 4 : 50) : 40;
-    if (!def) { plan.scenes.push({ name: 'legacy', d0: start + padIn, d1: end - padOut, zone, zi, key: zi + '_0', stage: 0 }); return plan; }
+    if (!def) {
+      const lsc = { name: 'legacy', d0: start + padIn, d1: end - padOut, zone, zi, key: zi + '_0', stage: 0 }; plan.scenes.push(lsc);
+      const lr = G.stream(T.seed, 'lturn' + zi); lsc.turns = []; let at = lsc.d0 + 320 + lr() * 200;   // v064 : la forêt tourne aussi (scène unique : virages répartis)
+      while (at + 260 < lsc.d1 - 100) { lsc.turns.push({ d0: at, d1: at + 240, ang: [90, 60, 150, 70][Math.floor(lr() * 4)] * (lr() < 0.5 ? -1 : 1) * Math.PI / 180 }); at += 240 + 320 + lr() * 400; }
+      return plan;
+    }
     const r = G.stream(T.seed, 'plan' + zi);
     const skipQ = (new URLSearchParams(location.search).get('skip') || '').split(',');   // banc de test : ?skip=city1,escalier
     const names = Object.keys(def.scenes).filter((n) => n !== def.signature && skipQ.indexOf(n) < 0);
@@ -216,7 +222,7 @@
       if (len < 80) break;
       const sc = { name: nm, d0: d, d1: d + len, zone, zi, key: zi + '_' + i, stage: Math.min(3, Math.floor(d / cfg.stageLen)) };
       plan.scenes.push(sc);
-      if (sd.turns) { const sg = G.stream(T.seed, 'turn' + sc.key)() < 0.5 ? -1 : 1; sc.turns = sd.turns.map((t) => ({ d0: sc.d0 + t[0] * len, d1: sc.d0 + t[1] * len, ang: sg * t[2] * Math.PI / 180 })); }   // v063 : virages (fractions de la scène, degrés)
+      if (sd.turns) { const tr0 = G.stream(T.seed, 'turn' + sc.key), sg = tr0() < 0.5 ? -1 : 1, spec = sd.turns === 'auto' ? Z.TURN_PRESETS[Math.floor(tr0() * Z.TURN_PRESETS.length)] : sd.turns; sc.turns = spec.map((t) => ({ d0: sc.d0 + t[0] * len, d1: sc.d0 + t[1] * len, ang: sg * t[2] * Math.PI / 180 })); }   // v063 : virages (fractions de la scène, degrés)
       if (sd.pin) { const p = sd.pin(T, sc, G.stream(T.seed, 'pin' + sc.key)); if (p) { p.d0 = sc.d0 + (p.from || 0); p.d1 = p.to !== undefined ? sc.d0 + p.to : sc.d1; plan.pins.push(p); } }
       d += len; i++;
     }
@@ -253,11 +259,13 @@
     // boîte dans le repère du couloir : dc (distance), lx (travers), yc (centre en hauteur au-dessus du sol), w × h × dd
     bx(dc, lx, yc, w, h, dd, mat, tint, collide, o) {
       if (!this.inClip(dc)) return null;
+      { const dth = Math.abs(this.T.theta(dc + dd / 2) - this.T.theta(dc - dd / 2)); if (dth > 0.003) dd += (Math.abs(lx) + w / 2) * dth; }   // v064 : en virage, recouvrement des tranches
       return this.b.box(Object.assign({ p: this.T.at(dc, lx, yc), s: [w, h, dd], r: [0, this.yaw(dc), 0], mat, tint, collide: collide !== false }, o || {}));
     }
     // idem avec roulis (degrés) autour de l'axe du couloir, ou cap supplémentaire
     bxr(dc, lx, yc, w, h, dd, mat, tint, roll, dyaw, collide) {
       if (!this.inClip(dc)) return null;
+      { const dth = Math.abs(this.T.theta(dc + dd / 2) - this.T.theta(dc - dd / 2)); if (dth > 0.003) dd += (Math.abs(lx) + w / 2) * dth; }
       return this.b.box({ p: this.T.at(dc, lx, yc), s: [w, h, dd], r: [0, this.yaw(dc) + (dyaw || 0), roll || 0], mat, tint, collide: collide !== false });
     }
     cyl(dc, lx, y0, rad, h, mat, tint, seg, rTop, collide) {
