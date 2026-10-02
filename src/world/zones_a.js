@@ -672,7 +672,6 @@
     const c = S.mid, w = S.vol(c), top = 130;
     S.item(c, () => {
       for (const s of [-1, 1]) S.bx(c, s * (w + 3.5), top / 2, 7, top, 50, 'concrete', '#b0b8bc');
-      for (const k of [-1, 1]) S.bx(c + k * 25.5, 0, top / 2, 2 * w + 14, top, 4, 'concrete', '#b0b8bc');
       S.bx(c, 0, top - 4 + 0.5, 2 * w + 14, 1, 54, 'basic:#eef4ff', undefined, false, { shadow: false });
       for (let y = 26; y < top - 10; y += 26) for (const s of [-1, 1]) S.bx(c, s * (w - 0.3), y, 0.5, 0.5, 46, 'col:#5a5e64', undefined, false);        // passerelles d'entretien
       S.bx(c, 0, 50, 2 * w - 2, 0.6, 0.6, 'col:#4a4e54', undefined, false);

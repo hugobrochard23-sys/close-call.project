@@ -603,7 +603,7 @@
       t.kill(this);
       if (this.endlessRun) {   // v033 : la roquette traverse la cible et continue ; essence rechargée
         const run = this.endlessRun, fx = this.effects, up = new V(0, 1, 0), dir = rocket.vel.clone().normalize();
-        const val = ({ sam: 2, radar: 3 })[t.type] || 1; run.points = (run.points || 0) + val; run.kills = (run.kills || 0) + 1;
+        const val = (({ sam: 2, radar: 3 })[t.type] || 1) * this.progress.pointMult(); run.points = (run.points || 0) + val; run.kills = (run.kills || 0) + 1;
         run.stats.targets++; this.progress.event('targets'); this.progress.event('nuts', val); run.stats.nuts = (run.stats.nuts || 0) + val;
         run.addFuel(CC.CONFIG.endless.fuelTarget);
         // v073 : animation de destruction (simple, sans texte) : explosions, onde de choc, débris, fumée, secousse, ralenti très court
@@ -615,7 +615,7 @@
           for (let k = 0; k < 3; k++) fx.addSmoker(c.clone().add(new V((Math.random() - 0.5) * 3, 0.5, (Math.random() - 0.5) * 3)), new V((Math.random() - 0.5) * 3, 5 + Math.random() * 3, (Math.random() - 0.5) * 3), 2.4, -1.5, 0.5, true);
           setTimeout(() => { try { fx.explosion(c.clone().add(new V((Math.random() - 0.5) * 6, 2 + Math.random() * 3, (Math.random() - 0.5) * 6)), null, true, 'orange'); } catch (e) { /* ignoré */ } }, 140); }
         this.audio.play('boom', c); this.audio.play('target');
-        (this.killPops = this.killPops || []).push({ p: c.clone(), t0: performance.now(), txt: '+' + val });
+        (this.killPops = this.killPops || []).push({ p: c.clone(), t0: performance.now(), txt: '+' + (Math.round(val * 10) / 10) });
         if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('warn');
         this.telemetry.event('targetHit', { target: t.type, speed: +rocket.vel.length().toFixed(2), runTime: +this.runTime.toFixed(3) });
         return;
@@ -644,12 +644,6 @@
       if (!this.rocket.active) return;
       if (this.rocket.shieldT > 0 && kind !== 'outOfBounds' && kind !== 'stalled') return;   // v034 : bouclier du revive
       const rk = this.rocket, runH = this.endlessRun;
-      if (runH && runH.hull > 0 && kind !== 'outOfBounds' && kind !== 'stalled' && kind !== 'altitude' && this.state === 'FLIGHT') {   // v042 : COQUE — un coup absorbé, la roquette traverse
-        runH.hull--; rk.shieldT = 1.5; runH.doorChain = 0;
-        this.flash = 0.7; this.flashColor = '#d9a441'; this.rig.shake = 1; this.audio.play('boom', pos); this.effects.explosion(pos, normal, false, 'orange');
-        this.feed('COQUE  -1', '#d0473e'); if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('warn');
-        return;
-      }
       this.lastSpeed = 0; this.crashKind = kind;
       rk.active = false; rk.mesh.visible = false; rk.light.intensity = 0; rk.rope.visible = false; rk.grapple.active = false;
       this.effects.explosion(pos, normal, false, 'orange');

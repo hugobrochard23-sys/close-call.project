@@ -226,7 +226,7 @@ CC.CONFIG = {
     laneAmp: [13, 16, 19, 21],   // v034c : amplitude latérale (m) de la trajectoire qui serpente, par palier
     tight: { first: 220, gap: [82, 70, 60, 52], hole: [12, 10.5, 9.5, 8.5] },   // v039 : passages beaucoup plus serrés et plus fréquents   // v038 : PORTES SERREES — un panneau plein à travers le couloir, percé d'un trou sur la trajectoire (m entre deux portes, côté du trou, par palier)
     gate: [70, 105],             // m entre deux portes (structures qui cadrent le passage)
-    density: { city: 0.8, night: 0.8, forest: 0.5, snow: 1.15, desert: 0.6, industry: 0.8, canyon: 0.65 },   // remplissage du volume par zone
+    density: { city: 0.8, night: 0.8, forest: 0.22, snow: 1.15, desert: 0.6, industry: 0.8, canyon: 0.65 },   // remplissage du volume par zone
     ceiling: 99999,              // v035 : plus de plafond (les zones ont leur propre hauteur : métro, base aérienne, pièce…)                 // m : altitude au-dessus de laquelle l'alarme ALTITUDE! se déclenche
     ceilingGrace: 1.5,           // s au-dessus du plafond avant l'explosion
     cruise: 14,                  // m : altitude de vol du pilote automatique (banc de test)

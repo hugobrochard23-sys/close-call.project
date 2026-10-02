@@ -21,7 +21,7 @@
     night:    { block: 6, low: 1.3, park: 1, open: 0.5 },
     desert:   { low: 3, open: 4, cliff: 1.3 },
     snow:     { forest: 4, open: 3, cliff: 1.6, low: 1.2 },
-    forest:   { forest: 8, open: 1, cliff: 1 },
+    forest:   { open: 9, forest: 0.5, cliff: 0.15 },
     industry: { block: 2.4, yard: 4, open: 1, low: 1 },
     canyon:   { cliff: 6, open: 1.3 },
   };
@@ -97,8 +97,8 @@
         for (let i = 0; i < Math.round(len / 18); i++) { const c = P(r(), r.between([2, 4])); const it = { t: r.pick(['bench', 'bush', 'lamp']), x: c[0], z: c[2], y0: base, yaw: psi, s: r.between([0.9, 1.5]), night: dark }; const kb = G.Kit.builders[it.t]; if (kb) kb(b, it, kc); }
         far(3, 40, 130, 50, 130, 16, 34);
       } else if (kind === 'open') {
-        wall(r.between([26, 36]), 16, r.between([7, 14]), zone === 'desert' || zone === 'canyon' ? 'sand' : zone === 'snow' ? 'white' : zone === 'industry' ? 'concreteDark' : 'grass', zone === 'desert' ? '#e6cc9a' : undefined, 0, 1);
-        for (let i = 0; i < Math.round(len / 12); i++) {
+        wall(r.between([26, 36]), 16, zone === 'forest' ? r.between([1.5, 4]) : r.between([7, 14]), zone === 'desert' || zone === 'canyon' ? 'sand' : zone === 'snow' ? 'white' : zone === 'industry' ? 'concreteDark' : 'grass', zone === 'desert' ? '#e6cc9a' : undefined, 0, 1);
+        for (let i = 0; i < Math.round(len / (zone === 'forest' ? 40 : 12)); i++) {   // v074 : forêt = quelques arbres isolés
           const c = P(r.between([0.03, 0.97]), r.between([3, 24]));
           if (zone === 'desert' || zone === 'canyon') b.rockLump(c[0], base, c[2], r.between([2, 5.5]), 'col:#b89468');
           else if (zone === 'snow') tree(b, r, kc, c, base, zone, false);

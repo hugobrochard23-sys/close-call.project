@@ -173,7 +173,7 @@
         if (hit) { this.pos.addScaledVector(d, hit.t); game.onTargetHit(t, this); return; }
       }
       // v034 : bouclier du revive — la roquette traverse le décor (elle repart au milieu d'un couloir qu'elle n'a pas fini de franchir)
-      const hit = this.shieldT > 0 ? null : world.sweep(this.pos, p1, r);
+      const hit = world.sweep(this.pos, p1, r);   // v074 : plus de traversée des murs, même protégé
       if (!hit) {
         this.flightDist += this.vel.length() * dt;
         this.pos.copy(p1);
@@ -216,6 +216,7 @@
         return;
       }
       this.pos.addScaledVector(d, hit.t);
+      if (this.shieldT > 0) { this.pos.addScaledVector(n, 0.15); this.vel.addScaledVector(n, -2 * this.vel.dot(n)).multiplyScalar(0.7); return; }   // protégé : on rebondit sur le mur
       game.onRocketCrash('wall', this.pos.clone(), n.clone());
     }
 

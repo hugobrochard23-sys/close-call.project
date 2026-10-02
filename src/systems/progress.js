@@ -50,7 +50,7 @@
         { id: 'mult', name: 'MULTIPLICATEUR', icon: 'mult', max: 5, cost: [15, 30, 60, 110, 180], desc: (l) => 'MAXIMUM X' + (2 + l) },
         { id: 'tank', name: 'RESERVOIR', icon: 'tank', max: 5, cost: [10, 25, 50, 90, 150], desc: (l) => '+' + 3 * l + ' S D ESSENCE' },
         { id: 'eff', name: 'RENDEMENT', icon: 'bolt', max: 5, cost: [12, 28, 55, 100, 160], desc: (l) => '-' + 8 * l + '% CONSOMMATION' },
-        { id: 'hull', name: 'COQUE', icon: 'shield', max: 5, cost: [20, 40, 80, 130, 200], desc: (l) => Progress.hullCharges(l) + ' COUP ABSORBE' },
+        { id: 'hull', name: 'POINTS', icon: 'star', max: 5, cost: [20, 40, 80, 130, 200], desc: (l) => 'POINTS X' + (1 + 0.1 * l).toFixed(1) },
       ];
     }
     static hullCharges(l) { return [0, 1, 1, 2, 2, 3][l] || 0; }
@@ -58,7 +58,8 @@
     multCap() { return 2 + this.upLevel('mult'); }
     fuelBonus() { return 3 * this.upLevel('tank'); }
     drainK() { return 1 - 0.08 * this.upLevel('eff'); }
-    hullCharges() { return Progress.hullCharges(this.upLevel('hull')); }
+    hullCharges() { return 0; }   // v074 : plus de coque (elle traversait les murs)
+    pointMult() { return 1 + 0.1 * this.upLevel('hull'); }   // v074 : POINTS : jusqu'à x1,5
     upCost(id) { const u = Progress.UPG.find((x) => x.id === id), l = this.upLevel(id); return l >= u.max ? null : u.cost[l]; }
     canBuy(id) { const c = this.upCost(id); return c !== null && (this.P.materials || 0) >= c; }
     buy(id) { if (!this.canBuy(id)) return false; this.P.materials -= this.upCost(id); this.P.up[id] = this.upLevel(id) + 1; this.game.writeSave(); return true; }

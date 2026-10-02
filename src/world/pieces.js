@@ -18,7 +18,7 @@
   const SCATTER = {
     city:     { tower: 6, house: 1.6, tank: 0.6, billboard: 0.8, crane: 0.7, mast: 0.6, stepped: 2 },
     night:    { tower: 6, stepped: 2.5, billboard: 0.8, crane: 0.6, mast: 0.9 },
-    forest:   { giant: 9, pine: 2.5, log: 1.2, rock: 1.2, bush: 2 },
+    forest:   { giant: 1, pine: 1, log: 0.6, rock: 1.4, bush: 3 },   // v074 : plaine dégagée, très peu de troncs
     snow:     { pine: 9, rock: 1.6, cabin: 0.7, spire: 1.2 },
     desert:   { mesa: 3, spire: 3, derrick: 1.2, rock: 1.6, turbine: 1.1, ruin: 0.9 },
     industry: { silo: 2, stack: 2, hall: 3, containers: 3, crane: 1.1, tower: 0.7, tank: 1 },

@@ -20,7 +20,7 @@
    * sol), amp (amplitude latérale relative de la trajectoire) */
   const PROFILE = {
     city:   { elev: 0,   vol: 27, y: [9, 30],  amp: 0.55 },
-    forest: { elev: 0,   vol: 33, y: [8, 28],  amp: 1.0 },
+    forest: { elev: 0,   vol: 58, y: [8, 28],  amp: 1.0 },   // v074 : plaine dégagée
     metro:  { elev: -44, vol: 19, y: [5, 13],  amp: 0.5 },
     port:   { elev: 0,   vol: 50, y: [6, 34],  amp: 0.85 },
     sky:    { elev: 170, vol: 75, y: [10, 64], amp: 1.3 },

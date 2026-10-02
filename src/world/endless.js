@@ -214,9 +214,20 @@
         b.box({ p: T.at(gd, 0, 0.12), s: [2 * hf, 0.1, 1.6], r: [0, yw, 0], mat: 'basic:#ffd23a', collide: false, shadow: false });
       } }
     if (location.search.indexOf('notgt') >= 0) tgt.length = 0;   // banc de test : ?notgt=1 (pilote automatique sans cibles)
+    const nv = new THREE.Vector3(), nout = {};
+    const clearAt = (p, rad, air) => { nv.set(p[0], p[1], p[2]); world.nearest(nv, rad + 2, nout); return nout.wall >= rad && (!air || nout.ground >= rad * 0.6); };
+    const place = (d, lx, yRel, air, rad) => {   // v074 : première position libre, en se rapprochant de la trajectoire ; null si rien n'est libre
+      const lane = T.laneX(d);
+      for (const f of [0, 0.3, 0.6, 1]) for (const dd of [0, 9, -9, 18, -18]) for (const dy of (air ? [0, 6, -6, 12] : [0])) {
+        const x = lx + (lane - lx) * f, p = T.at(d + dd, x, air ? U.clamp(yRel + dy, 8, 400) : 0);
+        if (clearAt(p, rad, air)) return p;
+      }
+      return null;
+    };
     for (const t of tgt) {
       const d = t.d, ly = T.laneY(d), type = t.zone === 'mini' ? 'fuel' : r.pick(ly < 15 ? ['tank', 'truck', 'heli', 'heli', 'sam'] : ['heli', 'heli', 'heli', 'heli', 'truck']), lx = t.lx, air = type === 'heli';   // v069 : sur la ligne directrice : hélicoptère à hauteur de la trajectoire, ou char / camion si elle descend
-      const p = air ? T.at(d, lx, U.clamp(ly + (t.dy || 0) + r.between([-1.5, 1.5]), 8, 400)) : T.at(d, lx, 0);
+      const p = place(d, lx, ly + (t.dy || 0) + r.between([-1.5, 1.5]), air, air ? 8 : type === 'sam' ? 4.5 : 5.5);
+      if (!p) continue;   // pas de place libre : pas de cible (jamais dans un mur)
       b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0) + (type === 'tank' ? 180 : 0), { unarmed: d < 900 || r() > U.clamp((d - 600) / 6500, 0.05, 0.9), scale: air ? 2.2 : type === 'fuel' ? 2.0 : 2.4, drift: air ? 5 : 2.2, driftSpeed: 0.45 });   // les premiers ne tirent pas ; ensuite de plus en plus souvent
       busy.push(d);
       const hy = air ? p[1] - T.base(d) : type === 'fuel' ? 3.5 : 1.6;
@@ -423,11 +434,6 @@
       if (rk.active && g.state === 'FLIGHT' && !g.useAutopilot && g.input && g.input.aimQ) {
         const a = this.T.theta(this.dist + Math.max(25, rk.speed) * dt) - this.T.theta(this.dist);
         if (a) { g.input.aimQ.premultiply(_qa.setFromAxisAngle(_ay, -a * 0.92)); g.input.aimQ.normalize(); }
-        // v071 : AIDE A LA VISEE — la visée se recale doucement vers la cible la plus proche quand elle est devant (moins de 22° d'écart, moins de 110 m)
-        _fa.set(0, 0, -1).applyQuaternion(g.input.aimQ);
-        let bt = null, ba = 0.38;
-        for (const q of g.targets) { if (!q.alive || q.hazard || !q.obb) continue; const dd = q.obb.c.distanceTo(rk.pos); if (dd > 110 || dd < 8) continue; _da.subVectors(q.obb.c, rk.pos).divideScalar(dd); const an = _fa.angleTo(_da); if (an < ba) { ba = an; bt = { dd, dir: _da.clone() }; } }
-        if (bt) { _xa.crossVectors(_fa, bt.dir); if (_xa.lengthSq() > 1e-8) { _xa.normalize(); g.input.aimQ.premultiply(_qa.setFromAxisAngle(_xa, Math.min(ba, 1.5 * dt * (1 - bt.dd / 130)))); g.input.aimQ.normalize(); } }
       }
       if (this.multT > 0) this.multT = Math.max(0, this.multT - dt);
       if (this.chainT > 0 && (this.chainT -= dt) <= 0) this.chain = 0;
@@ -438,7 +444,7 @@
       } else this.altT = 0;
     }
     get mult() { return 1; }   // v073 : plus de multiplicateur   // v042 : X1, X2, X3… selon la série de portes parfaites (plafond : amélioration MULTIPLICATEUR)
-    get score() { return this.points || 0; }   // v073 : le score = les cibles touchées
+    get score() { return Math.floor(this.points || 0); }   // v073 : le score = les cibles touchées
     addBonus(points) { const v = points * this.mult; this.bonus += v; return v; }
     addFuel(s) {
       const rk = this.game.rocket;

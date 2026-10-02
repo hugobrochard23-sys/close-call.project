@@ -703,7 +703,7 @@
     stat('ESSENCE', (E.fuelStart + prog.fuelBonus()) + ' S', mx + mw * 0.05, py + ph * 0.16, 'left');
     stat('MULTI MAX', 'X' + prog.multCap(), mx + mw * 0.05, py + ph * 0.58, 'left');
     stat('RENDEMENT', Math.round((1 - prog.drainK()) * 100) + '%', mx + mw * 0.95, py + ph * 0.16, 'right');
-    stat('COQUE', String(prog.hullCharges()), mx + mw * 0.95, py + ph * 0.58, 'right');
+    stat('POINTS', 'X' + prog.pointMult().toFixed(1), mx + mw * 0.95, py + ph * 0.58, 'right');
     // cartes d'amélioration
     const cy0 = Y(0.34), chh = HH * 0.112, gap = HH * 0.014;
     CC.Progress.UPG.forEach((up, i) => {
