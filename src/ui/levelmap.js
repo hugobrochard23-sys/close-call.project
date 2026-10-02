@@ -67,6 +67,15 @@
     for (let i = 0; i < 12; i++) { const h = 1 + ((i * 7) % 3), x = 2 + i * 2; px(x, 5 - h - 1, 2, h + 1, i % 2 ? '#ffd23a' : '#fff2a8'); }
   });
 
+  // v086 : coffre dessiné n'importe où (state 0 fermé, 1 entrouvert, 2 ouvert avec trésor) ; icône pour l'accueil
+  Home.drawChestAt = function (ctx, cx, bottomY, w, state) {
+    const s = Math.max(1, Math.round(w / 26)), body = chestBody(), lid = chestLid(), glow = chestGlow(), by = bottomY - 14 * s; ctx.imageSmoothingEnabled = false;
+    if (state >= 1) ctx.drawImage(lid, R(cx - 13 * s), R(by - (state >= 2 ? 10 : 7) * s), 26 * s, (state >= 2 ? 7 : 9) * s);
+    ctx.drawImage(body, R(cx - 13 * s), R(by), 26 * s, 14 * s);
+    if (state >= 2) ctx.drawImage(glow, R(cx - 13 * s), R(by - 3 * s), 26 * s, 6 * s); else if (state === 0) ctx.drawImage(lid, R(cx - 13 * s), R(by - 5 * s), 26 * s, 9 * s);
+  };
+  Home.drawChestIcon = function (ctx, cx, cy, size) { const s = Math.max(1, Math.round(size / 26)); Home.drawChestAt(ctx, cx, cy + 9 * s, size, 0); };
+
   const rnd = (i, k) => { const s = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return s - Math.floor(s); };
 
   // ---------- carte des niveaux : 60 niveaux en 2 pages de 30 ; la dernière ouverte clignote
@@ -77,7 +86,16 @@
     const pg = U.clamp(ui.mapPage, 0, pages - 1);
     const tp = ui.fitPx(['NIVEAUX'], W * 0.7, u * 0.011);
     text(ctx, 'NIVEAUX', W / 2, Y(0.05), tp, '#ffffff', { align: 'center', skew: -0.2 });
-    const cols = 5, gw = W * 0.9, cell = gw / cols, gap = cell * 0.14, size = cell - gap, x0 = W * 0.05 + gap / 2, y0 = Y(0.14), t = performance.now() / 1000;
+    const cols = 5, gw = W * 0.9, cell = gw / cols, gap = cell * 0.14, size = cell - gap, x0 = W * 0.05 + gap / 2, y0 = Y(0.215), t = performance.now() / 1000;
+    if (game.meta) {   // v086 : COFFRE DES ETOILES — une récompense toutes les 3 étoiles (refaire les niveaux pour en gagner)
+      const M = game.meta, hx = W * 0.05, hw = W * 0.9, hy = Y(0.095), hh = Y(0.195) - Y(0.095), avail = M.starsAvail(), next = M.starsNext(), k = (M.total() % 3) / 3;
+      Home.pill(ctx, hx, hy, hw, hh, 'rgba(38,45,54,0.97)', avail ? GOLD : '#5a6674', hh * 0.12);
+      Home.gridDraw(ctx, 'star', hx + hh * 0.5, hy + hh * 0.5, hh * 0.5, '#ffd23a');
+      const tt = 'ETOILES ' + M.total(), tp2 = ui.fitPx([tt], hw * 0.4, hh * 0.026); text(ctx, tt, hx + hh * 0.95, hy + hh * 0.12, tp2, '#ffffff', {});
+      const bx = hx + hh * 0.95, bw = hw * 0.5, by = hy + hh * 0.5, bh = hh * 0.14; ctx.fillStyle = '#14181d'; ctx.fillRect(R(bx), R(by), R(bw), R(bh)); ctx.fillStyle = '#ffd23a'; ctx.fillRect(R(bx), R(by), R(bw * k), R(bh));
+      const nt = avail ? 'RECOMPENSE PRETE !' : 'ENCORE ' + next + ' ETOILE' + (next > 1 ? 'S' : '') + ' = 1 RECOMPENSE', np2 = ui.fitPx([nt], hw * 0.7, hh * 0.02); text(ctx, nt, hx + hh * 0.95, hy + hh * 0.72, np2, avail ? '#6aff9a' : '#8a96a8', {});
+      if (avail) { const cw = hw * 0.24, cx2 = hx + hw - cw - hh * 0.12, ch2 = hh * 0.5, cy2 = hy + hh * 0.25; Home.button3d(ctx, cx2, cy2, cw, ch2, GOLD, GOLD, '#9a7126', 1 + 0.03 * Math.sin(t * 6)); const pp = ui.fitPx(['PRENDRE'], cw * 0.8, ch2 * 0.04); text(ctx, 'PRENDRE', cx2 + cw / 2, cy2 + ch2 / 2 - pp * 3.6, pp, '#14181d', { align: 'center' }); ui.buttons.push({ x: cx2, y: cy2, w: cw, h: ch2, action: () => { const o = M.claimStar(); if (o) Home.reveal(ui, [o], 'chest'); } }); }
+    }
     for (let i = 0; i < PAGE; i++) {
       const n = pg * PAGE + i + 1; if (n > CC.LM.count) break;
       const col = i % cols, row = Math.floor(i / cols), x = R(x0 + col * cell), y = R(y0 + row * cell), open = n <= max, isDone = !!done[n], isCur = n === cur;
@@ -121,6 +139,12 @@
       Home.crateIcon(ctx, gx, gy, gr * 1.1);
       if (game.meta.badge() && Math.floor(performance.now() / 500) % 2 === 0) { ctx.fillStyle = '#d0473e'; ctx.fillRect(R(gx + gr * 0.55), R(gy - gr * 1.05), R(gr * 0.5), R(gr * 0.5)); }
       ui.buttons.push({ x: gx - gr, y: gy - gr, w: 2 * gr, h: 2 * gr, action: () => { ui.overlay = 'daily'; } });
+      // v086 : COFFRE DES ETOILES, sous les quêtes quotidiennes : cadenas jusqu'au niveau 10, puis refaire les niveaux pour gagner des étoiles et des récompenses
+      { const cy2 = gy + 2 * gr + u * 0.025, open = game.meta.isOpen('chest'), hv = !ui.isTouch() && ui.mouse.x > gx - gr && ui.mouse.x < gx + gr && ui.mouse.y > cy2 - gr && ui.mouse.y < cy2 + gr;
+        Home.pill(ctx, gx - gr, cy2 - gr, 2 * gr, 2 * gr, hv ? 'rgba(50,59,70,0.97)' : 'rgba(38,45,54,0.97)', open && game.meta.starsAvail() > 0 ? GOLD : '#5a6674', gr * 0.35);
+        if (open) { Home.drawChestIcon(ctx, gx, cy2, gr * 1.25); if (game.meta.starsAvail() > 0 && Math.floor(performance.now() / 500) % 2 === 0) { ctx.fillStyle = '#d0473e'; ctx.fillRect(R(gx + gr * 0.55), R(cy2 - gr * 1.05), R(gr * 0.5), R(gr * 0.5)); } }
+        else { ctx.globalAlpha = 0.35; Home.drawChestIcon(ctx, gx, cy2, gr * 1.25); ctx.globalAlpha = 1; Home.icon.lock(ctx, gx, cy2 + gr * 0.1, gr * 0.7, '#c2c3c7'); text(ctx, 'NIV ' + game.meta.unlockAt('chest'), gx, cy2 + gr * 0.95, ui.fitPx(['NIV 00'], gr * 1.8, u * 0.0028), GOLD, { align: 'center' }); }
+        ui.buttons.push({ x: gx - gr, y: cy2 - gr, w: 2 * gr, h: 2 * gr, action: () => { if (open) ui.overlay = 'map'; else { game.audio.play('uiLock'); Home.toast(ui, 'COFFRE DES ETOILES : NIVEAU ' + game.meta.unlockAt('chest')); } } }); }
     }
     if (game.meta && game.meta.M.challenge) {   // v083 : défi reçu d'un ami : toucher pour jouer ce niveau
       const c = game.meta.M.challenge, ct = 'DEFI AMI  NIV ' + c.n + '  BATS ' + c.score + ' PTS', cp = ui.fitPx([ct], W * 0.86, u * 0.0046), cw = F.measure(ct, cp) + cp * 12, ch = cp * 16, cx0 = (W - cw) / 2, cy0 = Y(0.34);
@@ -228,13 +252,15 @@
       Home.button3d(ctx, bx, yMain, bw, bh1, on ? '#f0d28a' : GOLD, GOLD, '#9a7126', 1 + 0.02 * Math.sin(t * 5));
       text(ctx, lbl, cx, yMain + bh1 / 2 - lp * 3.6 - bh1 * 0.03, lp, '#14181d', { align: 'center' });
       ui.buttons.push({ x: bx, y: yMain, w: bw, h: bh1, action: () => { const go = () => game.goHome({ autoLaunch: !win }); game.ads ? game.ads.beforeContinue(go) : go(); } });
-      const wA = bw * 0.58, wB = bw - wA - 8;
-      Home.pill(ctx, bx, yMap, wA, bh0, 'rgba(38,45,54,0.97)', '#5a6674', bh0 * 0.3);
-      const mp = ui.fitPx(['NIVEAUX'], wA * 0.7, bh0 * 0.04); text(ctx, 'NIVEAUX', bx + wA / 2, yMap + bh0 / 2 - mp * 3.6, mp, '#ffffff', { align: 'center' });
-      ui.buttons.push({ x: bx, y: yMap, w: wA, h: bh0, action: () => { game.goHome({}); ui.overlay = 'map'; } });
-      Home.pill(ctx, bx + wA + 8, yMap, wB, bh0, 'rgba(38,60,48,0.97)', '#56d98b', bh0 * 0.3);   // v083 : DEFIER UN AMI (lien à partager : son score et son temps)
-      const dp = ui.fitPx(['DEFIER'], wB * 0.7, bh0 * 0.04); text(ctx, 'DEFIER', bx + wA + 8 + wB / 2, yMap + bh0 / 2 - dp * 3.6, dp, '#56d98b', { align: 'center' });
-      ui.buttons.push({ x: bx + wA + 8, y: yMap, w: wB, h: bh0, action: () => Home.shareChallenge(game, lv) });
+      const mapOpen = !game.meta || game.meta.isOpen('chest'), wA = mapOpen ? bw * 0.58 : 0, wB = mapOpen ? bw - wA - 8 : bw, xB = mapOpen ? bx + wA + 8 : bx;   // v086 : NIVEAUX seulement une fois le coffre des étoiles débloqué
+      if (mapOpen) {
+        Home.pill(ctx, bx, yMap, wA, bh0, 'rgba(38,45,54,0.97)', '#5a6674', bh0 * 0.3);
+        const mp = ui.fitPx(['NIVEAUX'], wA * 0.7, bh0 * 0.04); text(ctx, 'NIVEAUX', bx + wA / 2, yMap + bh0 / 2 - mp * 3.6, mp, '#ffffff', { align: 'center' });
+        ui.buttons.push({ x: bx, y: yMap, w: wA, h: bh0, action: () => { game.goHome({}); ui.overlay = 'map'; } });
+      }
+      Home.pill(ctx, xB, yMap, wB, bh0, 'rgba(38,60,48,0.97)', '#56d98b', bh0 * 0.3);   // v083 : DEFIER UN AMI (lien à partager : son score et son temps)
+      const dp = ui.fitPx(['DEFIER'], wB * 0.7, bh0 * 0.04); text(ctx, 'DEFIER', xB + wB / 2, yMap + bh0 / 2 - dp * 3.6, dp, '#56d98b', { align: 'center' });
+      ui.buttons.push({ x: xB, y: yMap, w: wB, h: bh0, action: () => Home.shareChallenge(game, lv) });
       if (win && !lv.doubled && game.ads && game.ads.enabled() && !game.testMode) {   // v083 : publicité récompensée : le coffre double
         const yD = yMap - bh0 - u * 0.02, on2 = ui.mouse && ui.mouse.y >= yD && ui.mouse.y <= yD + bh0;
         Home.pill(ctx, bx, yD, bw, bh0, on2 ? 'rgba(52,62,74,0.97)' : 'rgba(38,45,54,0.97)', GOLD, bh0 * 0.3);

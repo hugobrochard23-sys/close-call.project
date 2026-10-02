@@ -37,33 +37,50 @@
       // v042 : l'XP est divisée par 10 (anciennes sauvegardes converties une fois) ; améliorations de la fusée
       if (!this.P.v2) { this.P.xp = Math.floor((this.P.xp || 0) / 10); this.P.missions = (this.P.missions || []).map((m) => Object.assign(m, { xp: Math.max(1, Math.round((m.xp || 10) / 10)) })); this.P.v2 = 1; }
       this.P.up = Object.assign({ mult: 0, tank: 0, eff: 0, hull: 0 }, this.P.up || {});
+      if (!this.P.up2) { this.P.up2 = {}; for (const k of ['tank', 'eff', 'hull', 'mult']) this.P.up2[k] = { tier: 0, lv: Math.min(5, this.P.up[k] || 0) }; }   // v086 : anciens niveaux (0‥5) → palier gris
       // classement du niveau déjà enregistré dans une ancienne sauvegarde : record de distance → meilleur score au minimum
       if (S.endless && S.endless.best > this.P.best) this.P.best = S.endless.best;
       this.fill();
       this.run = null; this.toasts = [];
     }
 
-    // ---------- améliorations de la fusée (écran FUSEE) ----------
-    // coût en écrous du niveau suivant ; chaque amélioration a 5 niveaux
+    // ---------- améliorations de la fusée (GARAGE) ----------
+    // v086 : 6 PALIERS de 5 niveaux (gris, vert, bleu, violet, orange, rouge) = 30 niveaux par pièce. Au niveau 5 d'un palier, « PROMOUVOIR » passe au palier suivant
+    // (la pièce change de couleur, les niveaux repartent de 0 mais l'effet ne redescend jamais). L = niveau total (0‥30) ; l'effet dépend de L.
     static get UPG() {
       return [
-        { id: 'mult', name: 'PRECISION', icon: 'target', max: 5, cost: [15, 30, 60, 110, 180], desc: (l) => 'TOUCHE ' + (0.6 * l).toFixed(1) + ' M PLUS LARGE' },   // v082 : remplace le multiplicateur (qui n'existe plus) : la roquette touche les cibles de plus loin
-        { id: 'tank', name: 'RESERVOIR', icon: 'tank', max: 5, cost: [10, 25, 50, 90, 150], desc: (l) => '+' + 3 * l + ' S D ESSENCE' },
-        { id: 'eff', name: 'RENDEMENT', icon: 'bolt', max: 5, cost: [12, 28, 55, 100, 160], desc: (l) => '-' + 8 * l + '% CONSOMMATION' },
-        { id: 'hull', name: 'POINTS', icon: 'star', max: 5, cost: [20, 40, 80, 130, 200], desc: (l) => 'POINTS X' + (1 + 0.1 * l).toFixed(1) },
+        { id: 'tank', name: 'ESSENCE', icon: 'tank', base: 40, desc: (L) => '+' + L + ' S D ESSENCE' },
+        { id: 'eff', name: 'RENDEMENT', icon: 'bolt', base: 50, desc: (L) => '-' + (1.5 * L).toFixed(1).replace('.0', '') + '% CONSOMMATION' },
+        { id: 'hull', name: 'POINTS', icon: 'star', base: 70, desc: (L) => 'POINTS X' + (1 + 0.05 * L).toFixed(2) },
+        { id: 'mult', name: 'PRECISION', icon: 'target', base: 60, desc: (L) => 'TOUCHE ' + (0.15 * L).toFixed(1) + ' M PLUS LARGE' },
       ];
     }
-    static hullCharges(l) { return [0, 1, 1, 2, 2, 3][l] || 0; }
-    upLevel(id) { return this.P.up[id] || 0; }
-    multCap() { return 2 + this.upLevel('mult'); }
-    hitPad() { return 0.6 * this.upLevel('mult'); }   // v082 : PRECISION : rayon de touche en plus (m)
-    fuelBonus() { return 3 * this.upLevel('tank'); }
-    drainK() { return 1 - 0.08 * this.upLevel('eff'); }
-    hullCharges() { return 0; }   // v074 : plus de coque (elle traversait les murs)
-    pointMult() { return 1 + 0.1 * this.upLevel('hull'); }   // v074 : POINTS : jusqu'à x1,5
-    upCost(id) { const u = Progress.UPG.find((x) => x.id === id), l = this.upLevel(id); return l >= u.max ? null : u.cost[l]; }
+    static get TIERS() { return [{ name: 'GRIS', col: '#9aa0a8' }, { name: 'VERT', col: '#4ad07a' }, { name: 'BLEU', col: '#4a9aff' }, { name: 'VIOLET', col: '#b06aff' }, { name: 'ORANGE', col: '#ff9a3a' }, { name: 'ROUGE', col: '#ff4a3a' }]; }
+    static hullCharges(l) { return 0; }
+    up2(id) { return this.P.up2[id] || (this.P.up2[id] = { tier: 0, lv: 0 }); }
+    upTier(id) { return this.up2(id).tier; }
+    upLv(id) { return this.up2(id).lv; }
+    upLevel(id) { const o = this.up2(id); return o.tier * 5 + o.lv; }   // niveau total (0‥30)
+    multCap() { return 2; }
+    hitPad() { return 0.15 * this.upLevel('mult'); }   // PRECISION : rayon de touche en plus (m)
+    fuelBonus() { return this.upLevel('tank'); }       // ESSENCE : +1 s par niveau
+    drainK() { return 1 - 0.015 * this.upLevel('eff'); }
+    hullCharges() { return 0; }
+    pointMult() { return 1 + 0.05 * this.upLevel('hull'); }
+    isMaxed(id) { const o = this.up2(id); return o.tier >= 5 && o.lv >= 5; }
+    needsPromote(id) { const o = this.up2(id); return o.lv >= 5 && o.tier < 5; }
+    // coût du prochain pas : +niveau (dans le palier) ou promotion (au niveau 5) ; null si tout est au maximum
+    upCost(id) {
+      const u = Progress.UPG.find((x) => x.id === id), o = this.up2(id); if (this.isMaxed(id)) return null;
+      const k = Math.pow(2.1, o.tier); return o.lv >= 5 ? Math.round(u.base * 9 * k) : Math.round(u.base * (1 + 0.55 * o.lv) * k);
+    }
     canBuy(id) { const c = this.upCost(id); return c !== null && (this.P.materials || 0) >= c; }
-    buy(id) { if (!this.canBuy(id)) return false; this.P.materials -= this.upCost(id); this.P.up[id] = this.upLevel(id) + 1; this.game.writeSave(); return true; }
+    // renvoie 'level' | 'promote' | false
+    buy(id) {
+      if (!this.canBuy(id)) return false; const o = this.up2(id), promote = o.lv >= 5; this.P.materials -= this.upCost(id);
+      if (promote) { o.tier++; o.lv = 0; } else o.lv++;
+      this.game.writeSave(); return promote ? 'promote' : 'level';
+    }
 
     // ---------- niveaux ----------
     need(level) { return C().levelBase + C().levelStep * (Math.max(1, level) - 1); }
@@ -157,7 +174,7 @@
       const before = { level: P.level, xp: P.xp, need: this.need(P.level) };
       const worldsBefore = this.unlockedWorlds();
       const missions = P.missions.map((m) => ({ text: this.missionText(m), progress: Math.min(m.progress, m.target), target: m.target, xp: m.xp, done: m.done, justDone: r.doneIds.includes(m.id) }));
-      const matRun = (r.nuts || 0) + Math.floor(dist / 250), lvBefore = P.level;   // v042 : écrous = réservoirs touchés + 1 par 250 m
+      const matRun = Math.floor((r.nuts || 0) * 0.5) + Math.floor(dist / 400), lvBefore = P.level;   // v086 : écrous plus rares   // v042 : écrous = réservoirs touchés + 1 par 250 m
       this.addXp(gained);
       const lvReward = Math.max(0, P.level - lvBefore) * cfg.levelMaterials;
       P.materials = (P.materials || 0) + matRun + lvReward;

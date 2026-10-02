@@ -27,11 +27,12 @@
     boss:   { text: (n) => 'VAINCS ' + n + ' BOSS', gen: () => 1 },
     stars:  { text: (n) => 'GAGNE ' + n + ' ETOILES', gen: (r) => 3 + Math.floor(r() * 3) },
   };
+  const UNLOCK = { garage: 2, pass: 5, chest: 10 };   // niveau de jeu à atteindre : GARAGE (niveau 2), PASS (niveau 5), COFFRE DES ETOILES (niveau 10)
   const GIFT = [{ t: 'nuts', n: 30 }, { t: 'nuts', n: 50 }, { t: 'crate', n: 1 }, { t: 'nuts', n: 90 }, { t: 'nuts', n: 140 }, { t: 'crate', n: 2 }, { t: 'nuts', n: 300 }];
 
   class Meta {
     constructor(game) {
-      this.game = game; const S = game.save, d = { stars: {}, pass: { season: '', xp: 0, premium: false, free: {}, prem: {} }, gift: { last: '', streak: 0 }, dm: { day: '', list: [] }, chest: { next: 0 }, mods: { owned: {}, eq: [] } };
+      this.game = game; const S = game.save, d = { stars: {}, pass: { season: '', xp: 0, premium: false, free: {}, prem: {} }, gift: { last: '', streak: 0 }, dm: { day: '', list: [] }, chest: { next: 0 }, mods: { owned: {}, eq: [] }, seen: {}, sclaim: { n: 0 } };
       S.meta = S.meta || {};
       for (const k of Object.keys(d)) S.meta[k] = Object.assign({}, d[k], S.meta[k] || {});
       this.M = S.meta; this.drops = [];
@@ -40,6 +41,17 @@
     }
     save() { this.game.writeSave(); }
 
+    // ---------- fonctions qui se débloquent ----------
+    reach() { return (this.game.save.lvl && this.game.save.lvl.max) || 1; }
+    isOpen(f) { return /[?&]unlockall=1/.test(location.search) || this.reach() >= (UNLOCK[f] || 1); }
+    unlockAt(f) { return UNLOCK[f] || 1; }
+    pendingUnlock() { for (const f of ['garage', 'pass', 'chest']) if (this.isOpen(f) && !this.M.seen[f]) return f; return null; }
+    markSeen(f) { this.M.seen[f] = 1; this.save(); }
+    // ---------- coffre des étoiles : une récompense toutes les 3 étoiles ----------
+    starsAvail() { return Math.max(0, Math.floor(this.total() / 3) - (this.M.sclaim.n || 0)); }
+    starsNext() { return 3 - (this.total() % 3); }
+    starReward(k) { return k % 5 === 0 ? { t: 'crate', n: 1 } : { t: 'nuts', n: 25 + 6 * k }; }
+    claimStar() { if (this.starsAvail() <= 0) return null; const k = ++this.M.sclaim.n, out = this.give(this.starReward(k)); this.addPassXp(10); this.save(); return out; }
     // ---------- étoiles ----------
     starsOf(n) { return this.M.stars[n] || 0; }
     total() { let t = 0; for (const k in this.M.stars) t += this.M.stars[k]; return t; }

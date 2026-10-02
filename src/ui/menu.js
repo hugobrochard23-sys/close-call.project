@@ -52,6 +52,9 @@
       else if (game.state === 'LAUNCH') CC.Home.drawHome(this, ctx, game, W, H);                            // s'efface pendant la charge
       else if (game.state === 'RESULTS' && !this.overlay) this.drawResults(ctx, game, W, H);
       else if (game.paused && !this.overlay) this.drawPause(ctx, game, W, H);
+      if ((this.overlay === 'garage' || this.overlay === 'progress') && game.meta && !game.meta.isOpen('garage')) { this.overlay = null; if (CC.Home.toast) CC.Home.toast(this, 'GARAGE : NIVEAU ' + game.meta.unlockAt('garage')); }   // v086 : écrans verrouillés
+      if (this.overlay === 'pass' && game.meta && !game.meta.isOpen('pass')) { this.overlay = null; if (CC.Home.toast) CC.Home.toast(this, 'PASS : NIVEAU ' + game.meta.unlockAt('pass')); }
+      if (this.overlay === 'map' && game.meta && !game.meta.isOpen('chest')) this.overlay = null;
       if (this.overlay === 'settings') this.drawSettings(ctx, game, W, H);
       else if (this.overlay === 'binds') this.drawBinds(ctx, game, W, H);
       // Surcouches exclusives : elles repartent d'une liste de boutons vide (aucun clic ne doit passer au travers).
@@ -62,6 +65,7 @@
       else if (this.overlay === 'garage') { this.buttons = []; CC.Home.drawGarage(this, ctx, game, W, H); }
       else if (this.overlay === 'map') { this.buttons = []; CC.Home.drawMap(this, ctx, game, W, H); }
       else if (this.overlay === 'pass') { this.buttons = []; CC.Home.drawPass(this, ctx, game, W, H); }          // v082
+      else if (this.overlay === 'unlock') { this.buttons = []; CC.Home.drawUnlock(this, ctx, game, W, H); }          // v086
       else if (this.overlay === 'daily') { this.buttons = []; CC.Home.drawDaily(this, ctx, game, W, H); }
       else if (this.overlay === 'msettings') { this.buttons = []; CC.Home.drawSettings(this, ctx, game, W, H); }
       else if (this.overlay === 'revive') { this.buttons = []; CC.Home.drawRevive(this, ctx, game, W, H); }
@@ -69,6 +73,7 @@
       else if (this.overlay === 'shop') { this.buttons = []; if (!this.shop) this.shop = new CC.Shop(this); this.shop.draw(ctx, game, W, H); }
       else if (this.overlay === 'ad' && game.ads) { this.buttons = []; game.ads.draw(ctx, game, W, H, this); }
       if (game.state === 'MENU' && !this.overlay && game.ads && CC.CONFIG.ads.banner && !game.padMode) this.drawMenuBanner(ctx, game, W, H);
+      if (this.reveal && CC.Home.drawReveal) CC.Home.drawReveal(this, ctx, game, W, H);   // v086 : ouverture animée des caisses et coffres
       if (game.notice) {   // v031 : message passager (achat confirmé au retour du paiement)
         const T = -(this.offsetY || 0), HH = this.fullH || H, px = this.fitPx([game.notice], W * 0.86, HH * 0.004);
         ctx.fillStyle = 'rgba(10,40,14,0.9)'; ctx.fillRect(W * 0.04, T + HH * 0.012, W * 0.92, px * 13);
@@ -460,6 +465,7 @@
     hitTest(x, y) { return this.buttons.some((b) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h); }
 
     click(x, y) {
+      if (this.reveal) { if (CC.Home.revealClick) CC.Home.revealClick(this); return true; }   // v086 : l'animation d'ouverture capte les touchers
       for (const b of this.buttons) {
         if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
           const dir = x < b.x + b.w * 0.35 ? -1 : 1;

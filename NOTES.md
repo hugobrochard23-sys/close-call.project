@@ -1,4 +1,4 @@
-# COLD IMPACT — notes de projet (état v084)
+# COLD IMPACT — notes de projet (état v086)
 
 Jeu mobile de fusée (JS vanilla, Three.js r149, canvas 2D pour l'UI/HUD). Dépôt `hugobrochard23-sys/cold-impact.project`, branche `main`, déploiement GitHub Pages
 (https://hugobrochard23-sys.github.io/cold-impact.project/). Le propriétaire teste sur téléphone ; **toujours donner ce lien à la fin d'un message** (cache à vider / navigation privée).
@@ -78,6 +78,12 @@ Le pilote automatique ne sait pas viser, attendre un volet ni plonger verticalem
 - `difK = 0.35 + 0.075·(n-1)` (niveau 1 : 0,35 ; niveau 10 : 1 ; niveau 40 : 3,3) et `ease = min(1,(n-1)/35)` (`T.ease`) : tout ce qui est technique (slaloms, portes serrées, virages en épingle, chutes, volets) en dépend.
 - Niveau 1 : aucune porte serrée ; niveaux 2-5 : pas de slalom/défilé/salle ni scènes verticales (`ease < 0.12`) ; portes : trou de 26 m au départ (→ 8,5 m), 2,6× plus rares au début ; tube de dégagement `S.R` 12,5 m au départ (→ 6,6) ; slalom : amplitude 4,5 → 11 m, période 150 → 76 m, blocs à `R+6`.
 - LIMITES (`Run.update`, endless.js) : plafond invisible à +26 m au-dessus de la trajectoire et bords latéraux (`vol+8`) ; la fusée glisse sans mourir. Plus de passage par-dessus les obstacles ni de sortie de carte.
+
+## v086 — déblocages, garage à paliers, ouvertures animées
+- Onglets : GARAGE (niveau de jeu 2), PASS (5), COFFRE DES ETOILES (10, icône sous le quotidien sur l'accueil), BOUTIQUE libre ; l'onglet MAP a disparu. `meta.isOpen(f)` (niveau atteint = `save.lvl.max`), `?unlockall=1` pour tester. Animation de déblocage (cadenas qui tremble puis éclate) + mini-guide en 3 cartes (`Home.drawUnlock`, déclenché sur l'accueil par `meta.pendingUnlock()`).
+- Coffre des étoiles = l'écran des niveaux (refaire des niveaux) + une récompense toutes les 3 étoiles (`claimStar`, la 5e = caisse de modules). Coffre d'un niveau déjà fini : 40 %.
+- GARAGE : 4 pièces × 6 paliers (gris, vert, bleu, violet, orange, rouge) × 5 niveaux = 30 niveaux ; au niveau 5 : PROMOUVOIR (`progress.buy` renvoie 'level' | 'promote') ; coûts ×2,1 par palier ; sauvegarde `P.up2`. Effets : ESSENCE +1 s/niveau, RENDEMENT −1,5 %/niveau, POINTS +5 %/niveau, PRECISION +0,15 m/niveau. Écrous plus rares (coffre 10+3n, moitié par cible, 1 par 400 m). Une seule icône de pièce (`Home.drawCoinIcon`).
+- Ouverture animée (`Home.reveal`) pour cadeau, coffre gratuit, caisses du pass, étoiles : chute, secousse, éclat, cartes qui sortent. Sons : `ui` plus net, `uiTick/uiLock/uiBuy/uiPromote/unlock/chestShake/chestOpen/card` ; tic par seconde au « continuer ? ».
 
 ## À vérifier au doigt (jamais testé sur téléphone)
 Équilibrage des ennemis/missiles, difficulté des niveaux 2 à 5, taille de l'arène, caméra en virage, lisibilité des flèches (petites de loin), forêt dégagée.

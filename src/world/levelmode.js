@@ -37,7 +37,7 @@
       event: n < 3 ? null : { type: ['rain', 'storm', 'convoy'][(n + k) % 3], d: Math.round(len * (0.5 + 0.1 * ((n * 7) % 3))) },   // v083 : un événement par niveau (dès le niveau 3)
       // départ DIRECTEMENT dans la zone (même altitude que le lanceur) ; les zones en contrebas / en altitude (métro, profondeur, base aérienne) sont atteintes par une rampe très courte
       order: (flat ? [] : ['city']).concat(new Array(90).fill(zone)),
-      chest: 25 + 10 * n,
+      chest: 10 + 3 * n,   // v086 : les écrous sont plus rares (le garage a maintenant 30 niveaux d'amélioration par pièce)
     };
   };
   CC.LM = { ZN, def, count: 120, THEMES, POOL };

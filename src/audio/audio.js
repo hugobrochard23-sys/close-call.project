@@ -315,7 +315,15 @@
         case 'release': this.tone('triangle', 900, 300, 0.12, 0.1); break;
         case 'popup': this.tone('square', 660 * (param || 1), 990 * (param || 1), 0.06, 0.08); break;
         case 'toggle': this.tone('square', 220, 180, 0.08, 0.06); break;
-        case 'ui': this.tone('square', 520, 520, 0.06, 0.05); break;
+        case 'ui': this.tone('square', 700, 900, 0.1, 0.05); this.tone('triangle', 350, 350, 0.06, 0.07, 0.01); break;   // v086 : plus net
+        case 'uiTick': this.tone('square', 1000 + (param || 0) * 60, 1000 + (param || 0) * 60, 0.08, 0.04); break;
+        case 'uiLock': this.tone('square', 220, 150, 0.1, 0.18); this.tone('square', 180, 120, 0.08, 0.2, 0.1); break;
+        case 'uiBuy': [880, 1175, 1568].forEach((f, i) => this.tone('square', f, f, 0.08, 0.1, i * 0.06)); this.noiseHit(5000, 'highpass', 1, 0.08, 0.05); break;
+        case 'uiPromote': [523, 659, 784, 1046, 1318, 1568].forEach((f, i) => { this.tone('square', f, f, 0.09, 0.2, i * 0.07); this.tone('triangle', f / 2, f / 2, 0.1, 0.25, i * 0.07); }); this.sweep(600, 6000, 'highpass', 0.8, 0.16, 0.7, 0.1); break;
+        case 'unlock': this.tone('sine', 120, 60, 0.3, 0.4); this.noiseHit(1800, 'bandpass', 2, 0.3, 0.1); setTimeout(() => { if (this.ctx) { [392, 523, 659, 784, 1046].forEach((f, i) => { this.tone('square', f, f, 0.09, 0.3, i * 0.08); this.tone('triangle', f / 2, f / 2, 0.11, 0.35, i * 0.08); }); this.sweep(800, 6000, 'highpass', 0.8, 0.15, 0.8, 0.1); } }, 280); break;
+        case 'chestShake': this.noiseHit(900, 'bandpass', 3, 0.14, 0.05); this.tone('square', 140 + (param || 0) * 25, 120, 0.08, 0.06); break;
+        case 'chestOpen': this.explosion(0.5); this.sweep(300, 5200, 'bandpass', 0.9, 0.5, 0.5); [659, 784, 988, 1318, 1568].forEach((f, i) => this.tone('square', f, f, 0.09, 0.3, 0.1 + i * 0.07)); break;
+        case 'card': this.tone('square', 880 + (param || 0) * 110, 1320 + (param || 0) * 110, 0.08, 0.1); this.tone('triangle', 440, 440, 0.06, 0.12); break;
         case 'target': this.tone('square', 523, 523, 0.1, 0.1); this.tone('square', 784, 784, 0.1, 0.18, 0.1); break;
         // design : départ de coup de canon de char (claquement, déflagration grave, écho) ; roquette d'hélicoptère (sifflement)
         case 'tankFire': this.noiseHit(2500, 'highpass', 0.7, 0.35, 0.04); this.tone('sine', 110, 38, 0.55, 0.45); this.sweep(1800, 300, 'lowpass', 0.7, 0.45, 0.5);

@@ -101,7 +101,7 @@
   }
   function nutPill(ui, ctx, x, y, h, n) {
     const nl = U.formatInt(n), w = F.measure(nl, 1.5) + h * 1.5;
-    panel(ctx, x - w, y, w, h, DARK, EDGE, h * 0.3); Home.bigIcon(ctx, 'coins', x - w + h * 0.55, y + h / 2, h * 0.8);
+    panel(ctx, x - w, y, w, h, DARK, EDGE, h * 0.3); Home.drawCoinIcon(ctx, x - w + h * 0.55, y + h / 2, h * 0.95);
     F.draw(ctx, nl, x - h * 0.3, y + h / 2 - 6, 1.5, GOLD, { align: 'right' });
   }
 
@@ -236,7 +236,7 @@
     // colonne de droite : solde + pages
     const rx = m + rw + 6, rww = W - m - rx;
     panel(ctx, rx, gy, rww, ch * 0.9, NAVY, EDGE, 8);
-    Home.bigIcon(ctx, 'coins', rx + rww / 2, gy + ch * 0.28, ch * 0.4);
+    Home.drawCoinIcon(ctx, rx + rww / 2, gy + ch * 0.28, ch * 0.45);
     txt(ctx, 'ECROUS', rx + rww / 2, gy + ch * 0.52, rww - 6, 1, CREAM, 'center'); txt(ctx, U.formatInt(game.progress.P.materials || 0), rx + rww / 2, gy + ch * 0.68, rww - 6, 2, GOLD, 'center');
     const ay = gy + ch * 0.9 + gap;
     panel(ctx, rx, ay, rww, ch * 0.75, NAVY, EDGE, 8);

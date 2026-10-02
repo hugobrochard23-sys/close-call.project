@@ -38,6 +38,8 @@
     ctx.globalAlpha = a > 0.8 ? (1 - a) / 0.2 : 1; panel(ctx, x, y, w, h, NAVY, GOLD, 8); txt(ctx, q.text, L.W / 2, y + h * 0.3, w - 16, 2, GOLD, 'center'); ctx.globalAlpha = 1;
   }
   Home.drawToast = drawToast;
+  // v086 : les caisses, modules, apparences, cadeaux et coffres s'ouvrent avec une vraie animation ; les petites sommes restent une simple notification
+  const give = (ui, out, force) => { const arr = [].concat(out).filter(Boolean); if (!arr.length) return; if (force || arr.some((o) => o.kind !== 'nuts')) Home.reveal(ui, arr); else say(ui, arr); };
   const say = (ui, out) => { if (!out) return; const arr = Array.isArray(out) ? out : [out]; Home.toast(ui, arr.map((o) => o.text).join('  ')); };
 
   // ============================================================================================================
@@ -66,7 +68,7 @@
         ctx.globalAlpha = cur ? 1 : 0.5; const label = rewardIcon(ctx, r, x + cw / 2, y + rowH * 0.3, rowH * 0.4); ctx.globalAlpha = 1;
         txt(ctx, label, x + cw / 2, y + rowH * 0.52, cw - 6, 1.2, got ? GREEN : CREAM, 'center');
         if (got) Home.icon.check(ctx, x + cw / 2, y + rowH * 0.82, rowH * 0.09, GREEN);
-        else if (can) { greenBtn(ctx, x + 4, y + rowH * 0.68, cw - 8, rowH * 0.26, inRect(ui, x, y, cw, rowH)); txt(ctx, 'PRENDRE', x + cw / 2, y + rowH * 0.74, cw - 12, 1.1, DARK, 'center'); hit(ui, x, y, cw, rowH, () => { const o = meta.claim(tr, t); if (o) { game.audio.play('levelUp'); say(ui, o); } }); }
+        else if (can) { greenBtn(ctx, x + 4, y + rowH * 0.68, cw - 8, rowH * 0.26, inRect(ui, x, y, cw, rowH)); txt(ctx, 'PRENDRE', x + cw / 2, y + rowH * 0.74, cw - 12, 1.1, DARK, 'center'); hit(ui, x, y, cw, rowH, () => { const o = meta.claim(tr, t); if (o) give(ui, o); }); }
         else if (locked) Home.icon.lock(ctx, x + cw / 2, y + rowH * 0.82, rowH * 0.08, DIM);
         else txt(ctx, t > tier ? 'VERROUILLE' : '', x + cw / 2, y + rowH * 0.76, cw - 6, 0.9, DIM, 'center');
       });
@@ -78,7 +80,7 @@
     txt(ctx, (pg + 1) + ' / ' + pages, W / 2, ay + ab * 0.32, 70, 1.5, CREAM, 'center');
     // boutons du bas
     const by2 = ay + ab + HH * 0.016, bh2 = HH * 0.07, n = meta.claimableCount(), bw2 = (W - 2 * m - 8) / 2;
-    if (n > 0) { greenBtn(ctx, m, by2, bw2, bh2, inRect(ui, m, by2, bw2, bh2)); txt(ctx, 'TOUT PRENDRE ' + n, m + bw2 / 2, by2 + bh2 * 0.34, bw2 - 10, 1.6, DARK, 'center'); hit(ui, m, by2, bw2, bh2, () => { const o = meta.claimAll(); game.audio.play('levelUp'); say(ui, o.slice(0, 3)); }); }
+    if (n > 0) { greenBtn(ctx, m, by2, bw2, bh2, inRect(ui, m, by2, bw2, bh2)); txt(ctx, 'TOUT PRENDRE ' + n, m + bw2 / 2, by2 + bh2 * 0.34, bw2 - 10, 1.6, DARK, 'center'); hit(ui, m, by2, bw2, bh2, () => { const o = meta.claimAll(); give(ui, o); }); }
     else { panel(ctx, m, by2, bw2, bh2, DARK, EDGE, 8); txt(ctx, 'RIEN A PRENDRE', m + bw2 / 2, by2 + bh2 * 0.34, bw2 - 10, 1.3, DIM, 'center'); }
     const px2 = m + bw2 + 8;
     if (P.premium) { panel(ctx, px2, by2, bw2, bh2, '#3a3320', GOLD, 8); txt(ctx, 'PREMIUM ACTIF', px2 + bw2 / 2, by2 + bh2 * 0.34, bw2 - 10, 1.4, GOLD, 'center'); }
@@ -107,8 +109,8 @@
     const bw = gw * 0.5, bh = gh * 0.2, bx = m + gw / 2 - bw / 2, by = gy + gh * 0.72;
     if (ready) {
       const adOk = game.ads && game.ads.enabled() && !game.testMode, w1 = adOk ? bw * 0.62 : bw, bx1 = adOk ? m + gw / 2 - bw / 2 : bx;
-      greenBtn(ctx, bx1, by, w1, bh, inRect(ui, bx1, by, w1, bh)); txt(ctx, adOk ? 'PRENDRE' : 'PRENDRE LE CADEAU', bx1 + w1 / 2, by + bh * 0.3, w1 - 10, 1.4, DARK, 'center'); hit(ui, bx1, by, w1, bh, () => { const o = meta.claimGift(); if (o) { game.audio.play('levelUp'); say(ui, o); } });
-      if (adOk) { const bx2 = bx1 + w1 + 6, w2 = bw - w1 - 6; panel(ctx, bx2, by, w2, bh, NAVY, '#8fd0ff', 6); txt(ctx, 'X2 PUB', bx2 + w2 / 2, by + bh * 0.3, w2 - 8, 1.3, '#8fd0ff', 'center'); hit(ui, bx2, by, w2, bh, () => game.ads.rewarded(() => { const o = meta.claimGift(); if (o) { const o2 = meta.give(o.kind === 'nuts' ? { t: 'nuts', n: o.n } : { t: 'crate', n: 1 }); say(ui, [o, o2]); } }, null, 'daily')); }
+      greenBtn(ctx, bx1, by, w1, bh, inRect(ui, bx1, by, w1, bh)); txt(ctx, adOk ? 'PRENDRE' : 'PRENDRE LE CADEAU', bx1 + w1 / 2, by + bh * 0.3, w1 - 10, 1.4, DARK, 'center'); hit(ui, bx1, by, w1, bh, () => { const o = meta.claimGift(); if (o) give(ui, o, true); });
+      if (adOk) { const bx2 = bx1 + w1 + 6, w2 = bw - w1 - 6; panel(ctx, bx2, by, w2, bh, NAVY, '#8fd0ff', 6); txt(ctx, 'X2 PUB', bx2 + w2 / 2, by + bh * 0.3, w2 - 8, 1.3, '#8fd0ff', 'center'); hit(ui, bx2, by, w2, bh, () => game.ads.rewarded(() => { const o = meta.claimGift(); if (o) { const o2 = meta.give(o.kind === 'nuts' ? { t: 'nuts', n: o.n } : { t: 'crate', n: 1 }); give(ui, [o, o2], true); } }, null, 'daily')); }
     }
     else txt(ctx, 'REVIENS DEMAIN POUR LE SUIVANT', m + gw / 2, by + bh * 0.3, gw - 20, 1.2, DIM, 'center');
     // missions du jour
@@ -133,8 +135,8 @@
     txt(ctx, 'COFFRE GRATUIT', m + chh2 * 1.0, cy + chh2 * 0.2, gw * 0.36, 1.5, CREAM);
     const rd = meta.chestReady();
     txt(ctx, rd ? 'PRET !' : 'PROCHAIN DANS ' + fmtTime(meta.chestIn()), m + chh2 * 1.0, cy + chh2 * 0.55, gw * 0.5, 1.1, rd ? GREEN : DIM);
-    if (rd) { const bx3 = m + gw - gw * 0.3 - 10, bw3 = gw * 0.3, bh3 = chh2 * 0.5, by3 = cy + chh2 * 0.25; greenBtn(ctx, bx3, by3, bw3, bh3, inRect(ui, bx3, by3, bw3, bh3)); txt(ctx, 'OUVRIR', bx3 + bw3 / 2, by3 + bh3 * 0.3, bw3 - 8, 1.5, DARK, 'center'); hit(ui, bx3, by3, bw3, bh3, () => { const o = meta.openChest(); if (o) { game.audio.play('levelUp'); say(ui, o); } });
-      if (game.ads && game.ads.enabled() && !game.testMode) { const by4 = by3 + bh3 + 4; panel(ctx, bx3, by4, bw3, bh3 * 0.6, NAVY, '#8fd0ff', 6); txt(ctx, 'X2 PUB', bx3 + bw3 / 2, by4 + bh3 * 0.15, bw3 - 6, 1.1, '#8fd0ff', 'center'); hit(ui, bx3, by4, bw3, bh3 * 0.6, () => game.ads.rewarded(() => { const o = meta.openChest(); if (o) { const o2 = meta.give({ t: 'nuts', n: 60 }); say(ui, o.concat([o2])); } }, null, 'daily')); } }
+    if (rd) { const bx3 = m + gw - gw * 0.3 - 10, bw3 = gw * 0.3, bh3 = chh2 * 0.5, by3 = cy + chh2 * 0.25; greenBtn(ctx, bx3, by3, bw3, bh3, inRect(ui, bx3, by3, bw3, bh3)); txt(ctx, 'OUVRIR', bx3 + bw3 / 2, by3 + bh3 * 0.3, bw3 - 8, 1.5, DARK, 'center'); hit(ui, bx3, by3, bw3, bh3, () => { const o = meta.openChest(); if (o) give(ui, o, true); });
+      if (game.ads && game.ads.enabled() && !game.testMode) { const by4 = by3 + bh3 + 4; panel(ctx, bx3, by4, bw3, bh3 * 0.6, NAVY, '#8fd0ff', 6); txt(ctx, 'X2 PUB', bx3 + bw3 / 2, by4 + bh3 * 0.15, bw3 - 6, 1.1, '#8fd0ff', 'center'); hit(ui, bx3, by4, bw3, bh3 * 0.6, () => game.ads.rewarded(() => { const o = meta.openChest(); if (o) { const o2 = meta.give({ t: 'nuts', n: 60 }); give(ui, o.concat([o2]), true); } }, null, 'daily')); } }
     if (!meta.noAds) { const ny = cy + chh2 + HH * 0.014, nh = HH * 0.06; panel(ctx, m, ny, gw, nh, NAVY, GOLD, 8); txt(ctx, 'SANS PUBLICITE IMPOSEE (ACHAT UNIQUE)', m + gw / 2, ny + nh * 0.32, gw - 16, 1.2, GOLD, 'center'); hit(ui, m, ny, gw, nh, () => { if (meta.buyNoAds() === 'no-link') Home.toast(ui, 'ACHAT BIENTOT DISPONIBLE'); }); }
     else txt(ctx, 'MERCI : PLUS DE PUBLICITE IMPOSEE', W / 2, cy + chh2 + HH * 0.03, gw, 1.1, GREEN, 'center');
     drawToast(ui, ctx, L);
@@ -178,7 +180,7 @@
   };
   // garage : bascule entre AMELIORATIONS et MODULES (petit bouton dans le titre)
   const oldGarage = Home.drawGarage;
-  Home.drawGarage = function (ui, ctx, game, W, H) {
+  Home.drawGarage = function (ui, ctx, game, W, H) {   // (remplacé par meta_ui2.js)
     const L = Home.layout(ui, W, H), { T, HH, u } = L, m = u * 0.04;
     if (ui.garagePage === 'mods') Home.drawModules(ui, ctx, game, W, H); else oldGarage.apply(this, arguments);
     const top = T + HH * 0.1 + 2 + HH * 0.05 + HH * 0.018, th = HH * 0.062, bw = W * 0.24, bh = th * 0.7, bx = m * 1.6, by = top + (th - bh) / 2, mods = ui.garagePage === 'mods';

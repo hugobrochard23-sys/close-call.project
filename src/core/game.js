@@ -430,7 +430,7 @@
       this.results = Object.assign(res, { endless: true, time: this.runTime, stage: run.stageLabel(), cause: causes[this.crashKind] || 'CRASH', style: this.style.total, runStats: run.stats, xpDoubled: false, t: 0 });
       if (this.levelRun) {   // v075 : résultat du niveau (victoire = coffre + niveau suivant ; échec = % parcouru, un coup de pouce après plusieurs essais)
         const lv = this.levelRun, L = (S.lvl = S.lvl || { cur: 1, max: 1, done: {}, tries: {}, mode: 'level' }); L.tries = L.tries || {}; L.done = L.done || {};
-        const win = !!this.levelWin; this.results.level = { n: lv.n, len: lv.len, win, pct: win ? 1 : Math.min(0.99, run.dist / lv.len), chest: win ? lv.chest : 0, boss: !!(run.dist > lv.len - 80) };
+        const win = !!this.levelWin; this.results.level = { n: lv.n, len: lv.len, win, pct: win ? 1 : Math.min(0.99, run.dist / lv.len), chest: win ? (L.done[lv.n] ? Math.max(4, Math.round(lv.chest * 0.4)) : lv.chest) : 0, boss: !!(run.dist > lv.len - 80), replay: !!L.done[lv.n] };   // v086 : un niveau déjà fini rapporte 40 % du coffre
         { const T = run.T, ratio = Math.min(1, (run.kills || 0) / ((T.spawned || 0) + 1)), M = this.meta, stars = M.starsFor(win, ratio), lr = this.results.level;
           lr.stars = stars; lr.ratio = ratio; lr.newStars = win ? M.setStars(lv.n, stars) : 0;
           lr.passXp = M.addPassXp(win ? 60 + 25 * stars : 8 + Math.round(lr.pct * 20));
@@ -440,7 +440,7 @@
             if (G && G.pts.length > 9) M.setGhost(lv.n, { win, time: tm, d: Math.round(run.dist), pts: G.pts });
             const ch = M.checkChallenge(lv.n, score); if (ch) lr.challenge = ch; }
           lr.drops = (this.modRun ? this.modRun.drops : []).map((id) => M.addMod(id, 1)); M.save(); }
-        if (win) { L.done[lv.n] = 1; L.max = Math.max(L.max || 1, lv.n + 1); L.cur = lv.n + 1; L.tries[lv.n] = 0; this.progress.P.materials = (this.progress.P.materials || 0) + lv.chest; }
+        if (win) { L.done[lv.n] = 1; L.max = Math.max(L.max || 1, lv.n + 1); L.cur = lv.n + 1; L.tries[lv.n] = 0; this.progress.P.materials = (this.progress.P.materials || 0) + this.results.level.chest; }
         else L.tries[lv.n] = (L.tries[lv.n] || 0) + 1;
       }
       this.state = 'RESULTS'; this.centerMsg = null;
@@ -906,7 +906,8 @@
           if (this.launchT >= CC.CONFIG.pad.chargeTime) this.fire();
           break;
         case 'REVIVE':   // v034 : l'offre de continuer (publicité récompensée) s'éteint toute seule
-          if (this.ui.overlay === 'revive' && (this.reviveT -= dt) <= 0) { this.ui.overlay = null; this.finishEndless(); }
+          if (this.ui.overlay === 'revive') { this.reviveT -= dt; const c = Math.ceil(this.reviveT); if (c !== this._rvC && c > 0) { this._rvC = c; this.audio.play(c <= 3 ? 'warnMissile' : 'uiTick', null, 8 - c); if (CC.Haptics) CC.Haptics.tick('touch'); }   // v086 : un tic par seconde (plus aigu, puis alerte)
+            if (this.reviveT <= 0) { this.ui.overlay = null; this.finishEndless(); } }
           break;
         case 'AIM':
           this.aimTime += dt;
