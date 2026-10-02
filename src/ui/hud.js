@@ -228,7 +228,7 @@
       else if (run) {
         const d = run.dist;
         if (CC.Zones.nextDoor && CC.Zones.nextDoor(run.T, d)) { label = 'PASSE PAR LE TROU'; kind = 'door'; }
-        else if (game.targets.some((q) => q.alive && q.type === 'fuel' && q.pos && q.pos.distanceTo(rk.pos) < 330)) { label = 'VISE LE RESERVOIR'; kind = 'fuel'; }
+        else if (game.targets.some((q) => q.alive && !q.guard && q.pos && q.pos.distanceTo(rk.pos) < 330)) { label = 'FONCE SUR LE CHAR'; kind = 'fuel'; }
         else if (rk.fuel / rk.fuelMax < 0.35) { label = 'RELACHE LE BOOST'; kind = 'hold'; }
       }
       if (!label) return;

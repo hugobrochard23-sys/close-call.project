@@ -207,8 +207,8 @@
         b.box({ p: T.at(gd, 0, 0.12), s: [2 * hf, 0.1, 1.6], r: [0, yw, 0], mat: 'basic:#ffd23a', collide: false, shadow: false });
       } }
     for (const t of tgt) {
-      const d = t.d, type = st === 0 || t.zone === 'mini' ? 'fuel' : r.pick(['fuel', 'fuel', 'truck']), lx = t.lx, p = T.at(d, lx, 0);
-      b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0), { unarmed: true });
+      const d = t.d, type = t.zone === 'mini' ? 'fuel' : r.pick(['tank', 'tank', 'tank', 'truck', 'fuel']), lx = t.lx, p = T.at(d, lx, 0);   // v065 : on fonce surtout sur des CHARS (ils recharge l'essence)
+      b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0) + (type === 'tank' ? 180 : 0), { unarmed: st < 1 });
       busy.push(d);
       const hy = type === 'fuel' ? 3.5 : 1.6;
       gates.push({ d: d - 55, lx: T.laneX(d - 55), y: T.laneY(d - 55) * 0.7 }, { d: d - 22, lx, y: hy + 3 }, { d, lx, y: hy }, { d: d + 30, lx: T.laneX(d + 30), y: T.laneY(d + 30) * 0.8 });

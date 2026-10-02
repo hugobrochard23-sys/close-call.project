@@ -470,6 +470,7 @@
     }
     if (Z.backdrop) Z.backdrop(ctx);   // v038b : couches de bâtiments / conteneurs / montagnes très hauts sur les côtés
     if (Z.tight) Z.tight(ctx);   // v038 : portes serrées (src/world/tight.js)
+    if (Z.chaos) Z.chaos(ctx);   // v065 : champs d'obstacles dans tous les sens (src/world/zones_chaos.js)
     if (CC.Life && CC.Life.flushGlows) CC.Life.flushGlows(ctx);
   };
   // zones de l'ancien système (forêt) : décor par côtés + structures, bornés à la scène
