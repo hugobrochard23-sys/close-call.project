@@ -614,7 +614,21 @@
         this.flash = Math.min(0.28, 0.1 + 0.03 * L); this.flashColor = L >= 4 ? '#bff4ff' : '#ffe0a0';
         this.hitStop = 0.07 + 0.016 * L;                                  // ralenti à l'impact
         rocket.fbTime = Math.max(rocket.fbTime, rocket.age - rocket.cfg.ignitionDelay + 0.8 + 0.35 * L);   // la série offre du boost gratuit
+        { const sz = t.size ? new V(t.size[0], t.size[1], t.size[2]) : new V(5, 3, 5); fx.shatter(c, sz, rocket.vel, 'brick'); fx.shatter(c, sz.clone().multiplyScalar(0.7), rocket.vel, 'glass');
+          setTimeout(() => { try { fx.explosion(c.clone().add(new V((Math.random() - 0.5) * 6, 2 + Math.random() * 3, (Math.random() - 0.5) * 6)), null, true, 'orange'); } catch (e) { /* ignoré */ } }, 140); }   // v070 : débris + explosion secondaire
         this.audio.play('boom', c); this.audio.play('target');
+        // v070 : PALIERS DE COMBO — 5 et 10 (puis tous les 5) : ralenti cinématique, barres de cinéma, pluie d'écrous
+        const mile = run.killChain === 5 ? 1 : run.killChain >= 10 && run.killChain % 5 === 0 ? 2 : 0;
+        if (mile) {
+          const nuts = mile === 1 ? 8 : 18 + 4 * (run.killChain / 5 - 2);
+          this.hitStop = mile === 2 ? 1.5 : 1.0; this.hitScale = mile === 2 ? 0.22 : 0.3; this.chromaBurst = mile === 2 ? 0.03 : 0.018;
+          this.cine = { t0: performance.now(), dur: this.hitStop * 1000 + 600, chain: run.killChain, mile, nuts };
+          this.progress.event('nuts', nuts); run.stats.nuts = (run.stats.nuts || 0) + nuts;
+          const nCoin = Math.min(40, nuts * 2); const arr = (this.coinFx = this.coinFx || []);
+          for (let i = 0; i < nCoin; i++) arr.push({ p: c.clone(), t0: performance.now() + i * 22, a: Math.random() * 6.283, sp: 160 + Math.random() * 380, ph: Math.random() * 6, sx: null, sy: null });
+          this.audio.play('gold'); this.audio.play('levelUp');
+          this.feed('COMBO ' + run.killChain + '  +' + nuts + ' ECROUS', '#ffd23a');
+        }
         if (L >= 3) { try { this.audio.play('record'); } catch (e) { /* son absent */ } if (CC.Haptics) CC.Haptics.pattern('record'); }
         run.addFuel(CC.CONFIG.endless.fuelTarget + Math.min(L - 1, 4) * 2);
         if (!t.guard && (t.type === 'fuel' || t.type === 'truck' || t.type === 'tank' || t.type === 'heli')) {   // un char / camion / réservoir touché rapporte des écrous, multipliés par la série de portes
@@ -932,7 +946,7 @@
       if (this.settings.postfx && this.postParams) {
         this.postParams.flash = this.flash * 0.85; this.postParams.flashColor = this.flashColor || '#ffffff';
         if (this.postChroma === undefined || this.postParamsRef !== this.postParams) { this.postParamsRef = this.postParams; this.postChroma = this.postParams.chromatic; }
-        this.postParams.chromatic = (Number.isFinite(this.postChroma) ? this.postChroma : 0) + this.boostK * CC.CONFIG.boost.chromatic;   // v034 : le boost écarte les couleurs sur les bords
+        this.postParams.chromatic = (Number.isFinite(this.postChroma) ? this.postChroma : 0) + this.boostK * CC.CONFIG.boost.chromatic + (this.chromaBurst || 0);   // v034 : le boost écarte les couleurs sur les bords
         this.postfx.render(this.scene, this.camera, this.postParams, time);
       } else {
         this.renderer.setRenderTarget(null);
@@ -1020,7 +1034,8 @@
         const k = keys.shift(); if (k) { try { this.builderMat = this.builderMat || new CC.LevelBuilder(this.scene, this.world, { seed: 1, env: { sky: {} }, routes: [] }); this.builderMat.mat(k); } catch (e) { /* texture inconnue */ } } else { this.warmDone = true; if (this.builderMat) { this.scene.remove(this.builderMat.root); this.builderMat = null; } }
       }
       if (this.fadeIn > 0) this.fadeIn = Math.max(0, this.fadeIn - dt);
-      let sdt = dt; if (this.hitStop > 0) { this.hitStop -= dt; sdt = dt * 0.18; }   // v066 : ralenti à chaque destruction
+      let sdt = dt; if (this.hitStop > 0) { this.hitStop -= dt; sdt = dt * (this.hitScale || 0.18); if (this.hitStop <= 0) this.hitScale = 0; }
+      if (this.chromaBurst) this.chromaBurst = this.chromaBurst < 0.001 ? 0 : this.chromaBurst * 0.95;   // v066 : ralenti à chaque destruction
       if (!this.paused && this.state !== 'BOOT') this.safe(() => this.update(this.endlessRun && this.state === 'CRASHED' && this.impactT < 0.3 ? sdt * 0.4 : sdt));   // v040 : ralenti sur la collision
       else { this.input.poll(0); this.rig.update(0); }
       try { this.render(performance.now() / 1000); this.renderErr = 0; }

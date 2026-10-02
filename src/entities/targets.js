@@ -99,6 +99,15 @@
       this.base.copy(a).addScaledVector(seg, len > 0 ? Math.min(1, d / len) : 0);
       if (len > 0) this.pathYaw = Math.atan2(-seg.x, -seg.z);
     }
+    // v070 : contour blanc (coque inversée légèrement agrandie) visible quand la roquette est proche
+    buildOutline() {
+      const mat = Target.outMat || (Target.outMat = new THREE.MeshBasicMaterial({ color: '#ffffff', side: THREE.BackSide, fog: false }));
+      const grp = new THREE.Group(), list = [];
+      this.model.traverse((o) => { if (o.isMesh && o.geometry && o.material && !o.material.transparent && o.visible) list.push(o); });
+      for (const o of list.slice(0, 60)) { const m = new THREE.Mesh(o.geometry, mat); m.position.copy(o.position); m.quaternion.copy(o.quaternion); m.scale.copy(o.scale).multiplyScalar(1.09); o.parent.add(m); grp.add(m); }
+      this.outline = { set visible(v) { for (const m of grp.children) m.visible = v; }, get visible() { return grp.children.length ? grp.children[0].visible : false; } };
+      this.outline.visible = false;
+    }
     updateObb() { this.object.updateMatrixWorld(true); this.obb = obbFrom(this.object, this.size, this.center, this.obb); }
 
     update(dt, game) {
@@ -112,6 +121,16 @@
       if (this.type === 'radar') this.model.userData.dish.rotation.y += dt * 1.1;
       if (this.model.userData.beacon) this.model.userData.beacon.visible = (this.t + this.ph) % 1.4 < 0.15;
       if (this.type === 'heli' || this.type === 'heliCamo') this.updateObb();
+      else if (!this.path && !this.patrol && this.drift) {   // v070 : les cibles au sol bougent un peu (balancement, léger pivot)
+        const sw = Math.sin(this.t * this.driftSpeed + this.ph), yw = this.yaw0 + Math.sin(this.t * 0.6 + this.ph) * 0.05;
+        this.object.position.set(this.base.x + Math.cos(this.yaw0) * sw * this.drift, this.base.y, this.base.z - Math.sin(this.yaw0) * sw * this.drift); this.object.rotation.y = yw; this.updateObb();
+      }
+      if (rk) {
+        const dd = rk.pos.distanceTo(this.obb.c);
+        if (!this.outline && dd < 120) this.buildOutline();
+        if (this.outline) this.outline.visible = (dd < 110 && Math.floor((this.t + this.ph) * 3) % 2 === 0) || dd < 55;   // contour blanc à l'approche
+        if (!this.passed && dd < 30) { this.passed = true; if (game.audio) game.audio.play('whoosh', this.object.position); }   // bruit quand on passe à côté
+      }
       // tirs anti-aériens : tanks et hélicoptères, sauf une cible qui s'enfuit (v023 : elle fuit, elle ne se bat pas)
       if (rk && game.state === 'FLIGHT' && !this.path && !this.unarmed && (this.type === 'tank' || this.type === 'sam' || this.type === 'heli' || this.type === 'heliCamo')) this.updateAA(dt, game, rk);
       if (this.alert.visible) this.alert.position.y = this.size[1] + 1.2 + Math.sin(this.t * 6) * 0.1;
@@ -300,7 +319,7 @@
       const obj = this.model.clone(true);
       obj.traverse((o) => { if (o.isMesh) { o.material = o.material.transparent ? o.material : charred; if (o.material.transparent) o.visible = false; } if (o.isSprite) o.visible = false; });
       const root = new THREE.Group();
-      root.position.copy(this.object.position); root.quaternion.copy(this.object.quaternion); root.add(obj);
+      root.position.copy(this.object.position); root.quaternion.copy(this.object.quaternion); root.scale.copy(this.object.scale); root.add(obj);
       game.scene.add(root);
       const r = U.fx, W = { root, obj, t: 0, fire: 0, parts: [], kind: this.type, landed: false, vel: new V(), spin: new V() };
       if (this.type === 'tank') {
@@ -309,7 +328,7 @@
           tur.updateWorldMatrix(true, false);
           const wp = tur.getWorldPosition(new V()), wq = tur.getWorldQuaternion(new THREE.Quaternion());
           tur.parent.remove(tur);
-          const tg = new THREE.Group(); tg.position.copy(wp); tg.quaternion.copy(wq); tg.add(tur); tur.position.set(0, 0, 0); tur.rotation.set(0, tur.rotation.y, 0);
+          const tg = new THREE.Group(); tg.position.copy(wp); tg.quaternion.copy(wq); tg.scale.copy(this.object.scale); tg.add(tur); tur.position.set(0, 0, 0); tur.rotation.set(0, tur.rotation.y, 0);
           game.scene.add(tg);
           W.parts.push({ o: tg, vel: new V(r.range(-3, 3), r.range(10, 14), r.range(-3, 3)), spin: new V(r.range(-4, 4), r.range(-3, 3), r.range(-4, 4)), floor: this.object.position.y + 0.35, done: false });
         }

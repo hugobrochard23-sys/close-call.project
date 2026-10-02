@@ -337,7 +337,7 @@
 
     // Point rouge au bord de l'écran vers les cibles hors champ (ESTIMATION, vu séq. 3/4).
     drawIndicators(game) {
-      if (game.endlessRun) { this.drawMarks(game); this.drawCombo(game); return; }   // v066
+      if (game.endlessRun) { this.drawMarks(game); this.drawCombo(game); this.drawCine(game); return; }   // v066
       if (game.state !== 'FLIGHT' && game.state !== 'AIM') return;
       if (game.guideLevel(game.levelIndex, game.level)) return;   // v023 : niveaux 1 à 3 → flèches vertes à la place
       const W = this.canvas.width, H = this.canvas.height, ctx = this.ctx, cam = game.camera;
@@ -378,29 +378,23 @@
   const _bk = new THREE.Vector3();
   HUD.prototype.drawMarks = function (game) {
     if (game.state !== 'FLIGHT' && game.state !== 'AIM') return;
-    const W = this.canvas.width, H = this.canvas.height, ctx = this.ctx, cam = game.camera, rk = game.rocket, t = performance.now() / 1000;
-    const px = Math.max(5, Math.round(H * 0.012)), base = H * 0.034;   // v069 : petits, gros pixels
-    const list = game.targets.filter((q) => q.alive && !q.hazard && q.obb).map((q) => ({ q, d: rk.pos.distanceTo(q.obb.c) })).filter((o) => o.d < 240).sort((a, b) => a.d - b.d).slice(0, 2);
+    const W = this.canvas.width, H = this.canvas.height, ctx = this.ctx, cam = game.camera, rk = game.rocket;
+    const px = Math.max(5, Math.round(H * 0.012)), base = H * 0.03;
+    // v070 : un SEUL index (la cible la plus proche) et seulement tout près : fondu entre 150 m et 100 m
+    let best = null, bd = 150;
+    for (const q of game.targets) { if (!q.alive || q.hazard || !q.obb) continue; const d = rk.pos.distanceTo(q.obb.c); if (d < bd && _bk.subVectors(q.obb.c, rk.pos).dot(rk.fwd) > 0) { bd = d; best = q; } }
+    if (!best) return;
+    const p = CC.Curve.apply(this._v.copy(best.obb.c), cam).project(cam);
+    if (p.z > 1 || Math.abs(p.x) > 1 || Math.abs(p.y) > 1) return;
     const rect = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
-    list.forEach((o, i) => {
-      const q = o.q, p = CC.Curve.apply(this._v.copy(q.obb.c), cam).project(cam);
-      if (p.z > 1 || Math.abs(p.x) > 1 || Math.abs(p.y) > 1) return;
-      if (_bk.subVectors(q.obb.c, rk.pos).dot(rk.fwd) < 0) return;   // une cible dépassée n'est plus affichée
-      const hot = q.guard ? '#ff9a2a' : '#ff3b2e', hot2 = q.guard ? '#ffd080' : '#ff9a80', fade = U.clamp((240 - o.d) / 90, 0, 1);   // apparaît en fondu à l'approche (pleinement visible à 150 m)
-      const sx = (p.x * 0.5 + 0.5) * W, sy = (-p.y * 0.5 + 0.5) * H, near = U.clamp((300 - o.d) / 300, 0, 1);
-      const r = Math.round(base * (0.9 + 0.5 * near) / px) * px, arm = Math.round(r * 0.6 / px) * px;   // pas de clignotement ni de pulsation, tailles par pas de pixel
-      ctx.save(); ctx.globalAlpha = fade;
-      for (const [col, off] of [['rgba(30,6,4,0.9)', px * 0.7], [hot, 0]]) {
-        for (const [ax, ay] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-          const cx = sx + ax * r + off, cy = sy + ay * r + off;
-          rect(ax > 0 ? cx - arm : cx, ay > 0 ? cy - px : cy, arm, px, col);
-          rect(ax > 0 ? cx - px : cx, ay > 0 ? cy - arm : cy, px, arm, col);
-        }
-      }
-      rect(sx - px / 2, sy - px / 2, px, px, hot2);
-      this.text(Math.round(o.d) + ' M', sx, sy + r + H * 0.03, 0.0028, hot2, { align: 'center' });
-      ctx.restore();
-    });
+    const hot = best.guard ? '#ff9a2a' : '#ff3b2e', fade = U.clamp((150 - bd) / 50, 0, 1), sx = (p.x * 0.5 + 0.5) * W, sy = (-p.y * 0.5 + 0.5) * H;
+    const r = px * 3, arm = px * 2;   // taille fixe : trois pixels de demi-côté, bras de deux pixels
+    ctx.save(); ctx.globalAlpha = fade;
+    for (const [col, off] of [['rgba(30,6,4,0.9)', px * 0.7], [hot, 0]]) for (const [ax, ay] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      const cx = sx + ax * r + off, cy = sy + ay * r + off;
+      rect(ax > 0 ? cx - arm : cx, ay > 0 ? cy - px : cy, arm, px, col); rect(ax > 0 ? cx - px : cx, ay > 0 ? cy - arm : cy, px, arm, col);
+    }
+    ctx.restore();
   };
   HUD.prototype.drawCombo = function (game) {
     const run = game.endlessRun, W = this.canvas.width, H = this.canvas.height, ctx = this.ctx, now = performance.now(), ft = game.flightTime || 0;
@@ -426,6 +420,38 @@
         const sx = (p.x * 0.5 + 0.5) * W, sy = (-p.y * 0.5 + 0.5) * H - a * H * 0.12;
         ctx.save(); ctx.globalAlpha = 1 - a * a; this.text(q.txt, sx, sy, 0.0044 + 0.0004 * Math.min(q.chain, 6), q.chain >= 4 ? '#7be8ff' : '#ffd23a', { align: 'center' }); ctx.restore();
       }
+    }
+  };
+
+  // v070 : cinématique de PALIER DE COMBO (barres de cinéma + gros texte) et pluie d'écrous qui jaillissent puis remontent vers le compteur
+  HUD.prototype.drawCine = function (game) {
+    const W = this.canvas.width, H = this.canvas.height, ctx = this.ctx, now = performance.now(), px = Math.max(5, Math.round(H * 0.012));
+    const cn = game.cine;
+    if (cn) {
+      const age = now - cn.t0; if (age > cn.dur) game.cine = null; else {
+        const k = Math.max(0, Math.min(1, age / 220, (cn.dur - age) / 300)), bh = H * 0.085 * k;
+        ctx.fillStyle = '#05080c'; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
+        const pop = age < 350 ? 1 + 0.9 * Math.pow(1 - age / 350, 2) : 1, col = cn.mile === 2 ? (Math.floor(now / 80) % 2 ? '#ffffff' : '#7be8ff') : (Math.floor(now / 100) % 2 ? '#ffd23a' : '#ff8a2a');
+        ctx.save(); ctx.translate(W / 2, H * 0.4); ctx.scale(pop, pop); ctx.globalAlpha = Math.min(1, k * 1.5);
+        this.text(cn.mile === 2 ? 'COMBO ' + cn.chain + ' !!' : 'COMBO ' + cn.chain + ' !', 0, 0, 0.0095, col, { align: 'center' });
+        this.text('+' + cn.nuts + ' ECROUS', 0, H * 0.09, 0.0042, '#ffd23a', { align: 'center' });
+        ctx.restore();
+      }
+    }
+    // compteur d'écrous de la partie (haut gauche, sous la pause)
+    const run = game.endlessRun; if (!run) return;
+    const shown = game.coinShown === undefined ? (run.stats.nuts || 0) : game.coinShown, cx = W * 0.07, cy = H * 0.13;
+    const coin = (x, y, s, w) => { ctx.fillStyle = '#7a4a10'; ctx.fillRect(Math.round(x - s * w / 2 - s * 0.12), Math.round(y - s / 2 - s * 0.12), Math.round(s * w + s * 0.24), Math.round(s + s * 0.24)); ctx.fillStyle = '#ffc52b'; ctx.fillRect(Math.round(x - s * w / 2), Math.round(y - s / 2), Math.round(s * w), Math.round(s)); ctx.fillStyle = '#fff2a8'; ctx.fillRect(Math.round(x - s * w / 2), Math.round(y - s / 2), Math.round(Math.max(2, s * w * 0.3)), Math.round(s * 0.5)); };
+    coin(cx, cy, px * 2.2, 1); this.text(String(Math.floor(shown)), cx + px * 2.6, cy - px * 1.1, 0.0036, '#ffd23a', {});
+    const arr = game.coinFx; if (!arr || !arr.length) { game.coinShown = run.stats.nuts || 0; return; }
+    const tx = cx, ty = cy;
+    for (let i = arr.length - 1; i >= 0; i--) {
+      const c = arr[i], age = (now - c.t0) / 1000; if (age < 0) continue;
+      if (c.sx === null) { const p = CC.Curve.apply(this._v.copy(c.p), game.camera).project(game.camera); c.sx = (p.x * 0.5 + 0.5) * W; c.sy = (-p.y * 0.5 + 0.5) * H; if (p.z > 1) { c.sx = W / 2; c.sy = H * 0.5; } }
+      let x, y;
+      if (age < 0.5) { const e = 1 - Math.pow(1 - age / 0.5, 2); x = c.sx + Math.cos(c.a) * c.sp * e * 0.5; y = c.sy + Math.sin(c.a) * c.sp * e * 0.5 - 40 * Math.sin(Math.PI * age / 0.5); c.hx = x; c.hy = y; }
+      else { const k = Math.min(1, (age - 0.5) / 0.7), e = k * k * (3 - 2 * k); x = c.hx + (tx - c.hx) * e; y = c.hy + (ty - c.hy) * e; if (k >= 1) { arr.splice(i, 1); game.coinShown = Math.min(run.stats.nuts || 0, (game.coinShown === undefined ? 0 : game.coinShown) + 0.5); if (i % 4 === 0) { try { game.audio.play('xpTick', null, Math.floor(Math.random() * 8)); } catch (e2) { /* ignoré */ } } continue; } }
+      coin(x, y, px * 1.7, Math.abs(Math.cos(age * 9 + c.ph)) * 0.8 + 0.2);
     }
   };
 
