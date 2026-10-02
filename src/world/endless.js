@@ -148,7 +148,7 @@
     const cfg = C(), T = new Track(seed, opts && opts.zones);
     if (opts && opts.env) T.forceEnv = opts.env;   // banc de test : ?env=neonNight
     if (opts && opts.levelLen) {   // v075 : niveau à longueur fixe (arène + boss à la fin)
-      T.levelLen = opts.levelLen; T.difK = opts.difK || 1; T.bossHp = opts.bossHp || 1; T.bossType = opts.bossType || 'heli'; T.padStyle = opts.padStyle || 0; T.theme = opts.theme || null; T.mids = opts.mids || [];
+      T.levelLen = opts.levelLen; T.difK = opts.difK || 1; T.bossHp = opts.bossHp || 1; T.bossType = opts.bossType || 'heli'; T.padStyle = opts.padStyle || 0; T.theme = opts.theme || null; T.mids = opts.mids || []; T.bossTint = opts.bossTint || 0;
     }
     if (opts && opts.order && opts.order.length) { const o = opts.order.filter((z) => CC.Zones.PROFILE[z]); while (o.length < 90) o.push(o[o.length % Math.max(1, opts.order.length)]); T.zoneOrder = o; if (opts.levelLen) { const dE = o[1] && o[1] !== o[0] ? Math.abs(CC.Zones.PROFILE[o[1]].elev - CC.Zones.PROFILE[o[0]].elev) : 0; T.off = dE ? C().zoneLen - (Math.max(130, 1.8 * dE) + 40) : 0; } }   // banc de test : ?order=city,metro,…
     const L = {
@@ -281,12 +281,37 @@
       tanks.push({ type: 'heli', pos: T.at(d, T.laneX(d) + (r() < 0.5 ? -1 : 1) * 26, r.between([24, 36])), yaw: 180 }); busy.push(d);
     }
 
+    // v080 : SURPRISES — (1) une CIBLE DOREE de temps en temps, à l'écart de la trajectoire : risque / récompense (5 points, beaucoup de carburant) ;
+    //        (2) des FORMATIONS de 5 hélicoptères en V ou en diagonale : toutes détruites = bonus (aucune information à l'écran, tout se voit dans le décor)
+    if (T.levelLen && d1 < T.levelLen - 110 && !location.search.includes('notgt')) {
+      const rg = G.stream(T.seed, 'gold' + k), rf = G.stream(T.seed, 'form' + k);
+      if (rg() < 0.4) {
+        const gs = T.gstat || (T.gstat = { tries: 0, placed: 0 });
+        for (let a = 0; a < 5; a++) {
+          const d = d0 + cfg.chunkLen * (0.12 + 0.76 * rg()), sd = rg() < 0.5 ? -1 : 1, v = T.vol(d), lx = T.laneX(d) + sd * Math.min(Math.max(10, v - 8), 11 + rg() * 12), yy = T.laneY(d) + (rg() - 0.5) * 14;
+          gs.tries++;
+          if (!free(d, 14) || inRamp(d) || tr0(d).t !== 1) continue;
+          const p = place(d, lx, yy, true, 6); if (!p) continue;
+          gs.placed++; b.target('golden', p, 0, { scale: 1.7, unarmed: true, drift: 2.5, driftSpeed: 0.6 }); busy.push(d); break;
+        }
+      }
+      if ((T.difK || 1) >= 1 && rf() < 0.3) {
+        const V5 = rf() < 0.5, pat = V5 ? [[0, -14], [12, -7], [24, 0], [12, 7], [0, 14]] : [[0, -14], [11, -7], [22, 0], [33, 7], [44, 14]];
+        for (let a = 0; a < 4; a++) {
+          const d = d0 + cfg.chunkLen * (0.1 + 0.5 * rf()), pts = [];
+          if (!free(d, 18) || !free(d + 44, 12) || inRamp(d) || inRamp(d + 44) || tr0(d).t !== 1) continue;
+          for (const [dd, off] of pat) { const dm = d + dd, p = place(dm, T.laneX(dm) + off, T.laneY(dm) + 3, true, 8); if (!p) break; pts.push(p); }
+          if (pts.length === 5) { pts.forEach((p) => b.target('heli', p, T.yawAcross(d), { scale: 2.0, unarmed: true, grp: 'g' + k, drift: 2, driftSpeed: 0.5 })); busy.push(d, d + 44); (T.fstat = T.fstat || { n: 0 }).n++; break; }
+        }
+      }
+    }
+
     // v078 : MINI-BOSS (gros, plusieurs points de vie, armé, il s'enfuit à chaque coup) répartis sur le parcours avant le boss final
     for (const m of (T.mids || [])) {
       if (m.d < d0 + 10 || m.d >= d1 - 10) continue;
-      const air = m.type === 'heli', ly = T.laneY(m.d), p = place(m.d, T.laneX(m.d), air ? Math.max(ly, 16) : 0, air, air ? 12 : 9);
+      const air = m.type === 'heli' || !!(CC.BossFlying && CC.BossFlying[m.type]), ly = T.laneY(m.d), p = place(m.d, T.laneX(m.d), air ? Math.max(ly, 16) : 0, air, air ? 12 : 9);
       if (!p) continue;
-      b.target(m.type, p, T.yawAcross(m.d) + (m.type === 'tank' ? 180 : 0), { scale: 4.6, hp: m.hp, mini: true, unarmed: false, drift: air ? 6 : 2.5, driftSpeed: 0.4 });
+      b.target(m.type, p, T.yawAcross(m.d) + (m.type === 'tank' || (CC.BossModels && CC.BossModels[m.type]) ? 180 : 0), { scale: 4.6, hp: m.hp, mini: true, unarmed: false, drift: air ? 6 : 2.5, driftSpeed: 0.4, tint: m.tint || 0 });
       busy.push(m.d);
     }
 

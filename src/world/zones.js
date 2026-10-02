@@ -475,7 +475,13 @@
     const T = S.T, V0 = 64, meta = Z.meta[zone] || Z.meta.city, wl = meta.wall ? meta.wall(S.sr) : { mat: 'concrete', tint: '#c8ccd0' };
     for (let dc = S.d0; dc < S.d1; dc += 40) S.item(dc + 20, () => { for (const sg of [-1, 1]) S.bx(dc + 20, sg * (V0 + 12), 55, 24, 110, 40.6, wl.mat, wl.tint); });
     const dEnd = T.levelLen + 800; if (dEnd > S.d0 && dEnd <= S.d1 + 0.5) S.item(dEnd - 3, () => S.bx(dEnd - 3, 0, 55, 2 * (V0 + 24), 110, 6, wl.mat, wl.tint));
-    const dB = T.levelLen + 110; if (dB >= S.d0 && dB < S.d1) S.item(dB, () => { const bt = T.bossType || 'heli'; S.b.target(bt, S.at(dB, 0, bt === 'heli' ? 26 : 0), S.yaw(dB) + (bt === 'tank' ? 180 : 0), { scale: 6.5, hp: T.bossHp || 1, boss: true, unarmed: false, drift: bt === 'heli' ? 7 : 3, driftSpeed: 0.35 }); });
+    // v080 : le boss a SON design (CC.BossModels), il entre en vol depuis le fond de l'arène ; en altitude (tour, chute) il vole à la hauteur de la trajectoire
+    const dB = T.levelLen + 110, dS = T.levelLen + 380;
+    if (dS >= S.d0 && dS < S.d1) S.item(dS, () => {
+      const bt = T.bossType || 'heli', fly = bt === 'heli' || (CC.BossFlying && CC.BossFlying[bt]), yy = fly ? U.clamp(S.lane(dB).y, 24, 270) : 0, face = bt === 'tank' ? 180 : (CC.BossModels && CC.BossModels[bt] ? 180 : 0);
+      const st = S.at(dS, 0, yy), en = S.at(dB, 0, yy);
+      S.b.target(bt, st, S.yaw(dB) + face, { scale: 6.5, hp: T.bossHp || 1, boss: true, unarmed: false, drift: fly ? 7 : 3, driftSpeed: 0.35, tint: T.bossTint || 0, arrive: en });
+    });
   }
 
   /* ---------- point d'entrée : construit un tronçon de 200 m (sol, passages, scènes) ---------- */

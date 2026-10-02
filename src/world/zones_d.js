@@ -213,7 +213,7 @@
     L.motes(S, { n: 60, lx: [-46, 46], y: [2, 54], color: '#d8f8ff', size: 0.55, drift: [0, 2.2, 0], sway: 1.2, opacity: 0.6 });
     if (big) L.fleet(S, { model: 'sub', n: 1, lx: [-30, 30], y: [14, 40], speed: [6, 9], dir: 1, scale: [1, 1], sound: { name: 'shipHorn', range: 160, every: 30, param: 'far' } });
     // rayons de lumière : bandes verticales pâles depuis la surface
-    for (let i = 0; i < 6; i++) { const dc = S.d0 + S.sr() * S.len, lx = S.sr.between([-44, 44]); S.item(dc, () => S.bx(dc, lx, 40, S.sr.between([3, 8]), 100, 0.4, 'basic:#2a7a8a', undefined, false, { r: [0, S.yaw(dc), 0] })); }
+    // v080 : plus de rayons de lumière (de longs blocs que l'on traversait)
   }
   function seabed(S) {
     // le fond (dunes), la surface en plafond lumineux (mat eau), rochers
@@ -227,7 +227,7 @@
     for (let i = 0; i < 30; i++) { const dc = S.d0 + 10 + sr() * (S.len - 20), lx = sr.between([-1, 1]) * (S.vol(dc) - 3), h = sr.between([4, 22]), rad = sr.between([1.5, 4.5]);
       S.place(dc, lx, rad * 2.4, rad * 2.4, 0, h, (r) => { const col = r.pick(['#d8604a', '#e8a04a', '#c84a9a', '#4ab8a8', '#8a6ad8']); S.cyl(dc, lx, 0, rad, h, 'col:' + col, undefined, 8, rad * 0.5);
         for (let k = 0; k < 3; k++) S.cyl(dc + r.between([-rad, rad]), lx + r.between([-rad, rad]), h * 0.4, rad * 0.4, h * 0.6, 'col:' + col, undefined, 6, rad * 0.2, false); }, { m: 0.5 }); }
-    for (let i = 0; i < 40; i++) { const dc = S.d0 + S.sr() * S.len, lx = S.sr.between([-1, 1]) * S.vol(dc), h = S.sr.between([8, 26]); S.item(dc, (r) => S.bx(dc, lx, h / 2, 0.5, h, 0.5, 'col:#3a9a5a', undefined, false, { r: [0, S.yaw(dc), r.between([-8, 8])] })); }          // algues
+    // v080 : plus d'algues en longues barres sans collision
   } };
   eau.scenes.epave = { len: [230, 300], build(S) {
     const c = S.mid, Ln = S.lane(c);
@@ -270,7 +270,7 @@
         for (let i = 0; i < n; i++) { const dc = c - 75 + i * 15, L2 = S.lane(dc), inner = S.R * 1.6 + 7, top = L2.y + inner + 12;
           S.wall(dc, L2.lx - inner - 7, L2.lx + inner + 7, 0, top, 2.4, 'col:#e8e4d0', undefined, { lx: L2.lx, yc: L2.y, w: 2 * inner, h: 2 * inner - 4 });
           S.bx(dc, L2.lx, 0.5, 3, 1, 3.4, 'col:#d8d4c0', undefined, false); S.gate(dc, L2.lx, L2.y); }
-        S.bx(c, Ln.lx, 70, 4, 4, 170, 'col:#e8e4d0', undefined, false);
+        // v080 : la colonne vertébrale (un bloc de 170 m que l'on traversait) est retirée : il ne reste que les côtes
       });
       S.reserve(c, Ln.lx, 70, 175); S.rings(c - 90, 7, 26, 9);
     } };

@@ -43,7 +43,9 @@
       // design : variante de teinte par char (tirée de la position : stable d'une partie à l'autre)
       const vr = Math.abs(Math.round(pos[0] * 7 + pos[2] * 3)) % 3;
       this.model = type === 'tank' ? CC.Models.tank(vr) : type === 'heli' ? CC.Models.helicopter(false) : type === 'heliCamo' ? CC.Models.helicopter(true)
-        : type === 'truck' ? CC.Models.truck() : GEN_MODELS[type] ? GEN_MODELS[type]() : CC.Models.house();   // v032 : radar, dépôt, poste, lance-missiles
+        : type === 'truck' ? CC.Models.truck() : CC.BossModels && CC.BossModels[type] ? CC.BossModels[type](opts.tint) : GEN_MODELS[type] ? GEN_MODELS[type]() : CC.Models.house();   // v032 : radar, dépôt, poste, lance-missiles
+      this.gen = this.model.userData.gen ? this.model.userData : null;   // v080 : design de boss générique (models_boss.js)
+      this.arrive = opts.arrive ? new V().fromArray(opts.arrive) : null; this.grp = opts.grp || null; this.golden = !!(this.gen && this.gen.golden); this.rageK = 1;   // le boss entre en vol depuis le fond de l'arène
       this.ph = (vr + 1) * 1.7 + pos[0] * 0.13;             // phase propre (micro-mouvements désynchronisés)
       this.object.add(this.model);
       this.object.position.fromArray(pos);
@@ -118,12 +120,15 @@
       const rk = game.rocket && game.rocket.active ? game.rocket : null;
       if (this.path && game.state === 'FLIGHT' && rk && this.fleeDist < this.pathLen) { this.fleeDist += this.fleeSpeed * dt; this.placeOnPath(); }
       if (this.patrol) { this.patrolDist += this.patrolSpeed * dt; this.placeOnPatrol(); }
-      if (this.type === 'heli' || this.type === 'heliCamo') this.updateHeli(dt, game, rk);
-      if (this.type === 'tank' || this.type === 'sam') this.updateTank(dt, game, rk);
+      if (this.arrive && rk && rk.pos.distanceTo(this.base) < 600) { this.flyTo = this.arrive; this.flySpeed = 85; this.arrive = null; game.flash = Math.max(game.flash || 0, 0.28); game.flashColor = '#ff3a2a'; game.rig.shake = Math.max(game.rig.shake, 1.1); game.audio.play('alarm'); if (this.boss) game.audio.play('shipHorn'); }   // v080 : entrée du boss (sirène, secousse, éclat rouge)
+      if (this.gen) this.updateGeneric(dt, game, rk);
+      else if (this.type === 'heli' || this.type === 'heliCamo') this.updateHeli(dt, game, rk);
+      if (!this.gen && (this.type === 'tank' || this.type === 'sam')) this.updateTank(dt, game, rk);
       if (this.type === 'radar') this.model.userData.dish.rotation.y += dt * 1.1;
       if (this.model.userData.beacon) this.model.userData.beacon.visible = (this.t + this.ph) % 1.4 < 0.15;
       if (this.flyTo) { const dv = _v.subVectors(this.flyTo, this.base), dl = dv.length(); if (dl < 1) this.flyTo = null; else this.base.addScaledVector(dv, Math.min(1, (this.flySpeed || 90) * dt / dl)); }   // v076 : le boss s'éloigne après un coup
-      if (this.type === 'heli' || this.type === 'heliCamo') this.updateObb();
+      if (this.gen) { /* position et boîte déjà mises à jour */ }
+      else if (this.type === 'heli' || this.type === 'heliCamo') this.updateObb();
       else if (!this.path && !this.patrol && this.drift) {   // v070 : les cibles au sol bougent un peu (balancement, léger pivot)
         const sw = Math.sin(this.t * this.driftSpeed + this.ph), yw = this.yaw0 + Math.sin(this.t * 0.6 + this.ph) * 0.05;
         this.object.position.set(this.base.x + Math.cos(this.yaw0) * sw * this.drift, this.base.y, this.base.z - Math.sin(this.yaw0) * sw * this.drift); this.object.rotation.y = yw; this.updateObb();
@@ -135,7 +140,7 @@
         if (!this.passed && dd < 30) { this.passed = true; if (game.audio) game.audio.play('whoosh', this.object.position); }   // bruit quand on passe à côté
       }
       // tirs anti-aériens : tanks et hélicoptères, sauf une cible qui s'enfuit (v023 : elle fuit, elle ne se bat pas)
-      if (rk && game.state === 'FLIGHT' && !this.path && !this.unarmed && (this.type === 'tank' || this.type === 'sam' || this.type === 'heli' || this.type === 'heliCamo')) this.updateAA(dt, game, rk);
+      if (rk && game.state === 'FLIGHT' && !this.path && !this.unarmed && (this.gen || this.type === 'tank' || this.type === 'sam' || this.type === 'heli' || this.type === 'heliCamo')) this.updateAA(dt, game, rk);
       if (this.alert.visible) this.alert.position.y = this.size[1] + 1.2 + Math.sin(this.t * 6) * 0.1;
     }
 
@@ -199,6 +204,21 @@
           }
         }
       }
+    }
+
+    /* v080 : comportement commun des designs de boss : flottement ou pas lourd autour de la base, cap qui suit la roquette repérée (< 380 m),
+     * pièces mobiles animées par le modèle (ud.anim). */
+    updateGeneric(dt, game, rk) {
+      const ud = this.gen, t = this.t, ph = this.ph;
+      const side = _v.set(Math.cos(this.yaw0), 0, -Math.sin(this.yaw0)), pos = this.object.position;
+      pos.copy(this.base).addScaledVector(side, Math.sin(t * this.driftSpeed + ph) * this.drift);
+      if (ud.flying) pos.y += Math.sin(t * 1.1 + ph) * 1.1;
+      let want = this.yaw0;
+      if (rk && rk.pos.distanceTo(pos) < 380) { const d = _w.subVectors(rk.pos, pos); want = Math.atan2(-d.x, -d.z); }
+      let diff = want - this.yaw; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      this.yaw += U.clamp(diff, -0.7 * dt, 0.7 * dt); this.object.rotation.y = this.yaw;
+      if (ud.anim) ud.anim(dt, t);
+      this.updateObb();
     }
 
     /* Design : char. Moteur au ralenti (vibration, fumées d'échappement), tourelle qui suit la roquette avec inertie
@@ -279,7 +299,7 @@
       this.aaCool = (this.aaCool || 0) - dt;
       // point de tir de gameplay (inchangé : visibilité, portée, trajectoire) ; le départ visuel se fait à la bouche du canon
       const from = _v2.copy(this.obb.c);
-      if (this.type === 'tank' || this.type === 'sam') from.addScaledVector(this.obb.uy, this.obb.hy + 0.9); else from.addScaledVector(this.obb.uy, -(this.obb.hy + 0.6));
+      if (this.type === 'tank' || this.type === 'sam' || (this.gen && !this.gen.flying)) from.addScaledVector(this.obb.uy, this.obb.hy + 0.9); else from.addScaledVector(this.obb.uy, -(this.obb.hy + 0.6));
       const to = _v.subVectors(rk.pos, from);
       const dist = to.length();
       if (dist > L(A.range) || dist < A.minRange) { this.aaSeen = 0; return; }
@@ -300,7 +320,7 @@
       }
       const cap = game.level && game.level.aaMaxAlive ? game.level.aaMaxAlive : salvo ? A.maxAliveSalvo : A.maxAlive;   // v032 : plafond du profil de mission
       if (game.missiles.filter((m) => m.alive).length >= cap) return;
-      if (!salvo) this.aaCool = L(A.cooldown);
+      if (!salvo) this.aaCool = L(A.cooldown) * (this.rageK || 1);   // v080 : le boss blessé tire de plus en plus vite
       else if (this.burst > 0) { this.burst--; this.aaCool = this.burst > 0 ? A.salvoGap : L(A.cooldown) * A.salvoRest; }
       else { this.burst = A.salvoCount - 1; this.aaCool = A.salvoGap; game.aaVolleyT = now; }
       const miss = A.miss[1] + (A.miss[0] - A.miss[1]) * Math.pow(1 - d, A.missCurve);   // la précision progresse dès le milieu du parcours
@@ -311,7 +331,7 @@
 
     kill(game) {
       this.alive = false; this.object.visible = false;
-      if (game) this.makeWreck(game);
+      if (game && !this.golden) this.makeWreck(game);
     }
 
     /* Design : épave. Copie calcinée du modèle (un seul matériau sombre partagé), qui brûle et fume ; char : tourelle
@@ -336,7 +356,7 @@
           W.parts.push({ o: tg, vel: new V(r.range(-3, 3), r.range(10, 14), r.range(-3, 3)), spin: new V(r.range(-4, 4), r.range(-3, 3), r.range(-4, 4)), floor: this.object.position.y + 0.35, done: false });
         }
         obj.rotation.set(r.range(-0.04, 0.04), 0, r.range(-0.05, 0.05)); obj.position.y = -0.12;   // caisse affaissée
-      } else if (this.type === 'heli' || this.type === 'heliCamo') {
+      } else if (this.type === 'heli' || this.type === 'heliCamo' || (this.gen && this.gen.flying)) {
         W.vel.set(r.range(-3, 3), r.range(1, 3), r.range(-3, 3)); W.spin.set(r.range(-0.6, 0.6), r.range(2.5, 4) * (r() < 0.5 ? -1 : 1), r.range(-0.8, 0.8));
         const hit = game.world.raycast(this.object.position, new V(0, -1, 0), 400);
         W.ground = hit ? hit.point.y : this.object.position.y - 30;
@@ -363,7 +383,7 @@
           game.audio.play('brick', P.o.position);
         }
       }
-      if ((this.type === 'heli' || this.type === 'heliCamo') && !W.landed) {   // chute en vrille
+      if ((this.type === 'heli' || this.type === 'heliCamo' || (this.gen && this.gen.flying)) && !W.landed) {   // chute en vrille
         W.vel.y -= 11 * dt;
         W.root.position.addScaledVector(W.vel, dt);
         W.obj.rotation.x += W.spin.x * dt; W.obj.rotation.y += W.spin.y * dt; W.obj.rotation.z += W.spin.z * dt;

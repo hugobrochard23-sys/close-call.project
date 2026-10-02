@@ -317,7 +317,7 @@
       this.levelRun = ld; this.levelWin = false; this.coinFx = null;
       this.assistFuel = ld ? 3 * Math.min(5, ((this.save.lvl && this.save.lvl.tries && this.save.lvl.tries[ld.n]) || 0)) : 0;   // coup de pouce après plusieurs échecs
       if (ld) seed = ld.seed;
-      const ordP = this.params.get('order'), L = CC.Endless.level(seed, { zones: this.testMode ? null : this.progress.unlockedWorlds(), order: ld ? ld.order : (ordP ? ordP.split(',') : null), env: this.params.get('env') || null, levelLen: ld && ld.len, difK: ld && ld.difK, bossHp: ld && ld.hp, bossType: ld && ld.boss, padStyle: ld && ld.n, theme: ld && ld.theme, mids: ld && ld.mids });
+      const ordP = this.params.get('order'), L = CC.Endless.level(seed, { zones: this.testMode ? null : this.progress.unlockedWorlds(), order: ld ? ld.order : (ordP ? ordP.split(',') : null), env: this.params.get('env') || null, levelLen: ld && ld.len, difK: ld && ld.difK, bossHp: ld && ld.hp, bossType: ld && ld.boss, padStyle: ld && ld.n, theme: ld && ld.theme, mids: ld && ld.mids, bossTint: ld && ld.bossTint });
       this.loadLevelFrom(L, -1);
       this.endlessRun = new CC.Endless.Run(this, L);
       this.progress.beginRun(); this.reviveUsed = false; this.hudFeed.length = 0; this.cellHap = 0; this.cellSnd = 0;
@@ -613,9 +613,9 @@
 
     // v075 : coup sur un boss (il a plusieurs points de vie, la fusée traverse et doit revenir)
     hitBoss(t, rocket) {
-      t.hp--; t.hitCool = 0.9;
+      t.hp--; t.hitCool = 0.9; t.rageK = Math.max(0.45, (t.rageK || 1) * 0.78);
       { const run0 = this.endlessRun, T0 = run0.T, lv0 = this.levelRun; let dN = 0, best = 1e18; for (let d = Math.max(0, run0.dist - 40); d < run0.dist + 900; d += 6) { const p = T0.at(d, 0, 0), dx = p[0] - t.base.x, dz = p[2] - t.base.z, q = dx * dx + dz * dz; if (q < best) { best = q; dN = d; } }
-        const step = t.mini ? 70 : Math.max(45, Math.min(120, 330 / Math.max(1, t.hpMax))), dT = Math.min(dN + step, (lv0 ? lv0.len : 0) + 640), lx = (Math.random() - 0.5) * 50, yy = t.type === 'heli' ? 20 + Math.random() * 22 : 0, np = T0.at(dT, lx, yy);
+        const step = t.mini ? 70 : Math.max(45, Math.min(120, 330 / Math.max(1, t.hpMax))), dT = Math.min(dN + step, (lv0 ? lv0.len : 0) + 640), lx = (Math.random() - 0.5) * 50, yy = t.type === 'heli' || (t.gen && t.gen.flying) ? Math.max(20, t.base.y - T0.base(dN) + (Math.random() - 0.5) * 20) : 0, np = T0.at(dT, lx, yy);
         t.flyTo = new V(np[0], np[1], np[2]); t.flySpeed = 110; }   // il fuit vers le fond de l'arène et continue de tirer
       const run = this.endlessRun, fx = this.effects, c = rocket.pos.clone();
       fx.explosion(c, null, true, 'orange'); fx.ring(c, new V(0, 1, 0), 2, 36, 0.6, '#ffd060', 0.95); fx.flash(c, '#ffb040', 9, 110, 0.4, '#ff5020');
@@ -636,7 +636,7 @@
       t.kill(this);
       if (this.endlessRun) {   // v033 : la roquette traverse la cible et continue ; essence rechargée
         const run = this.endlessRun, fx = this.effects, up = new V(0, 1, 0), dir = rocket.vel.clone().normalize();
-        const val = (({ sam: 2, radar: 3 })[t.type] || 1) * (t.mini ? 3 : 1) * this.progress.pointMult(); if (t.mini) run.addFuel(CC.CONFIG.endless.fuelTarget * 1.5); run.points = (run.points || 0) + val; run.kills = (run.kills || 0) + 1;
+        const val = (({ sam: 2, radar: 3, golden: 5 })[t.type] || 1) * (t.mini ? 3 : 1) * this.progress.pointMult(); if (t.mini) run.addFuel(CC.CONFIG.endless.fuelTarget * 1.5); if (t.golden) run.addFuel(CC.CONFIG.endless.fuelTarget * 2.2); run.points = (run.points || 0) + val; run.kills = (run.kills || 0) + 1;
         run.stats.targets++; this.progress.event('targets'); this.progress.event('nuts', val); run.stats.nuts = (run.stats.nuts || 0) + val;
         run.addFuel(CC.CONFIG.endless.fuelTarget);
         // v073 : animation de destruction (simple, sans texte) : explosions, onde de choc, débris, fumée, secousse, ralenti très court
@@ -647,7 +647,11 @@
         { const sz = t.size ? new V(t.size[0], t.size[1], t.size[2]) : new V(5, 3, 5); fx.shatter(c, sz, rocket.vel, 'brick'); fx.shatter(c, sz.clone().multiplyScalar(0.7), rocket.vel, 'glass'); fx.shatter(c, sz.clone().multiplyScalar(1.2), rocket.vel.clone().multiplyScalar(1.4), 'planks');
           for (let k = 0; k < 3; k++) fx.addSmoker(c.clone().add(new V((Math.random() - 0.5) * 3, 0.5, (Math.random() - 0.5) * 3)), new V((Math.random() - 0.5) * 3, 5 + Math.random() * 3, (Math.random() - 0.5) * 3), 2.4, -1.5, 0.5, true);
           setTimeout(() => { try { fx.explosion(c.clone().add(new V((Math.random() - 0.5) * 6, 2 + Math.random() * 3, (Math.random() - 0.5) * 6)), null, true, 'orange'); } catch (e) { /* ignoré */ } }, 140); }
-        this.audio.play('boom', c); this.audio.play('target');
+        // v080 : séries (le son monte à chaque cible touchée en moins de 4 s : aucune information à l'écran), cible dorée, formation anéantie
+        { const nowS = performance.now() / 1000; run.streak = nowS - (run.streakT || -9) < 4 ? Math.min(8, (run.streak || 0) + 1) : 0; run.streakT = nowS; }
+        this.audio.play('boom', c); if (run.streak > 0) this.audio.play('door', null, run.streak); else this.audio.play('target');
+        if (t.golden) { this.audio.play('ringSeries'); fx.ring(c, up, 3, 46, 0.9, '#ffd23a', 0.95); fx.ring(c, new V(1, 0, 0), 2, 38, 0.8, '#fff4b0', 0.9); fx.flash(c, '#ffd23a', 12, 130, 0.6, '#ffb020'); this.flash = 0.3; this.flashColor = '#ffe9a0'; this.hitStop = 0.14; }
+        if (t.grp && this.targets.every((x) => x.grp !== t.grp || !x.alive)) { run.points = (run.points || 0) + 3 * this.progress.pointMult(); run.addFuel(CC.CONFIG.endless.fuelTarget * 1.5); this.audio.play('levelUp'); fx.ring(c, up, 3, 50, 1.0, '#ffd23a', 0.95); fx.flash(c, '#ffd23a', 10, 120, 0.5, '#ffb020'); this.hitStop = 0.12; }
         (this.killPops = this.killPops || []).push({ p: c.clone(), t0: performance.now(), txt: '+' + (Math.round(val * 10) / 10) });
         if (t.boss) this.onBossDead(t, c, rocket);
         if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('warn');
