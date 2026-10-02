@@ -128,6 +128,7 @@
   /* ajoute une flotte à une scène, limitée au tronçon en cours de construction ; retourne la flotte ou null */
   const FLEET_MAX = 14, MOTES_MAX = 60;   // v038 : plafonds (perfs téléphone : trop de poissons = écran noir)
   L.fleet = function (S, o) {
+    return null;   // v073 : plus aucun véhicule, avion, bateau, poisson, oiseau en mouvement (décor ultra simple)
     const c0 = Math.max(S.d0, S.c0), c1 = Math.min(S.d1, S.c1);
     if (c1 - c0 < 30 || o.n < 1 || o.model === 'bird' || o.model === 'gull' || o.model === 'balloon' || o.model === 'heli' || o.model === 'airliner' || o.model === 'fish' || o.model === 'jelly') return null;   // v053 : plus de poissons ni de méduses   // v036b/v039 : plus d'oiseaux, de ballons, d'hélicoptères ni d'avions de ligne (rien dans les airs qui gêne la lecture)
     // part de la flotte proportionnelle à la longueur du tronçon couvert
@@ -192,7 +193,8 @@
   }
   const T0 = (T, d, lx, y) => T.at(d, lx, y);
   L.Sweeper = Sweeper;
-  L.sweeper = function (S, o) { if (!S.inClip(o.d)) return null; const sw = new Sweeper(S, o); S.b.entity(sw); S.b.targets.push(sw); S.ctx.busy.push(o.d); return sw; };
+  L.sweeper = function (S, o) { if (!o.shutter || !S.inClip(o.d)) return null;   // v073 : seuls les volets des portes bougent
+    const sw = new Sweeper(S, o); S.b.entity(sw); S.b.targets.push(sw); S.ctx.busy.push(o.d); return sw; };
 
   // ---------- halos lumineux statiques (enseignes, lampadaires, fenêtres) : un seul objet `Points` par couleur et par tronçon ----------
   const glowMats = {};

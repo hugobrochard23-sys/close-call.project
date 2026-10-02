@@ -32,6 +32,7 @@
       const S = game.save;
       S.prog = Object.assign({ materials: 0, xp: 0, level: 1, runs: 0, best: 0, seed: 1, stats: {}, missions: [], seen: 1, launches: 0 }, S.prog || {});
       S.prog.stats = Object.assign({ dist: 0, targets: 0, cells: 0, boosts: 0, close: 0, gold: 0, time: 0 }, S.prog.stats);
+      if (!S.prog.scoreV2) { S.prog.best = 0; S.prog.scoreV2 = 1; }   // v073 : nouveau score (cibles touchées) : on repart d'un record vide
       this.P = S.prog;
       // v042 : l'XP est divisée par 10 (anciennes sauvegardes converties une fois) ; améliorations de la fusée
       if (!this.P.v2) { this.P.xp = Math.floor((this.P.xp || 0) / 10); this.P.missions = (this.P.missions || []).map((m) => Object.assign(m, { xp: Math.max(1, Math.round((m.xp || 10) / 10)) })); this.P.v2 = 1; }
@@ -141,7 +142,7 @@
      * de fin : lignes d'XP, niveau avant / après, décors débloqués, missions (état AU MOMENT de la fin, puis renouvelées). */
     endRun(info) {
       const P = this.P, r = this.run || { doneIds: [], missionXp: 0 }, cfg = C();
-      const dist = Math.floor(info.dist), bonus = Math.floor(info.bonus), score = dist + bonus;
+      const dist = Math.floor(info.dist), bonus = 0, score = Math.floor(info.points || 0);   // v073 : score = cibles touchées
       const lines = [];
       const xpDist = Math.floor(dist * cfg.xpPerMeter), xpBonus = Math.floor(bonus * cfg.xpPerBonus);
       lines.push({ label: 'DISTANCE', v: xpDist });

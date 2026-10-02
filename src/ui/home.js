@@ -397,7 +397,7 @@
     const barH = Home.drawTabs(ui, ctx, game, L, null);   // v043 : GARAGE · MAP · BOUTIQUE (au fil des niveaux)
     // v040 : plus de mission affichée sur l'accueil (elle reste dans l'onglet MISSION) ; aux 3 premiers vols, le but en trois lignes
     if ((prog.P.launches || 0) < 3) {
-      const base = Y(0.72), lines2 = [['TOUCHE LA ROQUETTE', '#e8ecef'], ['PASSE LES TROUS', '#d9a441'], ['FONCE SUR LES CHARS', '#d9a441']];
+      const base = Y(0.72), lines2 = [['TOUCHE LA ROQUETTE', '#e8ecef'], ['PASSE LES TROUS', '#d9a441'], ['TOUCHE LES CIBLES', '#d9a441']];
       lines2.slice(1).forEach(([g2, c2], i) => text(ui, ctx, g2, W / 2, base + i * u * 0.07, ui.fitPx([g2], W * 0.86, u * 0.005), c2, { align: 'center' }));
     }
     if (!touch) text(ui, ctx, 'ESPACE OU CLIC : LANCER    F1 : TOUCHES', W / 2, T + HH - barH - u * 0.035, ui.fitPx(['ESPACE OU CLIC : LANCER    F1 : TOUCHES'], W * 0.8, u * 0.0032), '#8a96a8', { align: 'center' });
@@ -423,7 +423,7 @@
       ctx.strokeStyle = 'rgba(11,14,20,0.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(sx, fy, fr, 0, 6.283); ctx.stroke();
       const msg = touch ? 'TOUCHE POUR LANCER' : 'CLIC OU ESPACE POUR LANCER';
       text(ui, ctx, msg, W / 2, sy + u * 0.47, ui.fitPx([msg], W * 0.84, u * 0.0058), '#ffffff', { align: 'center', outline: '#0b0e14' });
-      for (const [i, g2] of ['PASSE LES TROUS', 'FONCE SUR LES CHARS'].entries()) text(ui, ctx, g2, W / 2, sy + u * (0.56 + i * 0.065), ui.fitPx([g2], W * 0.8, u * 0.0046), '#d9a441', { align: 'center' });
+      for (const [i, g2] of ['PASSE LES TROUS', 'TOUCHE LES CIBLES'].entries()) text(ui, ctx, g2, W / 2, sy + u * (0.56 + i * 0.065), ui.fitPx([g2], W * 0.8, u * 0.0046), '#d9a441', { align: 'center' });
     }
   };
 

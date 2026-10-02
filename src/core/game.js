@@ -408,7 +408,7 @@
     finishEndless() {
       const run = this.endlessRun, S = this.save, dist = Math.round(run.dist);
       this.ui.overlay = null;
-      const res = this.progress.endRun({ dist: run.dist, bonus: run.bonus, time: this.runTime, maxMult: run.maxMult || 1 });
+      const res = this.progress.endRun({ dist: run.dist, bonus: 0, points: run.points || 0, time: this.runTime, maxMult: 1 });
       S.endless = S.endless || { best: 0, runs: 0 };
       S.endless.runs = (S.endless.runs || 0) + 1;
       if (dist > (S.endless.best || 0)) S.endless.best = dist;
@@ -424,6 +424,7 @@
     // v033 : chaque gain de STYLE recharge l'essence en mode CLASSIQUE (la destruction d'une cible a son propre bonus)
     // v034 : et compte dans le score (points de bonus) ; le journal du HUD l'annonce en français
     onStyleAward(label, points) {
+      if (this.endlessRun) return;   // v073 : plus de points de style en mode infini
       const run = this.endlessRun; if (!run) return;
       if (label === 'BOMB SMASH!') return;
       run.addFuel(points * CC.CONFIG.endless.fuelPerStyle);
@@ -436,6 +437,7 @@
     // v040 : porte serrée franchie. PARFAIT (centre tenu) enchaîne une série : plus la série est longue, plus la porte rapporte (et un peu d'essence) ;
     // un passage au bord casse la série.
     onDoor(perfect) {
+      if (this.endlessRun) return;   // v073 : plus de série de portes parfaites
       const run = this.endlessRun; if (!run) return;
       run.stats.doors = (run.stats.doors || 0) + 1;
       run.doorChain = perfect ? (run.doorChain || 0) + 1 : 0;
@@ -451,7 +453,8 @@
     }
 
     // v034 : journal du HUD (3 lignes courtes sous le score)
-    feed(text, color) { this.hudFeed.unshift({ text, color: color || '#ffffff', t: 0 }); if (this.hudFeed.length > 4) this.hudFeed.length = 4; }
+    feed(text, color) { if (this.endlessRun) return;   // v073 : plus de journal de messages en partie
+      this.hudFeed.unshift({ text, color: color || '#ffffff', t: 0 }); if (this.hudFeed.length > 4) this.hudFeed.length = 4; }
 
     // v034 : éclat / étoile / multiplicateur ramassé (Collect.update)
     onCollect(kind, pos) {
@@ -599,48 +602,20 @@
       const c = t.obb.c.clone();
       t.kill(this);
       if (this.endlessRun) {   // v033 : la roquette traverse la cible et continue ; essence rechargée
-        const run = this.endlessRun, ft = this.flightTime || 0, fx = this.effects;
-        run.killChain = (run.killT !== undefined && ft - run.killT < 6 && run.killChain) ? run.killChain + 1 : 1; run.killT = ft;
-        run.kills = (run.kills || 0) + 1; run.bestChain = Math.max(run.bestChain || 0, run.killChain);
-        const L = Math.min(6, run.killChain), up = new V(0, 1, 0), dir = rocket.vel.clone().normalize();
-        // v066 : DOPAMINE — plus la série est longue, plus la destruction est violente
-        fx.explosion(c, null, true, 'orange');
-        if (L >= 2) fx.explosion(c.clone().add(new V(0, 2.5, 0)), null, true, 'cyan');
-        if (L >= 5) fx.explosion(c.clone().add(new V(4, 1, 0)), null, true, 'orange');
-        fx.ring(c, up, 2, 22 + 7 * L, 0.6, L >= 3 ? '#7be8ff' : '#ffd060', 0.95);
-        fx.ring(c, dir, 1, 16 + 6 * L, 0.5, '#ffffff', 0.85);
-        fx.flash(c, '#ffb040', 6 + Math.min(L, 3), 90, 0.35, '#ff5020');
-        this.rig.shake = Math.min(1.7, 0.8 + 0.13 * L);
-        this.flash = Math.min(0.28, 0.1 + 0.03 * L); this.flashColor = L >= 4 ? '#bff4ff' : '#ffe0a0';
-        this.hitStop = 0.07 + 0.016 * L;                                  // ralenti à l'impact
-        { const sz = t.size ? new V(t.size[0], t.size[1], t.size[2]) : new V(5, 3, 5); fx.shatter(c, sz, rocket.vel, 'brick'); fx.shatter(c, sz.clone().multiplyScalar(0.7), rocket.vel, 'glass');
+        const run = this.endlessRun, fx = this.effects, up = new V(0, 1, 0), dir = rocket.vel.clone().normalize();
+        const val = ({ sam: 2, radar: 3 })[t.type] || 1; run.points = (run.points || 0) + val; run.kills = (run.kills || 0) + 1;
+        run.stats.targets++; this.progress.event('targets'); this.progress.event('nuts', val); run.stats.nuts = (run.stats.nuts || 0) + val;
+        run.addFuel(CC.CONFIG.endless.fuelTarget);
+        // v073 : animation de destruction (simple, sans texte) : explosions, onde de choc, débris, fumée, secousse, ralenti très court
+        fx.explosion(c, null, true, 'orange'); fx.explosion(c.clone().add(new V(0, 2.5, 0)), null, true, 'cyan');
+        fx.ring(c, up, 2, 30, 0.6, '#ffd060', 0.95); fx.ring(c, dir, 1, 22, 0.5, '#ffffff', 0.85);
+        fx.flash(c, '#ffb040', 8, 90, 0.35, '#ff5020');
+        this.rig.shake = 1.0; this.flash = 0.16; this.flashColor = '#ffe0a0'; this.hitStop = 0.09; this.hitScale = 0.18;
+        { const sz = t.size ? new V(t.size[0], t.size[1], t.size[2]) : new V(5, 3, 5); fx.shatter(c, sz, rocket.vel, 'brick'); fx.shatter(c, sz.clone().multiplyScalar(0.7), rocket.vel, 'glass'); fx.shatter(c, sz.clone().multiplyScalar(1.2), rocket.vel.clone().multiplyScalar(1.4), 'planks');
           for (let k = 0; k < 3; k++) fx.addSmoker(c.clone().add(new V((Math.random() - 0.5) * 3, 0.5, (Math.random() - 0.5) * 3)), new V((Math.random() - 0.5) * 3, 5 + Math.random() * 3, (Math.random() - 0.5) * 3), 2.4, -1.5, 0.5, true);
-          fx.shatter(c, sz.clone().multiplyScalar(1.2), rocket.vel.clone().multiplyScalar(1.4), 'planks');
-          setTimeout(() => { try { fx.explosion(c.clone().add(new V((Math.random() - 0.5) * 6, 2 + Math.random() * 3, (Math.random() - 0.5) * 6)), null, true, 'orange'); } catch (e) { /* ignoré */ } }, 140); }   // v070 : débris + explosion secondaire
+          setTimeout(() => { try { fx.explosion(c.clone().add(new V((Math.random() - 0.5) * 6, 2 + Math.random() * 3, (Math.random() - 0.5) * 6)), null, true, 'orange'); } catch (e) { /* ignoré */ } }, 140); }
         this.audio.play('boom', c); this.audio.play('target');
-        // v070 : PALIERS DE COMBO — 5 et 10 (puis tous les 5) : ralenti cinématique, barres de cinéma, pluie d'écrous
-        const mile = run.killChain === 5 ? 1 : run.killChain >= 10 && run.killChain % 5 === 0 ? 2 : 0;
-        if (mile) {
-          const nuts = mile === 1 ? 8 : 18 + 4 * (run.killChain / 5 - 2);
-          this.hitStop = mile === 2 ? 1.5 : 1.0; this.hitScale = mile === 2 ? 0.22 : 0.3; this.chromaBurst = mile === 2 ? 0.03 : 0.018;
-          this.cine = { t0: performance.now(), dur: this.hitStop * 1000 + 600, chain: run.killChain, mile, nuts };
-          this.progress.event('nuts', nuts); run.stats.nuts = (run.stats.nuts || 0) + nuts;
-          const nCoin = Math.min(40, nuts * 2); const arr = (this.coinFx = this.coinFx || []);
-          for (let i = 0; i < nCoin; i++) arr.push({ p: c.clone(), t0: performance.now() + i * 22, a: Math.random() * 6.283, sp: 160 + Math.random() * 380, ph: Math.random() * 6, sx: null, sy: null });
-          this.audio.play('gold'); this.audio.play('levelUp');
-          this.feed('COMBO ' + run.killChain + '  +' + nuts + ' ECROUS', '#ffd23a');
-        }
-        if (L >= 3) { try { this.audio.play('record'); } catch (e) { /* son absent */ } if (CC.Haptics) CC.Haptics.pattern('record'); }
-        run.addFuel(CC.CONFIG.endless.fuelTarget + Math.min(L - 1, 4) * 2);
-        if (!t.guard && (t.type === 'fuel' || t.type === 'truck' || t.type === 'tank' || t.type === 'heli')) {   // un char / camion / réservoir touché rapporte des écrous, multipliés par la série de portes
-          const n = (t.type === 'fuel' ? 3 : 2) * run.mult;
-          this.progress.event('nuts', n); run.stats.nuts = (run.stats.nuts || 0) + n;
-        }
-        const pts = Math.round(run.addBonus((t.guard ? 50 : CC.CONFIG.score.target) * run.killChain));
-        if (!t.guard) { run.stats.targets++; this.progress.event('targets'); }
-        this.feed((run.killChain >= 2 ? 'COMBO X' + run.killChain + '  +' : (t.guard ? 'ENNEMI  +' : 'CIBLE  +')) + pts, run.killChain >= 4 ? '#7be8ff' : run.killChain >= 2 ? '#ffd23a' : CC.CONFIG.hud.colors.green);
-        this.cellBump = 1.3;
-        (this.killPops = this.killPops || []).push({ p: c.clone(), t0: performance.now(), txt: '+' + pts, chain: run.killChain });
+        (this.killPops = this.killPops || []).push({ p: c.clone(), t0: performance.now(), txt: '+' + val });
         if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('warn');
         this.telemetry.event('targetHit', { target: t.type, speed: +rocket.vel.length().toFixed(2), runTime: +this.runTime.toFixed(3) });
         return;

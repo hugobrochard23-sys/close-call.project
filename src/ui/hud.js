@@ -228,9 +228,7 @@
       else if (!rk.thrusting && t < 6) { label = 'MAINTIENS : BOOST'; kind = 'hold'; }
       else if (run) {
         const d = run.dist;
-        if (CC.Zones.nextDoor && CC.Zones.nextDoor(run.T, d)) { label = 'PASSE PAR LE TROU'; kind = 'door'; }
-        else if (game.targets.some((q) => q.alive && !q.guard && q.pos && q.pos.distanceTo(rk.pos) < 330)) { label = 'FONCE SUR LE CHAR'; kind = 'fuel'; }
-        else if (rk.fuel / rk.fuelMax < 0.35) { label = 'RELACHE LE BOOST'; kind = 'hold'; }
+        if (game.targets.some((q) => q.alive && !q.guard && q.pos && q.pos.distanceTo(rk.pos) < 330)) { label = 'TOUCHE LA CIBLE'; kind = 'fuel'; }
       }
       if (!label) return;
       const ctx = this.ctx, px = this.refH * 0.0042, w = CC.Font.measure(label, px, !this.modern) + px * 14, h = px * 16, x = W / 2 - w / 2, y = H * 0.23;

@@ -195,7 +195,7 @@
         tgt.push({ d, lx, zone });
         reserved.push({ d: d - 8, lx, w: 24, dd: 26 });
         // v070 : cibles ÉPARPILLEES : des extras partout dans le volume (côtés, haut, bas), de plus en plus souvent
-        const pe = U.clamp((d - 700) / 8000, 0, 0.95), vv = T.vol(d);
+        const pe = U.clamp((d - 2500) / 9000, 0, 0.6), vv = T.vol(d);
         for (let e = 0; e < 2; e++) if (r() < pe * (e ? 0.4 : 1)) { const sg = r() < 0.5 ? -1 : 1; tgt.push({ d: d + r.between([-16, 16]), lx: U.clamp(lx + sg * r.between([9, Math.max(10, vv - 6)]), -(vv - 5), vv - 5), zone, extra: true, dy: r.between([-12, 18]) }); }
       }
       T.nextTarget = nextT(d);
@@ -224,7 +224,7 @@
     }
 
     // drones : ils balaient le passage (le rail rouge montre leur course) ; dans les scènes libres seulement
-    const nD = cfg.drones[st];
+    const nD = 0;   // v073 : plus de drones
     for (let i = 0; i < nD; i++) {
       const d = d0 + cfg.chunkLen * (i + r.between([0.25, 0.75])) / Math.max(1, nD);
       if (!free(d, 45) || inRamp(d) || tr0(d).t < 1 || zoneAt(d) === 'metro' && false) continue;
@@ -238,7 +238,7 @@
     }
 
     // ennemis (faibles, en nombre limité) : chars et lance-missiles en bordure du volume, hélicoptères en altitude ; selon la zone
-    const ramp = U.clamp(d0 / 7000, 0, 1), tanks = [], nT = Math.round(4 * ramp);   // v068 : ennemis de garde en nombre croissant
+    const ramp = 0, tanks = [], nT = 0;   // v073 : plus d'ennemis de garde : seulement les cibles sur la ligne   // v068 : ennemis de garde en nombre croissant
     for (let i = 0; i < nT; i++) {
       const d = d0 + cfg.chunkLen * (i + r.between([0.2, 0.8])) / nT, zn = zoneAt(d); if (!free(d, 14) || inRamp(d) || tr0(d).t < 1 || !CC.Zones.enemies(zn).tank) continue;
       const lx = CC.Zones.edgeLx(T, d, r() < 0.5 ? -1 : 1, zn); tanks.push({ type: 'tank', pos: T.at(d, lx, 0), yaw: 180 - Math.sign(lx) * 20 }); busy.push(d);
@@ -437,8 +437,8 @@
         if (this.altT > cfg.ceilingGrace) { this.altT = 0; g.onRocketCrash('altitude', rk.pos.clone(), null); }
       } else this.altT = 0;
     }
-    get mult() { return Math.min(this.multCap || 2, 1 + Math.floor((this.doorChain || 0) / 3)); }   // v042 : X1, X2, X3… selon la série de portes parfaites (plafond : amélioration MULTIPLICATEUR)
-    get score() { return Math.floor(this.dist) + Math.floor(this.bonus); }
+    get mult() { return 1; }   // v073 : plus de multiplicateur   // v042 : X1, X2, X3… selon la série de portes parfaites (plafond : amélioration MULTIPLICATEUR)
+    get score() { return this.points || 0; }   // v073 : le score = les cibles touchées
     addBonus(points) { const v = points * this.mult; this.bonus += v; return v; }
     addFuel(s) {
       const rk = this.game.rocket;

@@ -37,7 +37,7 @@
     }
   }
   function furniture(S, crosses, opts) {
-    opts = opts || {};
+    opts = Object.assign({}, opts || {}, { noCars: true });   // v073 : plus aucune voiture
     const cs = (dc) => crosses.some((c) => Math.abs(c - dc) < 12);
     // lampadaires (rythme régulier) et arbres d'alignement
     for (const s of [-1, 1]) {
@@ -48,7 +48,7 @@
         S.bx(dc, lx - s * 2.5, h - 0.15, 0.9, 0.22, 0.6, S.dark ? 'basic:#ffe8b0' : 'col:#dcdcd4', undefined, false);
         if (S.dark) S.glow(dc, lx - s * 2.5, h - 0.4, '#ffb864', 7);
       }); });
-      if (!opts.noTrees) S.rows(S.d0 + 8, S.d1, 15, 0.12, (dc) => { if (cs(dc)) return; S.item(dc, (r) => {
+      if (!opts.noTrees) S.rows(S.d0 + 8, S.d1, 45, 0.2, (dc) => { if (cs(dc)) return; S.item(dc, (r) => {
         const p = S.at(dc, s * (S.vol(dc) - 5.2), 0);
         S.kit('tree', r, { t: 'tree', x: p[0], z: p[2], y0: p[1], h: r.between([6.5, 9]), rad: 0.3, broad: true });
       }); });
@@ -411,7 +411,7 @@
       if (S.b.arrow) for (const k of [0, 1]) { const e = S.b.arrow(S.at(dcRim - 14 - k * 12, lx, y + 7 + k * 2), 0); if (e && e.object) e.object.scale.setScalar(2.6); }
     });
   }
-  function climbHelis(S, A, s0, s1, step) { for (let s = s0, i = 0; s < s1; s += step, i++) { const dc = A(s), L = S.lane(dc); tgt(S, 'heli', dc, U.clamp(L.lx + (i % 2 ? 7 : -7), -12, 12), L.y + 2); } }
+  function climbHelis(S, A, s0, s1, step) { return; for (let s = s0, i = 0; s < s1; s += step, i++) { const dc = A(s), L = S.lane(dc); tgt(S, 'heli', dc, U.clamp(L.lx + (i % 2 ? 7 : -7), -12, 12), L.y + 2); } }
   // CITY 1 : copie de la séquence du niveau d'origine : rue de 18 m, bâtiment tunnel, bâtiment à vitres, toits bas + panneau + grue,
   // montée sur les toits, bloc du disque d'accroche, puis la CHUTE LIBRE VERTICALE dans le puits (70 câbles et 18 poutres en I aux positions exactes) et le couloir de sortie
   const PIT = 800, SHIFT = 190;   // début du puits (m dans la scène) ; altitude du fond du puits d'origine (y = -190) ramenée au sol (0)
@@ -500,6 +500,7 @@
     } };
   // v060 : un RESERVOIR à la fin de chaque grande section (les scènes à trajectoire imposée n'en reçoivent pas du générateur)
   function endTank(S, sEnd) {
+    return;   // v073 : plus de réservoir : le carburant vient des cibles
     const dc = sEnd !== undefined ? S.d0 + sEnd : S.d1 - 22, L = S.lane(dc);
     S.item(dc, () => { S.b.target('fuel', S.at(dc, L.lx, 0), S.yaw(dc), { unarmed: true }); S.gate(dc - 22, L.lx, 9); S.gate(dc, L.lx, 3.5); if (S.ctx.busy) S.ctx.busy.push(dc); });
   }

@@ -69,7 +69,7 @@
           const yc = Math.max(Ln.y, lo2 + hh / 2 + 0.4), amp = U.clamp(hole * 0.34, 1.8, 4.6), h0 = amp + 0.4, per = U.lerp(5.6, 3.2, U.clamp(d / 8000, 0, 1)), tn = r.pick(th.tints), dd = 4;
           S.bx(d, 0, (yc + hh / 2 + top2) / 2, 2 * v, top2 - (yc + hh / 2), dd, th.mat, tn);
           if (yc - hh / 2 > lo2 + 0.5) S.bx(d, 0, (lo2 + yc - hh / 2) / 2, 2 * v, yc - hh / 2 - lo2, dd, th.mat, tn);
-          for (const sg of [-1, 1]) CC.Life.sweeper(S, { mode: 'across', d, lx: Ln.lx + sg * (h0 + v / 2), y: yc, amp, period: per, phase: sg < 0 ? 0 : Math.PI, parts: [[0, 0, 0, v, hh, dd + 0.6, '#7c8088'], [0, hh / 2 - 0.35, 0, v + 0.2, 0.7, dd + 1, '#e8c020'], [0, -hh / 2 + 0.35, 0, v + 0.2, 0.7, dd + 1, '#e8c020']], size: [v, hh, dd + 0.6], cause: 'mover' });
+          for (const sg of [-1, 1]) CC.Life.sweeper(S, { shutter: true, mode: 'across', d, lx: Ln.lx + sg * (h0 + v / 2), y: yc, amp, period: per, phase: sg < 0 ? 0 : Math.PI, parts: [[0, 0, 0, v, hh, dd + 0.6, '#7c8088'], [0, hh / 2 - 0.35, 0, v + 0.2, 0.7, dd + 1, '#e8c020'], [0, -hh / 2 + 0.35, 0, v + 0.2, 0.7, dd + 1, '#e8c020']], size: [v, hh, dd + 0.6], cause: 'mover' });
           S.bx(d, Ln.lx, yc + hh / 2 + 0.3, 2 * (h0 + amp) + 1.6, 0.6, dd + 0.4, 'hazard', undefined, false, { shadow: false });
           yc0 = yc; wd0 = 2 * (h0 + amp); hd0 = hh; return;
         }

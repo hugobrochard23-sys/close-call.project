@@ -200,7 +200,8 @@
       return plan;
     }
     const r = G.stream(T.seed, 'plan' + zi);
-    const skipQ = (new URLSearchParams(location.search).get('skip') || '').split(',');   // banc de test : ?skip=city1,escalier
+    const skipQ = (new URLSearchParams(location.search).get('skip') || '').split(',');
+    skipQ.push('rame', 'presses', 'bras', 'chaine', 'grues', 'squelette', 'arche', 'levant', 'convoi', 'camp', 'helis', 'convoi2', 'camp2', 'helis2');   // v073 : scènes avec éléments mobiles ou superflus   // banc de test : ?skip=city1,escalier
     const names = Object.keys(def.scenes).filter((n) => n !== def.signature && skipQ.indexOf(n) < 0);
     for (let i = names.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = names[i]; names[i] = names[j]; names[j] = t; }
     if (def.early) {   // v057 : une scène « copie du niveau d'origine » + une scène spéciale parmi les premières de la zone (jamais en toute première)
@@ -298,6 +299,7 @@
     }
     // anneaux d'or (séries) : n anneaux espacés de gap m à partir de dc, sur la trajectoire ; le passage à travers tous = SERIE PARFAITE
     rings(dc, n, gap, radius) {
+      return;   // v073 : plus d'anneaux d'or (information superflue)
       const gid = this.sc.key + '_' + dc, rad = radius || 8;
       for (let i = 0; i < n; i++) { const d = dc + i * gap; if (!this.inClip(d)) continue; const L = this.lane(d);
         this.ctx.rings.push({ d, lx: L.lx, y: L.y, rad, gid, n, i });

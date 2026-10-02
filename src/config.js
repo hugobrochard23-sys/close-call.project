@@ -226,21 +226,21 @@ CC.CONFIG = {
     laneAmp: [13, 16, 19, 21],   // v034c : amplitude latérale (m) de la trajectoire qui serpente, par palier
     tight: { first: 220, gap: [82, 70, 60, 52], hole: [12, 10.5, 9.5, 8.5] },   // v039 : passages beaucoup plus serrés et plus fréquents   // v038 : PORTES SERREES — un panneau plein à travers le couloir, percé d'un trou sur la trajectoire (m entre deux portes, côté du trou, par palier)
     gate: [70, 105],             // m entre deux portes (structures qui cadrent le passage)
-    density: { city: 0.8, night: 0.8, forest: 1.5, snow: 1.15, desert: 0.6, industry: 0.8, canyon: 0.65 },   // remplissage du volume par zone
+    density: { city: 0.8, night: 0.8, forest: 0.5, snow: 1.15, desert: 0.6, industry: 0.8, canyon: 0.65 },   // remplissage du volume par zone
     ceiling: 99999,              // v035 : plus de plafond (les zones ont leur propre hauteur : métro, base aérienne, pièce…)                 // m : altitude au-dessus de laquelle l'alarme ALTITUDE! se déclenche
     ceilingGrace: 1.5,           // s au-dessus du plafond avant l'explosion
     cruise: 14,                  // m : altitude de vol du pilote automatique (banc de test)
     fuelDrain: 1.75,              // v039 : l'essence descend 1,5× plus vite en boost
     fuelStart: 38,               // s d'essence au départ (v034b : 14 → 30)
     fuelMax: 46,                 // s : taille du réservoir
-    fuelPerStyle: 0.0035,        // s d'essence gagnées par point de STYLE (COLD IMPACT X2 = 200 pts → +0,7 s)
+    fuelPerStyle: 0,        // s d'essence gagnées par point de STYLE (COLD IMPACT X2 = 200 pts → +0,7 s)
     fuelTarget: 10,              // s d'essence par cible détruite en route
     targetGap: [190, 280],       // m entre deux cibles à détruire
     threat: [0.15, 0.15, 0.15, 0.15],   // précision des missiles constante : la difficulté vient du NOMBRE     // menace des tirs ennemis par palier (v034b : adoucie, on ne progressait plus vers 3 000 m)
     tanks: [1, 2, 2, 3],         // chars ennemis par tronçon et par palier
     sams: [0, 1, 2, 2],          // v034b : lance-missiles par tronçon
     helis: [0, 1, 1, 2],         // v034b : hélicoptères de garde par tronçon
-    drones: [0, 0, 1, 1],        // v034 : drones (obstacle mobile) par tronçon et par palier
+    drones: [0, 0, 0, 0],        // v034 : drones (obstacle mobile) par tronçon et par palier
     droneSpeed: [4.5, 4.0, 3.4, 2.9],   // s par aller-retour d'un drone, par palier (plus court = plus vif)
     maxMissiles: [2, 3, 3, 4],   // missiles ennemis en vol en même temps, par palier
   },
@@ -331,8 +331,8 @@ CC.CONFIG = {
     firstRunXp: 3,              // XP du tout premier vol
     levelBase: 30, levelStep: 20, levelMaterials: 20,   // XP pour passer du niveau n au suivant : base + step × (n − 1) ; matériaux offerts à chaque niveau   // XP pour passer du niveau n au suivant : base + step × (n − 1)
     missionSlots: 1,
-    cityOnly: true,              // v067 : on soigne la VILLE d'abord ; les autres décors seront refaits sur le même modèle
-    worlds: { city: 1, forest: 1, port: 2, usine: 2, tour: 2, sky: 2, chute: 3, metro: 3, mini: 4, eau: 4 },   // niveau qui débloque chaque décor
+    cityOnly: false,              // v067 : on soigne la VILLE d'abord ; les autres décors seront refaits sur le même modèle
+    worlds: { city: 1, forest: 1, port: 1, usine: 1, tour: 1, sky: 1, chute: 1, metro: 1, mini: 1, eau: 1 },   // niveau qui débloque chaque décor
     ranks: ['RECRUE', 'PILOTE', 'AS', 'CAPITAINE', 'MAJOR', 'COMMANDANT', 'LEGENDE'],
   },
 
