@@ -181,8 +181,10 @@
   Home.drawGarage = function (ui, ctx, game, W, H) {
     const L = Home.layout(ui, W, H), { T, HH, u } = L, m = u * 0.04;
     if (ui.garagePage === 'mods') Home.drawModules(ui, ctx, game, W, H); else oldGarage.apply(this, arguments);
-    const top = T + HH * 0.1 + 2 + HH * 0.05 + HH * 0.018, th = HH * 0.062, bw = Math.min(W * 0.3, 120), bh = th * 0.7, bx = m * 1.6, by = top + (th - bh) / 2, mods = ui.garagePage === 'mods';
+    const top = T + HH * 0.1 + 2 + HH * 0.05 + HH * 0.018, th = HH * 0.062, bw = W * 0.24, bh = th * 0.7, bx = m * 1.6, by = top + (th - bh) / 2, mods = ui.garagePage === 'mods';
     panel(ctx, bx, by, bw, bh, mods ? '#3a3320' : '#2f4a3a', mods ? GOLD : GREEN, 6); txt(ctx, mods ? '< AMELIO.' : 'MODULES >', bx + bw / 2, by + bh * 0.3, bw - 8, 1.3, mods ? GOLD : GREEN, 'center');
     hit(ui, bx, by, bw, bh, () => { ui.garagePage = mods ? null : 'mods'; });
+    if (!mods) { const tip = 'ECROUS : ACHETE DES AMELIORATIONS ICI', tp = Math.min(1.1, (W - 2 * m) / Math.max(1, F.measure(tip, 1))); F.draw(ctx, tip, W / 2, top + th + 1, tp, '#d9a441', { align: 'center' }); }   // v085 : à quoi servent les écrous
+    drawToast(ui, ctx, L);
   };
 })();

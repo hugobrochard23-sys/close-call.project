@@ -389,7 +389,8 @@
     { const nl = U.formatInt(prog.P.materials || 0), nh = gr * 1.5, npx = nh * 0.075, nw = F.measure(nl, npx) + nh * 1.4, nx = gx - gr * 0.2, ny = gy + gr * 1.4;
       pill(ctx, nx - nw + gr * 1.2, ny, nw, nh, 'rgba(38,45,54,0.97)', '#5a6674', nh * 0.3);
       Home.drawCoinIcon(ctx, nx - nw + gr * 1.2 + nh * 0.55, ny + nh / 2, nh * 0.95);
-      text(ui, ctx, nl, nx + gr * 1.2 - nh * 0.3, ny + nh / 2 - npx * 3.6, npx, '#e8ecef', { align: 'right' }); }
+      text(ui, ctx, nl, nx + gr * 1.2 - nh * 0.3, ny + nh / 2 - npx * 3.6, npx, '#e8ecef', { align: 'right' });
+      hit(ui, nx - nw + gr * 1.2, ny, nw, nh, () => { ui.overlay = 'garage'; if (CC.Home.toast) CC.Home.toast(ui, 'ECROUS : AMELIORE TA FUSEE ICI'); }); }   // v085 : toucher les écrous ouvre le garage
     // APPUYER POUR JOUER (sous la roquette)
     { const pj = 'APPUYER POUR JOUER'; text(ui, ctx, pj, W / 2, Y(0.66), ui.fitPx([pj], W * 0.8, u * 0.0075 + Math.sin(performance.now() * 0.005) * 0), '#e8ecef', { align: 'center', alpha: 0.75 + 0.25 * Math.sin(performance.now() * 0.006) }); }
     // 1. la roquette : anneau pulsant + doigt qui touche (les 3 premiers vols : consigne écrite en plus)

@@ -192,6 +192,7 @@
         Home.drawCoinIcon(ctx, gx2 + ic / 2, Y(0.6) + np * 3.5, ic);
         text(ctx, lbl, gx2 + ic + np * 3, Y(0.6) - (pop - 1) * np * 8, np * pop, GOLD, {});
       }
+      if (t > 2.4 && (game.settings.coinTips || 0) < 4) { const tip = 'ECROUS : AMELIORATIONS AU GARAGE', tf = ui.fitPx([tip], W * 0.9, u * 0.0036); text(ctx, tip, cx, Y(0.64), tf, '#8fd0ff', { align: 'center' }); if (!r.tipCounted) { r.tipCounted = true; game.settings.coinTips = (game.settings.coinTips || 0) + 1; game.writeSave(); } }   // v085 : explique l'utilité des écrous les premières fois
       if (t < 2.3 && (r.tickAt || 0) + 0.06 < t && t > 1.25) { r.tickAt = t; game.audio.play('xpTick', null, Math.floor(shown / Math.max(1, lv.chest) * 8)); }
       // v082 : étoiles (apparaissent une à une), module(s) trouvé(s), XP du pass
       if (lv.stars !== undefined && Home.drawStars) {

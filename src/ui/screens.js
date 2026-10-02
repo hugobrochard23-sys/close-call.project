@@ -77,7 +77,7 @@
   // ---------- barre de trois onglets ----------
   Home.drawTabs = function (ui, ctx, game, L, active) {
     const { W, HH, T, u } = L, lvl = game.progress.level;
-    const list = [{ id: 'garage', icon: 'wrench', label: 'GARAGE', lv: 2 }, { id: 'pass', icon: 'star', label: 'PASS', lv: 2 }, { id: 'map', icon: 'pin', label: 'MAP', lv: 3 }, { id: 'shop', icon: 'shop', label: 'BOUTIQUE', lv: 5 }].filter((t) => lvl >= t.lv);
+    const list = [{ id: 'garage', icon: 'wrench', label: 'GARAGE', lv: 2 }, { id: 'pass', icon: 'star', label: 'PASS', lv: 2 }, { id: 'map', icon: 'pin', label: 'MAP', lv: 3 }, { id: 'shop', icon: 'shop', label: 'BOUTIQUE', lv: 5 }];   // v085 : toujours visibles (avant : cachés tant que le niveau de pilote était trop bas)
     if (!list.length) return 0;
     const bh = HH * 0.085, bw = Math.min(W * 0.94, W * 0.31 * list.length), bx = (W - bw) / 2, by = T + HH - bh - HH * 0.03, cw = bw / list.length;
     panel(ctx, bx, by, bw, bh, NAVY, EDGE, bh * 0.14);

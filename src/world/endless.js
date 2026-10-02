@@ -254,7 +254,7 @@
       const sA = (CC.Zones.plan(T, T.zoneIndex(d)).scenes.find((q) => d >= q.d0 && d < q.d1)) || null;
       if (!sA || sA.name === 'arene' || d > T.levelLen - 30) continue;
       if (!((T.ease === undefined ? 1 : T.ease) < 0.25 || sA.name === 'city1' || sA.name === 'escalier' || (CC.Zones.reliefNames || []).indexOf(sA.name) >= 0)) continue;
-      const pa = T.at(d, T.laneX(d), T.laneY(d) - 2.2), pb = T.at(d + 12, T.laneX(d + 12), T.laneY(d + 12) - 2.2), o = CC.Models.guideArrow(), P = new THREE.Vector3(pa[0], pa[1], pa[2]);
+      const pa = T.at(d, T.laneX(d), T.laneY(d) - 2.2), pb = T.at(d + 45, T.laneX(d + 45), T.laneY(d + 45) - 2.2), o = CC.Models.guideArrow(), P = new THREE.Vector3(pa[0], pa[1], pa[2]);
       o.position.copy(P); o.lookAt(new THREE.Vector3(pb[0], pb[1], pb[2])); o.rotateX(0.6); o.scale.setScalar(2.4);
       b.entity({ object: o, t: Math.random() * 6, base: P.y, update(dt) { this.t += dt; this.object.position.y = this.base + Math.sin(this.t * 3) * 0.3; } });
     }
