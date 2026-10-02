@@ -10,8 +10,8 @@
     usine: { mat: 'metal', tints: ['#b8b4a8', '#a8a49c', '#c8b890'] }, forest: { mat: 'bark', tints: ['#8a7a68', '#7a6a58'] }, sky: { mat: 'metal', tints: ['#d0d4dc', '#b8c0cc'] },
     tour: { mat: 'concreteDark', tints: ['#c8ccd0', '#b8bcc4'] }, chute: { mat: 'concreteDark', tints: ['#c8ccd0', '#b8bcc4'] }, eau: { mat: 'rock', tints: ['#6a8a90', '#5a7a82'] },
   };
-  const gapOf = (d) => [46, 38, 31, 26][U.clamp(Math.floor(d / C().stageLen), 0, 3)];
-  const WEIGHTS = { pillar: 3, beam: 2.6, diag: 2, laser: 1.6, hoop: 1.6, stagger: 1.6, block: 1.6, grid: 1.2 };
+  const gapOf = (d) => [84, 70, 58, 48][U.clamp(Math.floor(d / C().stageLen), 0, 3)];   // v067 : carte plus lisible
+  const WEIGHTS = { pillar: 3.5, beam: 3, laser: 1.2, hoop: 1.4, block: 1.4 };
 
   function list(T, dmax) {
     const L = T._chaos || (T._chaos = { pos: [], next: 300, r: G.stream(T.seed, 'chaos') });

@@ -493,8 +493,44 @@
   for (const nm of ['ruelle', 'slalom', 'plongee', 'enfilade']) { const b0 = city.scenes[nm].build; city.scenes[nm].build = function (S) { b0.call(this, S); endTank(S); }; }
   { const b1 = city.scenes.city1.build; city.scenes.city1.build = function (S) { b1.call(this, S); endTank(S, PIT + 68); }; }
   { const b2 = city.scenes.escalier.build; city.scenes.escalier.build = function (S) { b2.call(this, S); endTank(S, SH + 66); }; }
+
+  // ---------- v067 : MISSIONS MILITAIRES dans la ville — des groupes de cibles à détruire en série (combo) ----------
+  const TS = { tank: 2.4, truck: 2.4, sam: 2.4, radar: 2.4, heli: 2.2 };
+  function tgt(S, type, dc, lx, y, yawAdd) {
+    S.item(dc, () => { S.b.target(type, S.at(dc, lx, y || 0), S.yaw(dc) + (yawAdd || 0) + (type === 'truck' ? 90 : type === 'tank' ? 180 : 0), { unarmed: false, scale: TS[type] || 2.4 }); S.gate(dc - 14, S.lane(dc - 14).lx, 8); S.gate(dc, lx, Math.max(4, y || 5)); });
+  }
+  function sandbags(S, dc, lx, n) { for (let i = 0; i < n; i++) S.item(dc + i * 3.2, () => S.bx(dc + i * 3.2, lx, 0.8, 3, 1.6, 1.4, 'col:#8a7a58', undefined, true)); }
+  // CONVOI : une colonne de camions et de chars sur l'avenue, un hélicoptère de couverture au bout
+  city.scenes.convoi = { len: [250, 300], noDoor: true, noChaos: true, build(S) {
+    const sr = S.sr, dist = district(S, sr.between([30, 44]), sr.between([48, 70]));
+    avenueRoad(S, []); furniture(S, [], {});
+    for (const s of [-1, 1]) buildingRow(S, s, dist, [], 0, { shops: true });
+    const n = 6; for (let i = 0; i < n; i++) { const dc = S.d0 + 62 + i * 30, L = S.lane(dc); tgt(S, i % 3 === 1 ? 'tank' : 'truck', dc, U.clamp(L.lx + (i % 2 ? 5 : -5), -9, 9)); sandbags(S, dc - 6, i % 2 ? -14 : 14, 3); }
+    tgt(S, 'heli', S.d1 - 40, S.lane(S.d1 - 40).lx + 6, 22);
+    farTowers(S, 80, 170, 4);
+  } };
+  // CAMP : une place dégagée avec un anneau de chars, des lance-missiles et un radar au centre
+  city.scenes.camp = { len: [230, 280], noDoor: true, noChaos: true, build(S) {
+    const sr = S.sr, dist = district(S, sr.between([30, 44]), sr.between([48, 70])), c = S.mid;
+    avenueRoad(S, []); furniture(S, [], { noTrees: true });
+    for (const s of [-1, 1]) buildingRow(S, s, dist, [], 0, { shops: true, skip: (cx) => Math.abs(cx - c) < 60 });
+    for (const [i, a] of [[0, -1], [1, 1], [2, -1], [3, 1]]) { const dc = c - 54 + i * 36; tgt(S, 'tank', dc, a * 13); sandbags(S, dc - 4, a * 22, 3); }
+    tgt(S, 'sam', c - 30, -22); tgt(S, 'sam', c + 34, 22); tgt(S, 'radar', c, 0);
+    for (let i = 0; i < 5; i++) S.item(c - 70 + i * 34, () => S.bx(c - 70 + i * 34, i % 2 ? 30 : -30, 2.6, 8, 5.2, 9, 'col:#6a7a4a', undefined, true));   // tentes
+    farTowers(S, 80, 170, 4);
+  } };
+  // HELICOPTERES : un couloir d'immeubles hauts, trois hélicoptères en vol stationnaire et deux lance-missiles sur les toits
+  city.scenes.helis = { len: [230, 280], noDoor: true, noChaos: true, build(S) {
+    const sr = S.sr, dist = district(S, sr.between([60, 84]), sr.between([84, 110]));
+    avenueRoad(S, []); furniture(S, [], {});
+    for (const s of [-1, 1]) buildingRow(S, s, dist, [], 0, { shops: true });
+    for (let i = 0; i < 3; i++) { const dc = S.d0 + 70 + i * 52, L = S.lane(dc); tgt(S, 'heli', dc, U.clamp(L.lx + (i % 2 ? 9 : -9), -12, 12), U.clamp(L.y + (i - 1) * 4, 14, 34)); }
+    for (const s of [-1, 1]) { const dc = S.d0 + 110 + (s > 0 ? 40 : 0), v = S.vol(dc) + 12; S.item(dc, () => { S.bx(dc, s * v, 24, 14, 48, 14, dist.mat, '#e8ecf0'); }); tgt(S, 'sam', dc, s * v, 48); }
+    farTowers(S, 90, 180, 4);
+  } };
+  city.scenes.convoi2 = Object.assign({}, city.scenes.convoi); city.scenes.camp2 = Object.assign({}, city.scenes.camp); city.scenes.helis2 = Object.assign({}, city.scenes.helis);
   city.notFirst = ['toits'];
-  city.early = [['city1', 'escalier'], ['virage', 'chicane', 'epingle']];
+  city.early = [['convoi', 'camp', 'helis'], ['city1', 'escalier', 'virage', 'convoi2', 'camp2', 'helis2']];
 
 
   // ---------- v063 : VIRAGES — le couloir tourne (le décor et les obstacles suivent) ----------

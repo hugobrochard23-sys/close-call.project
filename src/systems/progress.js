@@ -68,7 +68,7 @@
     get xp() { return this.P.xp; }
     rank(level) { const R = C().ranks; return R[Math.min(R.length - 1, Math.floor((level - 1) / 3))]; }
     // décors ouverts au niveau donné, dans l'ordre d'apparition
-    worldsAt(level) { const W = C().worlds; return Object.keys(W).filter((k) => W[k] <= level); }
+    worldsAt(level) { if (C().cityOnly) return ['city']; const W = C().worlds; return Object.keys(W).filter((k) => W[k] <= level); }
     worldName(id) { return (CC.Endless && CC.Endless.Zones[id] && CC.Endless.Zones[id].label) || id.toUpperCase(); }
     unlockedWorlds() { return this.worldsAt(this.P.level); }
 

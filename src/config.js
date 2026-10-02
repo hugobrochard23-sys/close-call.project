@@ -235,7 +235,7 @@ CC.CONFIG = {
     fuelMax: 46,                 // s : taille du réservoir
     fuelPerStyle: 0.0035,        // s d'essence gagnées par point de STYLE (COLD IMPACT X2 = 200 pts → +0,7 s)
     fuelTarget: 10,              // s d'essence par cible détruite en route
-    targetGap: [95, 150],       // m entre deux cibles à détruire
+    targetGap: [190, 280],       // m entre deux cibles à détruire
     threat: [0.15, 0.3, 0.45, 0.6],     // menace des tirs ennemis par palier (v034b : adoucie, on ne progressait plus vers 3 000 m)
     tanks: [1, 2, 2, 3],         // chars ennemis par tronçon et par palier
     sams: [0, 1, 2, 2],          // v034b : lance-missiles par tronçon
@@ -331,6 +331,7 @@ CC.CONFIG = {
     firstRunXp: 3,              // XP du tout premier vol
     levelBase: 30, levelStep: 20, levelMaterials: 20,   // XP pour passer du niveau n au suivant : base + step × (n − 1) ; matériaux offerts à chaque niveau   // XP pour passer du niveau n au suivant : base + step × (n − 1)
     missionSlots: 1,
+    cityOnly: true,              // v067 : on soigne la VILLE d'abord ; les autres décors seront refaits sur le même modèle
     worlds: { city: 1, forest: 1, port: 2, usine: 2, tour: 2, sky: 2, chute: 3, metro: 3, mini: 4, eau: 4 },   // niveau qui débloque chaque décor
     ranks: ['RECRUE', 'PILOTE', 'AS', 'CAPITAINE', 'MAJOR', 'COMMANDANT', 'LEGENDE'],
   },

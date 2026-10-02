@@ -606,12 +606,12 @@
         // v066 : DOPAMINE — plus la série est longue, plus la destruction est violente
         fx.explosion(c, null, true, 'orange');
         if (L >= 2) fx.explosion(c.clone().add(new V(0, 2.5, 0)), null, true, 'cyan');
-        if (L >= 4) { fx.explosion(c.clone().add(new V(4, 1, 0)), null, true, 'orange'); fx.explosion(c.clone().add(new V(-4, 1, 2)), null, true, 'cyan'); }
+        if (L >= 5) fx.explosion(c.clone().add(new V(4, 1, 0)), null, true, 'orange');
         fx.ring(c, up, 2, 22 + 7 * L, 0.6, L >= 3 ? '#7be8ff' : '#ffd060', 0.95);
         fx.ring(c, dir, 1, 16 + 6 * L, 0.5, '#ffffff', 0.85);
-        fx.flash(c, '#ffb040', 7 + 2 * L, 100, 0.4, '#ff5020');
+        fx.flash(c, '#ffb040', 6 + Math.min(L, 3), 90, 0.35, '#ff5020');
         this.rig.shake = Math.min(1.7, 0.8 + 0.13 * L);
-        this.flash = Math.min(0.45, 0.12 + 0.05 * L); this.flashColor = L >= 4 ? '#bff4ff' : '#ffe0a0';
+        this.flash = Math.min(0.28, 0.1 + 0.03 * L); this.flashColor = L >= 4 ? '#bff4ff' : '#ffe0a0';
         this.hitStop = 0.07 + 0.016 * L;                                  // ralenti à l'impact
         rocket.fbTime = Math.max(rocket.fbTime, rocket.age - rocket.cfg.ignitionDelay + 0.8 + 0.35 * L);   // la série offre du boost gratuit
         this.audio.play('boom', c); this.audio.play('target');

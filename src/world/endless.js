@@ -209,7 +209,7 @@
     for (const t of tgt) {
       const d = t.d, type = t.zone === 'mini' ? 'fuel' : r.pick(['tank', 'tank', 'tank', 'truck', 'heli', 'heli', 'sam', 'fuel']), lx = t.lx, air = type === 'heli';   // v066 : chars, camions, hélicoptères, lance-missiles
       const p = air ? T.at(d, lx + r.between([-8, 8]), U.clamp(T.laneY(d) + r.between([-4, 8]), 10, 60)) : T.at(d, lx, 0);
-      b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0) + (type === 'tank' ? 180 : 0), { unarmed: d < 500 });
+      b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0) + (type === 'tank' ? 180 : 0), { unarmed: d < 500, scale: air ? 2.2 : type === 'fuel' ? 2.0 : 2.4 });
       busy.push(d);
       const hy = air ? p[1] - T.base(d) : type === 'fuel' ? 3.5 : 1.6;
       gates.push({ d: d - 55, lx: T.laneX(d - 55), y: T.laneY(d - 55) * 0.7 }, { d: d - 22, lx, y: hy + 3 }, { d, lx, y: hy }, { d: d + 30, lx: T.laneX(d + 30), y: T.laneY(d + 30) * 0.8 });
@@ -383,7 +383,7 @@
       this.ensure(Math.floor(this.dist / cfg.chunkLen));
       const job = this.pending.shift();
       if (job && this.chunks.get(job.c.k) === job.c) {
-        const e = job.c.builder.guard(job.t.type || 'tank', job.t.pos, job.t.yaw, {});   // s'ajoute aux listes du tronçon
+        const e = job.c.builder.guard(job.t.type || 'tank', job.t.pos, job.t.yaw, { scale: job.t.type === 'heli' ? 2.2 : 2.4 });   // s'ajoute aux listes du tronçon
         g.targets.push(e); g.entities.push(e);
       }
       // palier de difficulté
