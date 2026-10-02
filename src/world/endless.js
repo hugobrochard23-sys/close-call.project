@@ -77,7 +77,7 @@
     }
     // épingles : certaines scènes (avion géant, pont levant, tasse…) imposent le passage, la trajectoire s'y raccorde en douceur
     laneX(d) { let x = this.laneX0(d); for (const p of CC.Zones.pinAt(this, d)) x += ((p.fx ? p.fx(d) : p.lx) - x) * pinW(p, d); return x; }   // v055 : fx(d) = trajectoire latérale imposée (slalom)
-    laneY(d) { let y = this.laneY0(d); for (const p of CC.Zones.pinAt(this, d)) { const py = p.y2 !== undefined ? p.y + (p.y2 - p.y) * U.clamp((d - p.d0) / Math.max(1, p.d1 - p.d0), 0, 1) : p.y; y += (py - y) * pinW(p, d); } return y; }   // v054 : y2 = pente (plongée)
+    laneY(d) { let y = this.laneY0(d); for (const p of CC.Zones.pinAt(this, d)) { const py = p.fy ? p.fy(d) : p.y2 !== undefined ? p.y + (p.y2 - p.y) * U.clamp((d - p.d0) / Math.max(1, p.d1 - p.d0), 0, 1) : p.y; y += (py - y) * pinW(p, d); } return y; }   // v054 : y2 = pente (plongée)
     vol(d) { return CC.Zones.prof(this, d, 'vol') + 2.5 * Math.sin(d / 131 + this.lp[0] * 1.7); }          // demi-largeur du volume de jeu
     elev(zi) { return CC.Zones.PROFILE[this.zoneOrder[Math.min(Math.max(0, zi), this.zoneOrder.length - 1)]].elev; }
     base(d) {

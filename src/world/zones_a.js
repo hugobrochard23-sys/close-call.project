@@ -317,7 +317,7 @@
     pin(T, sc) { const mid = (sc.d0 + sc.d1) / 2; return { lx: U.clamp(T.laneX0(mid), -4, 4), y: 68, y2: 12, from: 62, to: sc.d1 - sc.d0 - 20 }; },
     build(S) {
       const dist = district(S, S.sr.between([100, 130]), S.sr.between([130, 180])), half = S.R + 6.5;
-      shaft(S, half, 200, dist); beams(S, half, 26, 60);
+      shaft(S, half, 200, dist); cableWeb(S, half, S.d0 + 70, S.d1 - 30, 40); ledges(S, half, 12);
       farTowers(S, 110, 200, 3);
     } };
   // CHEMINEE : l'inverse, on remonte le long du puits jusqu'au-dessus des toits
@@ -325,7 +325,7 @@
     pin(T, sc) { const mid = (sc.d0 + sc.d1) / 2; return { lx: U.clamp(T.laneX0(mid), -4, 4), y: 12, y2: 72, from: 20, to: sc.d1 - sc.d0 - 62 }; },
     build(S) {
       const dist = district(S, S.sr.between([100, 130]), S.sr.between([130, 180])), half = S.R + 6.5;
-      shaft(S, half, 200, dist); beams(S, half, 26, 60);
+      shaft(S, half, 200, dist); cableWeb(S, half, S.d0 + 70, S.d1 - 30, 40); ledges(S, half, 12);
       farTowers(S, 110, 200, 3);
     } };
   // SLALOM : la trajectoire tourne de gauche à droite, un bloc d'immeuble barre alternativement chaque côté du couloir
@@ -368,55 +368,105 @@
       farTowers(S, 90, 190, 6);
     } };
 
-  // ---------- v056 : TRAVERSEE D'IMMEUBLE (vitres brisées) et PUITS A ESCALIERS ----------
-  // VITRES : deux immeubles successifs traversés de part en part : on casse une vitre à l'entrée, on vole dans les bureaux éclairés, on casse la vitre de sortie
-  city.scenes.vitres = { len: [230, 300], noDoor: true,
-    pin(T, sc) { const mid = (sc.d0 + sc.d1) / 2; return { lx: U.clamp(T.laneX0(mid), -5, 5), y: U.clamp(T.laneY0(mid), 14, 24), from: 40, to: sc.d1 - sc.d0 - 30 }; },
-    build(S) {
-      const sr = S.sr, dist = district(S, sr.between([50, 70]), sr.between([70, 100]));
-      avenueRoad(S, []); furniture(S, [], { noTrees: true });
-      for (const s of [-1, 1]) buildingRow(S, s, dist, [], 0, { shops: true, skip: (cx) => cx > S.d0 + 50 });
-      const hh = S.R * 2 + 4, hw = S.R + 3.5, depth = 36, H = 64;
-      for (const dc of [S.d0 + 70, S.d0 + 70 + depth + 60]) {
-        if (dc + depth > S.d1 - 20) continue;
-        const L = S.lane(dc + depth / 2), yc = U.clamp(L.y, hh / 2 + 1.5, 28), v = S.vol(dc) + 8, tint = sr.pick(dist.tints), lo = yc - hh / 2, hi = yc + hh / 2;
-        S.item(dc, () => {
-          S.wall(dc, -v, v, 0, H, 3, dist.mat, tint, { lx: L.lx, yc, w: 2 * hw, h: hh });                       // façade d'entrée
-          S.wall(dc + depth, -v, v, 0, H, 3, dist.mat, tint, { lx: L.lx, yc, w: 2 * hw, h: hh });               // façade de sortie
-          for (const z of [dc, dc + depth]) S.b.glass(S.at(z + (z === dc ? 0.2 : -0.2), L.lx, yc), [2 * hw, hh, 0.3], [0, S.yaw(z), 0]);   // vitres à briser
-          const mid = dc + depth / 2;
-          S.bx(mid, L.lx, hi + 0.6, 2 * hw + 2, 1.2, depth - 3, 'concreteDark', '#c8c8c4');                  // plafond
-          S.bx(mid, L.lx, lo - 0.6, 2 * hw + 2, 1.2, depth - 3, 'concreteDark', '#a8a8a4');                  // plancher
-          S.bx(mid, L.lx, hi - 0.15, 2 * hw, 0.25, depth - 4, 'emis:#fff2d0', undefined, false);              // néons de plafond
-          for (const s of [-1, 1]) { S.bx(mid, L.lx + s * (hw + 0.6), (lo + hi) / 2, 1.2, hh, depth - 3, 'concrete', '#c0c0bc');
-            for (let k = 0; k < 3; k++) S.bx(dc + 8 + k * 10, L.lx + s * (hw - 1.4), (lo + hi) / 2, 0.9, hh - 0.4, 0.9, 'col:#8a8a88', undefined, false); }   // poteaux de bureau
-          S.bx(dc, L.lx, hi + 1.6, 2 * hw + 4, 0.8, 3.4, 'hazard', undefined, false); S.bx(dc + depth, L.lx, hi + 1.6, 2 * hw + 4, 0.8, 3.4, 'hazard', undefined, false);
-        });
-        S.reserve(dc + depth / 2, 0, 2 * v, depth + 6); S.gate(dc - 6, L.lx, yc); S.gate(dc + depth / 2, L.lx, yc); S.gate(dc + depth + 6, L.lx, yc);
-      }
-      farTowers(S, 80, 170, 4);
-    } };
-  // CHUTE A ESCALIERS : le puits est bordé d'escaliers de secours en zigzag (paliers saillants à éviter) ; on tombe entre les volées
-  function stairs(S, half) {
-    let k = 0;
-    for (let dc = S.d0 + 50; dc < S.d1 - 30; dc += 15, k++) S.item(dc, (r) => {
-      const L = S.lane(dc), s = k % 2 === 0 ? 1 : -1, x = L.lx + s * (half - 1.6), y = L.y + (k % 4 < 2 ? 0 : 0);
-      S.bx(dc, x, L.y - 4 + (r() * 2 - 1), 3.2, 0.5, 6.5, 'metal', '#8a8e94');                                    // palier
-      S.bx(dc, x - s * 1.4, L.y - 3.3, 0.12, 1.1, 6.5, 'col:#2a2a2e', undefined, false);                       // garde-corps
-      S.bxr(dc + 7.5, x, L.y - 7, 2.6, 0.25, 11, 'metal', '#9a9ea4', s * 33, 0, false);                         // volée de marches (décor)
-      S.bxr(dc + 7.5, x - s * 1.3, L.y - 6.4, 0.1, 1.0, 11, 'col:#2a2a2e', undefined, s * 33, 0, false);
-      S.gate(dc, L.lx, L.y);
-    });
+  // ---------- v057 : COPIES DU NIVEAU CITY (rue étroite, bâtiments traversés, vitres brisées, panneau, grue, puits à câbles) et DU CHANTIER (escalier) ----------
+  const pw = (pts, s) => { if (s <= pts[0][0]) return pts[0][1]; for (let i = 1; i < pts.length; i++) if (s <= pts[i][0]) { const a = pts[i - 1], b = pts[i]; return a[1] + (b[1] - a[1]) * (s - a[0]) / (b[0] - a[0]); } return pts[pts.length - 1][1]; };
+  // toile de câbles noirs en diagonale entre les deux parois du puits (comme le niveau City) : on garde ceux qui laissent la trajectoire libre
+  function cableWeb(S, half, da, db, n) {
+    for (let k = 0; k < n; k++) {
+      const dm = da + (db - da) * (k + 0.5) / n;
+      S.item(dm, (r) => {
+        for (let t = 0; t < 40; t++) {
+          const dA = dm + r.between([-12, 12]), dB = dA + r.between([-16, 16]), yA = S.lane(dA).y + r.between([-26, 26]), yB = yA + r.between([-14, 14]);
+          if (yA < 4 || yB < 4) continue;
+          const sg = r() < 0.5 ? -1 : 1, la = S.lane(dA).lx + sg * half, lb = S.lane(dB).lx - sg * half;
+          let ok = true;
+          for (let q = 0; q <= 12; q++) { const f = q / 12, d = dA + (dB - dA) * f, y = yA + (yB - yA) * f, x = la + (lb - la) * f, L = S.lane(d); if (Math.hypot(x - L.lx, y - L.y) < 5.8) { ok = false; break; } }
+          if (!ok) continue;
+          if (!S.inClip(dA)) return;
+          S.b.cable(S.at(dA, la, yA), S.at(dB, lb, yB), 0.12);
+          return;
+        }
+      });
+    }
   }
-  city.scenes.chute_escaliers = { len: [260, 320], noDoor: true,
-    pin(T, sc) { const mid = (sc.d0 + sc.d1) / 2; return { lx: U.clamp(T.laneX0(mid), -4, 4), y: 66, y2: 12, from: 62, to: sc.d1 - sc.d0 - 20 }; },
+  // poutres en I qui dépassent des parois
+  function ledges(S, half, n) {
+    for (let k = 0; k < n; k++) {
+      const dm = S.d0 + 60 + (S.len - 100) * (k + 0.5) / n;
+      S.item(dm, (r) => { const L = S.lane(dm), sg = r() < 0.5 ? -1 : 1, x = L.lx + sg * (half - 1.4), y = L.y + r.between([-16, 16]), roll = r.between([-30, 30]);
+        if (y < 4) return;
+        S.bxr(dm, x, y, 3, 0.5, 2.6, 'col:#2e2e30', undefined, roll, 0, true); S.bxr(dm, x, y + 1.4, 3, 0.5, 2.6, 'col:#2e2e30', undefined, roll, 0, false); S.bxr(dm, x, y + 0.7, 0.5, 1.4, 2.6, 'col:#2e2e30', undefined, roll, 0, false); });
+    }
+  }
+  // CITY 1 : la séquence du niveau d'origine (rue de 18 m, bâtiment tunnel, bâtiment à vitres, toits bas + panneau + grue, disque d'accroche), on monte, puis chute libre dans le puits à câbles
+  const C1 = [[0, 23], [215, 23], [245, 23], [268, 19], [290, 17], [321, 17], [356, 30], [380, 44], [405, 60], [520, 12], [600, 12]];
+  city.scenes.city1 = { len: [580, 580], noDoor: true,
+    pin(T, sc) { return { lx: 0, fy: (d) => pw(C1, d - sc.d0), from: 20, to: sc.d1 - sc.d0 - 20 }; },
     build(S) {
-      const dist = district(S, S.sr.between([100, 130]), S.sr.between([130, 180])), half = S.R + 6.5;
-      shaft(S, half, 200, dist); stairs(S, half);
-      farTowers(S, 110, 200, 3);
+      const sr = S.sr, A = (s) => S.d0 + s, SIDES = ['facade', 'facadePink', 'facadeTan'], TINTS = ['#ffffff', '#f6f2f0', '#eeeeee', '#f7f5f3'];
+      const blk = (s0, s1, x0, x1, h, y0, o) => {   // immeuble : s (m dans la scène), x (m depuis l'axe), hauteur, altitude de base
+        const dc = A((s0 + s1) / 2);
+        S.item(dc, (r) => S.bx(dc, (x0 + x1) / 2, (y0 || 0) + h / 2 - 0.4, x1 - x0, h, s1 - s0, { side: r.pick(SIDES), top: 'concrete', bottom: 'concreteDark' }, r.pick(TINTS), true, o));
+      };
+      avenueRoad(S, []);
+      // rue principale : immeubles de 22 m de large de part et d'autre d'une rue de 18 m
+      for (let s = 20; s < 215; s += 32) { const e = Math.min(s + 31, 215); for (const sg of [-1, 1]) { const h = S.sr.between([55, 90]); const dc = A((s + e) / 2); S.item(dc, (r) => S.bx(dc, sg * 20, h / 2 - 0.4, 22, h, e - s, { side: r.pick(SIDES), top: 'concrete', bottom: 'concreteDark' }, r.pick(TINTS))); } }
+      // B : le bâtiment qui barre la rue, tunnel y 18..28, trois vitres à la sortie
+      { const s0 = 215, s1 = 245, dc = A(230);
+        blk(s0, s1, -40, -5, 46); blk(s0, s1, 5, 40, 46); blk(s0, s1, -5, 5, 18); blk(s0, s1, -5, 5, 18, 28);
+        S.item(dc, () => { for (const x of [-4.8, 4.8]) S.bx(dc, x, 23, 0.4, 10, 30, 'concreteDark', undefined, true); S.bx(dc, 0, 18.2, 9.2, 0.4, 30, 'concreteDark', undefined, true, { ground: true }); S.bx(dc, 0, 27.8, 9.2, 0.4, 30, 'concreteDark', undefined, true);
+          for (const x of [-3, 0, 3]) S.b.glass(S.at(A(s1 - 0.4), x, 23), [3, 9.6, 0.12], [0, S.yaw(A(s1 - 0.4)), 0]); });
+        S.gate(A(s0 - 8), 0, 23); S.gate(dc, 0, 23); S.gate(A(s1 + 8), 0, 22); }
+      // place entre B et C
+      blk(245, 290, -60, -14, S.sr.between([40, 60])); blk(245, 290, 14, 60, S.sr.between([40, 60]));
+      // C : ouverture vitrée y 12..22, vitres à l'entrée et à la sortie
+      { const s0 = 290, s1 = 321, dc = A(305.5);
+        blk(s0, s1, -30, -5, 34); blk(s0, s1, 5, 30, 34); blk(s0, s1, -5, 5, 12); blk(s0, s1, -5, 5, 12, 22);
+        S.item(dc, () => { for (const x of [-4.8, 4.8]) S.bx(dc, x, 17, 0.4, 10, 31, 'concreteDark', undefined, true); S.bx(dc, 0, 12.2, 9.2, 0.4, 31, 'concreteDark', undefined, true, { ground: true }); S.bx(dc, 0, 21.8, 9.2, 0.4, 31, 'concreteDark', undefined, true);
+          for (const z of [s0 + 0.2, s1 - 0.2]) S.b.glass(S.at(A(z), 0, 17), [9.6, 9.6, 0.12], [0, S.yaw(A(z)), 0]); });
+        S.gate(A(s0 - 8), 0, 17); S.gate(dc, 0, 17); S.gate(A(s1 + 8), 0, 17); }
+      // toits bas, panneau publicitaire, grue jaune
+      blk(321, 357, -45, -8, 20); blk(321, 357, 8, 45, 16);
+      { const dc = A(335);
+        S.item(dc, () => {
+          S.bx(dc, -20, 29, 16, 8, 0.4, 'col:#2a2a2a', undefined, true, { render: false });
+          const bb = CC.Textures.special('billboard'), dark = new THREE.MeshLambertMaterial({ color: '#2a2a2a' });
+          const board = new THREE.Mesh(new THREE.BoxGeometry(16, 8, 0.4), [dark, dark, dark, dark, new THREE.MeshLambertMaterial({ map: bb }), dark]);
+          const p = S.at(dc, -20, 29); board.position.set(p[0], p[1], p[2]); board.rotation.y = S.yaw(dc); S.b.add(board);
+          S.bx(dc - 0.4, -24, 22.5, 0.4, 5, 0.4, 'col:#303030', undefined, true); S.bx(dc - 0.4, -16, 22.5, 0.4, 5, 0.4, 'col:#303030', undefined, true);
+        });
+        const dcg = A(337);
+        S.item(dcg, () => { S.bx(dcg, 22, 30, 2.2, 60, 2.2, 'col:#d8a820'); S.bx(dcg, 8, 59, 34, 1.6, 1.6, 'col:#d8a820'); S.bx(dcg, 34, 59, 12, 1.6, 1.6, 'col:#d8a820'); S.bx(dcg, 36, 56, 4, 4, 3, 'concreteDark'); }); }
+      // bloc du disque d'accroche (décor : le grappin n'est pas jouable dans le mode infini)
+      { const dc = A(368.5); S.item(dc, (r) => { S.bx(dc, 0, 10, 50, 20, 23, { side: 'facadePink', top: 'concrete', bottom: 'concreteDark' }, undefined);
+          const p = S.at(dc, 6, 22.2), q = S.at(dc + 1, 6, 22.2), n = [q[0] - p[0], q[1] - p[1], q[2] - p[2]];
+          if (S.b.grapplePoint) S.b.grapplePoint(p, n, 1.6); }); }
+      // le puits : parois de 25 m de large à ±15 m de l'axe (s 380 → 560), toile de câbles, poutres en I
+      for (let s = 380; s < 560; s += 20) { const dc = A(s + 10); S.item(dc, (r) => { S.bx(dc, -27.5, 80, 25, 160, 20.2, { side: 'facade', top: 'concrete', bottom: 'concreteDark' }, r.pick(TINTS)); S.bx(dc, 27.5, 80, 25, 160, 20.2, { side: 'facadeTan', top: 'concrete', bottom: 'concreteDark' }, r.pick(TINTS)); }); }
+      cableWeb(S, 15, A(410), A(535), 56); ledges(S, 15, 14);
+      farTowers(S, 90, 180, 6);
+    } };
+  // ESCALIER : la cage d'escalier du niveau CHANTIER — volées alternées le long des murs, on descend en suivant les marches (pente 0,5 comme les marches d'origine)
+  const ESC = [[0, 64], [60, 64], [160, 16], [260, 16]];
+  city.scenes.escalier = { len: [260, 260], noDoor: true,
+    pin(T, sc) { return { lx: 0, fy: (d) => pw(ESC, d - sc.d0), from: 20, to: sc.d1 - sc.d0 - 20 }; },
+    build(S) {
+      const W = 9, A = (s) => S.d0 + s, tints = ['#ffffff', '#f6f2f0', '#eeeeee'];
+      avenueRoad(S, []);
+      for (let s = 20; s < 240; s += 20) { const dc = A(s + 10); S.item(dc, (r) => { for (const sg of [-1, 1]) S.bx(dc, sg * (W + 15), 70, 30, 140, 20.2, { side: 'concreteWarm', top: 'concrete', bottom: 'concreteDark' }, r.pick(tints)); }); }
+      for (let k = 0; k * 10 < 100 / 1.8 + 1; k++) {
+        const east = k % 2 === 0, x = east ? W - 2.5 : -W + 2.5;
+        for (let i = 0; i < 10; i++) {
+          const n = k * 10 + i, s = 60 + n * 1.8; if (s > 160) break;
+          const dc = A(s), y = pw(ESC, s) - 2.2;
+          S.item(dc, () => S.bx(dc, x, y, 5, 0.5, 1.8, 'concreteWarm', undefined, true, { ground: true }));
+        }
+        if (60 + k * 18 < 160) S.gate(A(60 + k * 18 + 9), 0, pw(ESC, 60 + k * 18 + 9));
+      }
+      farTowers(S, 90, 170, 4);
     } };
   city.notFirst = ['toits'];
-  city.early = ['chute', 'vitres', 'chute_escaliers', 'slalom', 'cheminee'];
+  city.early = [['city1', 'escalier'], ['chute', 'slalom', 'cheminee', 'toits', 'ruelle', 'plongee']];
 
   // ============================================================== METRO
   const H = 24;

@@ -10,7 +10,7 @@ CC.CONFIG = {
   render: {
     aspect: 16 / 9,              // MESURÉ : zone de jeu 1132x637
     maxPixelRatio: 1.5,
-    shadows: true,
+    shadows: false,              // v057 : ombres portées du monde coupées (décalées par la courbure visuelle) ; l'ombre de la fusée reste
     launchFx: 0.16,              // CHOIX v024 : durée (s) du renflement qui parcourt le tube au tir
     shadowMapSize: 2048,
     curve: 0.00026,              // v037 : courbure visuelle du monde (réglage unique ; 0 = aucune) : un sommet à d m de la caméra est abaissé de curve × d²
@@ -224,7 +224,7 @@ CC.CONFIG = {
     hole: [15, 12, 10, 8.5],     // m : côté du trou des murs percés par palier
     bend: [8, 13, 18, 22],       // m : amplitude des virages du couloir par palier
     laneAmp: [13, 16, 19, 21],   // v034c : amplitude latérale (m) de la trajectoire qui serpente, par palier
-    tight: { first: 260, gap: [130, 112, 98, 86], hole: [12, 10.5, 9.5, 8.5] },   // v039 : passages beaucoup plus serrés et plus fréquents   // v038 : PORTES SERREES — un panneau plein à travers le couloir, percé d'un trou sur la trajectoire (m entre deux portes, côté du trou, par palier)
+    tight: { first: 220, gap: [82, 70, 60, 52], hole: [12, 10.5, 9.5, 8.5] },   // v039 : passages beaucoup plus serrés et plus fréquents   // v038 : PORTES SERREES — un panneau plein à travers le couloir, percé d'un trou sur la trajectoire (m entre deux portes, côté du trou, par palier)
     gate: [70, 105],             // m entre deux portes (structures qui cadrent le passage)
     density: { city: 0.8, night: 0.8, forest: 1.5, snow: 1.15, desert: 0.6, industry: 0.8, canyon: 0.65 },   // remplissage du volume par zone
     ceiling: 99999,              // v035 : plus de plafond (les zones ont leur propre hauteur : métro, base aérienne, pièce…)                 // m : altitude au-dessus de laquelle l'alarme ALTITUDE! se déclenche

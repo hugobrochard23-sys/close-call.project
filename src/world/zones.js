@@ -196,9 +196,10 @@
     const r = G.stream(T.seed, 'plan' + zi);
     const names = Object.keys(def.scenes).filter((n) => n !== def.signature);
     for (let i = names.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = names[i]; names[i] = names[j]; names[j] = t; }
-    if (def.early) {   // v056 : deux scènes « spéciales » dans les premières scènes de la zone (jamais en toute première)
-      const pick = def.early.filter((n) => names.indexOf(n) >= 0); for (let i = pick.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = pick[i]; pick[i] = pick[j]; pick[j] = t; }
-      const sp = pick.slice(0, 2); for (const n of sp) names.splice(names.indexOf(n), 1);
+    if (def.early) {   // v057 : une scène « copie du niveau d'origine » + une scène spéciale parmi les premières de la zone (jamais en toute première)
+      const sp = [];
+      for (const grp of def.early) { const av = grp.filter((n) => names.indexOf(n) >= 0 && sp.indexOf(n) < 0); if (av.length) sp.push(av[Math.floor(r() * av.length)]); }
+      for (const n of sp) names.splice(names.indexOf(n), 1);
       names.splice(Math.min(1, names.length), 0, ...sp);
     }
     if (zi === 0 && def.notFirst) { const k = names.findIndex((n) => def.notFirst.indexOf(n) < 0); if (def.notFirst.indexOf(names[0]) >= 0 && k > 0) { const t = names[0]; names[0] = names[k]; names[k] = t; } }   // v056 : pas de scène en altitude juste au départ
@@ -209,6 +210,7 @@
     while (d < end - padOut - 70 && i < 40) {
       const nm = names[i % names.length], sd = def.scenes[nm];
       let len = r.between(sd.len);
+      if (sd.len[0] === sd.len[1] && d + len > end - padOut) { i++; continue; }   // v057 : scène à longueur fixe (copie du niveau City) : elle ne se tronque pas
       if (d + len > end - padOut) len = end - padOut - d;
       if (len < 80) break;
       const sc = { name: nm, d0: d, d1: d + len, zone, zi, key: zi + '_' + i, stage: Math.min(3, Math.floor(d / cfg.stageLen)) };
