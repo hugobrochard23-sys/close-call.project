@@ -236,11 +236,11 @@ CC.CONFIG = {
     fuelPerStyle: 0.0035,        // s d'essence gagnées par point de STYLE (COLD IMPACT X2 = 200 pts → +0,7 s)
     fuelTarget: 10,              // s d'essence par cible détruite en route
     targetGap: [190, 280],       // m entre deux cibles à détruire
-    threat: [0.15, 0.3, 0.45, 0.6],     // menace des tirs ennemis par palier (v034b : adoucie, on ne progressait plus vers 3 000 m)
+    threat: [0.15, 0.15, 0.15, 0.15],   // précision des missiles constante : la difficulté vient du NOMBRE     // menace des tirs ennemis par palier (v034b : adoucie, on ne progressait plus vers 3 000 m)
     tanks: [1, 2, 2, 3],         // chars ennemis par tronçon et par palier
     sams: [0, 1, 2, 2],          // v034b : lance-missiles par tronçon
     helis: [0, 1, 1, 2],         // v034b : hélicoptères de garde par tronçon
-    drones: [0, 1, 1, 2],        // v034 : drones (obstacle mobile) par tronçon et par palier
+    drones: [0, 0, 1, 1],        // v034 : drones (obstacle mobile) par tronçon et par palier
     droneSpeed: [4.5, 4.0, 3.4, 2.9],   // s par aller-retour d'un drone, par palier (plus court = plus vif)
     maxMissiles: [2, 3, 3, 4],   // missiles ennemis en vol en même temps, par palier
   },

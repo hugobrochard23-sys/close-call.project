@@ -216,6 +216,7 @@
     let d = start + padIn, i = 0;
     while (d < end - padOut - 70 && i < 40) {
       const nm = names[i % names.length], sd = def.scenes[nm];
+      if (sd.minD && d < sd.minD) { i++; continue; }   // v068 : scènes militaires seulement plus loin
       let len = r.between(sd.len);
       if (sd.len[0] === sd.len[1] && d + len > end - padOut) { i++; continue; }   // v057 : scène à longueur fixe (copie du niveau City) : elle ne se tronque pas
       if (d + len > end - padOut) len = end - padOut - d;

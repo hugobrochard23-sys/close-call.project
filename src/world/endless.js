@@ -180,8 +180,8 @@
     const inRamp = (d) => { const t = tr0(d); return !!t.k && T.elev(t.k) !== T.elev(t.k - 1); };
 
     // cibles en route, sur la colonne vertébrale (il faut parfois plonger vers le sol pour les prendre)
-    const nextT = (from) => from + r.between(cfg.targetGap);
-    if (T.nextTarget === undefined) T.nextTarget = 330;   // v040 : le premier réservoir vient APRES la première porte (tutoriel lisible)
+    const nextT = (from) => from + r.between(cfg.targetGap) * U.lerp(2.4, 0.65, U.clamp(from / 7000, 0, 1));   // v068 : peu de cibles au départ, de plus en plus ensuite
+    if (T.nextTarget === undefined) T.nextTarget = 520;   // v040 : le premier réservoir vient APRES la première porte (tutoriel lisible)
     const tgt = [];
     while (T.nextTarget < d1) {
       const d = T.nextTarget;
@@ -230,16 +230,16 @@
     }
 
     // ennemis (faibles, en nombre limité) : chars et lance-missiles en bordure du volume, hélicoptères en altitude ; selon la zone
-    const tanks = [], nT = cfg.tanks[st];
+    const ramp = U.clamp(d0 / 7000, 0, 1), tanks = [], nT = Math.round(4 * ramp);   // v068 : ennemis de garde en nombre croissant
     for (let i = 0; i < nT; i++) {
       const d = d0 + cfg.chunkLen * (i + r.between([0.2, 0.8])) / nT, zn = zoneAt(d); if (!free(d, 14) || inRamp(d) || tr0(d).t < 1 || !CC.Zones.enemies(zn).tank) continue;
       const lx = CC.Zones.edgeLx(T, d, r() < 0.5 ? -1 : 1, zn); tanks.push({ type: 'tank', pos: T.at(d, lx, 0), yaw: 180 - Math.sign(lx) * 20 }); busy.push(d);
     }
-    for (let i = 0; i < (cfg.sams[st] || 0); i++) {
+    for (let i = 0; i < Math.round(3 * ramp); i++) {
       const d = d0 + cfg.chunkLen * r.between([0.15, 0.85]), zn = zoneAt(d); if (!free(d, 20) || inRamp(d) || tr0(d).t < 1 || !CC.Zones.enemies(zn).sam) continue;
       const lx = CC.Zones.edgeLx(T, d, r() < 0.5 ? -1 : 1, zn); tanks.push({ type: 'sam', pos: T.at(d, lx, 0), yaw: 180 - Math.sign(lx) * 15 }); busy.push(d);
     }
-    for (let i = 0; i < (cfg.helis[st] || 0); i++) {
+    for (let i = 0; i < Math.round(3 * ramp); i++) {
       const d = d0 + cfg.chunkLen * r.between([0.2, 0.8]), zn = zoneAt(d); if (!free(d, 25) || inRamp(d) || tr0(d).t < 1 || !CC.Zones.enemies(zn).heli) continue;
       tanks.push({ type: 'heli', pos: T.at(d, T.laneX(d) + (r() < 0.5 ? -1 : 1) * 26, r.between([24, 36])), yaw: 180 }); busy.push(d);
     }
@@ -395,7 +395,7 @@
         void D;
       }
       const L = this.level;
-      L.aaThreat = param(cfg.threat, this.dist); L.aaSalvo = st >= 2; L.aaMaxAlive = cfg.maxMissiles[st];
+      L.aaThreat = param(cfg.threat, this.dist); L.aaSalvo = this.dist > 3500; L.aaMaxAlive = Math.round(U.lerp(1, 6, U.clamp(this.dist / 7000, 0, 1)));   // v068 : plus de missiles, pas plus précis
       // zone de décor : l'ambiance glisse en 3 s vers celle de la nouvelle zone
       const zi = this.T.zoneIndex(this.dist);
       if (zi !== this.zone) { this.envFrom = this.T.env(this.zone); this.zone = zi; this.envT = 0; this.announce(zi); }

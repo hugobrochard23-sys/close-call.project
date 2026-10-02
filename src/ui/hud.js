@@ -375,6 +375,7 @@
   }
 
   // v066 : REPERES DE CIBLES — grands crochets rouges en pixels (taille croissante à l'approche), distance, flèche de bord pour les cibles hors champ
+  const _bk = new THREE.Vector3();
   HUD.prototype.drawMarks = function (game) {
     if (game.state !== 'FLIGHT' && game.state !== 'AIM') return;
     const W = this.canvas.width, H = this.canvas.height, ctx = this.ctx, cam = game.camera, rk = game.rocket, t = performance.now() / 1000;
@@ -384,6 +385,7 @@
     list.forEach((o, i) => {
       const q = o.q, p = CC.Curve.apply(this._v.copy(q.obb.c), cam).project(cam);
       if (p.z > 1 || Math.abs(p.x) > 1 || Math.abs(p.y) > 1) return;
+      if (_bk.subVectors(q.obb.c, rk.pos).dot(rk.fwd) < 0) return;   // une cible dépassée n'est plus affichée
       const hot = q.guard ? '#ff9a2a' : '#ff3b2e', hot2 = q.guard ? '#ffd080' : '#ff9a80', fade = U.clamp((240 - o.d) / 90, 0, 1);   // apparaît en fondu à l'approche (pleinement visible à 150 m)
       const sx = (p.x * 0.5 + 0.5) * W, sy = (-p.y * 0.5 + 0.5) * H, near = U.clamp((300 - o.d) / 300, 0, 1);
       const r = base * (0.9 + 0.7 * near) * (1 + 0.06 * Math.sin(t * 9 + i)), arm = r * 0.62;
