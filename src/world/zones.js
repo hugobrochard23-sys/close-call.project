@@ -216,7 +216,8 @@
     let d = start + padIn, i = 0;
     while (d < end - padOut - 70 && i < 40) {
       const nm = names[i % names.length], sd = def.scenes[nm];
-      if (sd.minD && d < sd.minD) { i++; continue; }   // v068 : scènes militaires seulement plus loin
+      if (zi === 0 && def.notFirst && plan.scenes.length === 0 && def.notFirst.indexOf(nm) >= 0 && (T._nf = (T._nf || 0) + 1) < 200) { names.push(names.splice(i % names.length, 1)[0]); continue; }   // jamais de montée / chute en toute première scène
+      if (sd.minD && d < sd.minD && (T._mg = (T._mg || 0) + 1) < 4000) { names.push(names.splice(i % names.length, 1)[0]); continue; }   // v068 : scènes militaires seulement plus loin (reportées en fin de liste)
       let len = r.between(sd.len);
       if (sd.len[0] === sd.len[1] && d + len > end - padOut) { i++; continue; }   // v057 : scène à longueur fixe (copie du niveau City) : elle ne se tronque pas
       if (d + len > end - padOut) len = end - padOut - d;
@@ -242,7 +243,7 @@
     constructor(ctx, sc) {
       this.ctx = ctx; this.b = ctx.b; this.T = ctx.T; this.game = ctx.game; this.sc = sc; this.zone = sc.zone;
       this.c0 = ctx.d0; this.c1 = ctx.d1; this.d0 = sc.d0; this.d1 = sc.d1; this.len = sc.d1 - sc.d0; this.mid = (sc.d0 + sc.d1) / 2;
-      this.stage = sc.stage; this.R = CLEAR[sc.stage];
+      this.stage = sc.stage; this.R = U.lerp(9.6, 6.3, U.clamp(sc.d0 / 8000, 0, 1));   // v072 : le tube de dégagement se rétrécit à mesure qu'on avance
       this.sr = G.stream(ctx.T.seed, 'sc' + sc.key); this.sr.pick = (a) => a[Math.floor(this.sr() * a.length)];
       this.ic = 0; this.rects = ctx.reserved.slice(); this.env = ctx.T.env(sc.zi); this.dark = !!(this.env && this.env.dark > 0.4);
       this.vol = (dc) => ctx.T.vol(dc);

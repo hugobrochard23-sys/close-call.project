@@ -337,7 +337,7 @@
 
     // Point rouge au bord de l'écran vers les cibles hors champ (ESTIMATION, vu séq. 3/4).
     drawIndicators(game) {
-      if (game.endlessRun) { this.drawMarks(game); this.drawCombo(game); this.drawCine(game); return; }   // v066
+      if (game.endlessRun) { this.drawMarks(game); this.drawCombo(game); this.drawCine(game); this.drawHint(game); return; }   // v066
       if (game.state !== 'FLIGHT' && game.state !== 'AIM') return;
       if (game.guideLevel(game.levelIndex, game.level)) return;   // v023 : niveaux 1 à 3 → flèches vertes à la place
       const W = this.canvas.width, H = this.canvas.height, ctx = this.ctx, cam = game.camera;
@@ -453,6 +453,17 @@
       else { const k = Math.min(1, (age - 0.5) / 0.7), e = k * k * (3 - 2 * k); x = c.hx + (tx - c.hx) * e; y = c.hy + (ty - c.hy) * e; if (k >= 1) { arr.splice(i, 1); game.coinShown = Math.min(run.stats.nuts || 0, (game.coinShown === undefined ? 0 : game.coinShown) + 0.5); if (i % 4 === 0) { try { game.audio.play('xpTick', null, Math.floor(Math.random() * 8)); } catch (e2) { /* ignoré */ } } continue; } }
       coin(x, y, px * 1.7, Math.abs(Math.cos(age * 9 + c.ph)) * 0.8 + 0.2);
     }
+  };
+
+  // v072 : INDICATION de direction pendant les montées et le plongeon (chevrons en pixels + mot)
+  HUD.prototype.drawHint = function (game) {
+    const run = game.endlessRun; if (!run || !run.hint || game.state !== 'FLIGHT') return;
+    const W = this.canvas.width, H = this.canvas.height, ctx = this.ctx, now = performance.now(), px = Math.max(5, Math.round(H * 0.013)), down = run.hint.kind === 'down';
+    const cx = W / 2, cy = H * 0.3, ph = Math.floor(now / 140) % 4, col = down ? (Math.floor(now / 160) % 2 ? '#ff3b2e' : '#ffd23a') : '#7be8ff';
+    const chev = (y, a) => { ctx.globalAlpha = a; ctx.fillStyle = col; for (let k = 0; k < 5; k++) { const dy = (down ? k : -k) * px; ctx.fillRect(Math.round(cx - (4 - k) * px), Math.round(y + dy), px, px); ctx.fillRect(Math.round(cx + (3 - k) * px), Math.round(y + dy), px, px); } ctx.globalAlpha = 1; };
+    for (let i = 0; i < 3; i++) chev(cy + (down ? 1 : -1) * (i * px * 6) + (down ? ph : -ph) * px * 0.5, 0.35 + 0.65 * ((ph + i) % 3 === 0 ? 1 : 0.5));
+    this.text(down ? 'PLONGE ICI !' : 'MONTE !', cx, cy - H * 0.06 - (down ? 0 : px * 7), 0.0058, col, { align: 'center' });
+    if (down) this.text(run.hint.d + ' M', cx, cy + px * 22, 0.0044, '#ffd23a', { align: 'center' });
   };
 
   CC.HUD = HUD;

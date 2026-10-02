@@ -61,9 +61,18 @@
       const { sc, zone } = at, th = THEME[zone], st = U.clamp(Math.floor(d / cfg.stageLen), 0, 3);
       const S = new Z.Scene(ctx, { name: 'tight', d0: d - 10, d1: d + 10, zone, zi: sc.zi, key: 't' + Math.round(d), stage: st });
       let yc0 = 0, wd0 = 8, hd0 = 8;
-      const Ln = S.lane(d), v = T.vol(d) + (zone === 'usine' || zone === 'eau' ? 3 : zone === 'city' || zone === 'tour' || zone === 'chute' ? 46 : 26), hole = cfg.tight.hole[st];   // v038b : le panneau déborde largement sur les côtés (on n'en voit plus le bord)
+      const Ln = S.lane(d), v = T.vol(d) + (zone === 'usine' || zone === 'eau' ? 3 : zone === 'city' || zone === 'tour' || zone === 'chute' ? 46 : 26), hole = U.lerp(13.5, 6.2, U.clamp(d / 8000, 0, 1));   // v072 : plus on avance, plus l'ouverture est petite   // v038b : le panneau déborde largement sur les côtés (on n'en voit plus le bord)
       S.item(d, (r) => {
-        const shape = r.weighted({ win: 3, slit: 1.6, slot: 1.6 });
+        const shape = r.weighted({ win: 3, slit: 1.6, slot: 1.6, shutter: U.clamp((d - 1100) / 3500, 0, 1) * 2.6 });
+        if (shape === 'shutter') {   // v072 : VOLETS — deux panneaux qui s'ouvrent et se ferment, il faut passer quand c'est ouvert
+          const hh = Math.max(9, hole * 0.95), lo2 = (zone === 'chute' || zone === 'tour' || zone === 'sky') ? Math.max(0, Ln.y - 52) : 0, top2 = (zone === 'usine' ? 76 : Ln.y + (zone === 'city' || zone === 'tour' || zone === 'chute' ? 150 : 80));
+          const yc = Math.max(Ln.y, lo2 + hh / 2 + 0.4), amp = U.clamp(hole * 0.34, 1.8, 4.6), h0 = amp + 0.4, per = U.lerp(5.6, 3.2, U.clamp(d / 8000, 0, 1)), tn = r.pick(th.tints), dd = 4;
+          S.bx(d, 0, (yc + hh / 2 + top2) / 2, 2 * v, top2 - (yc + hh / 2), dd, th.mat, tn);
+          if (yc - hh / 2 > lo2 + 0.5) S.bx(d, 0, (lo2 + yc - hh / 2) / 2, 2 * v, yc - hh / 2 - lo2, dd, th.mat, tn);
+          for (const sg of [-1, 1]) CC.Life.sweeper(S, { mode: 'across', d, lx: Ln.lx + sg * (h0 + v / 2), y: yc, amp, period: per, phase: sg < 0 ? 0 : Math.PI, parts: [[0, 0, 0, v, hh, dd + 0.6, '#7c8088'], [0, hh / 2 - 0.35, 0, v + 0.2, 0.7, dd + 1, '#e8c020'], [0, -hh / 2 + 0.35, 0, v + 0.2, 0.7, dd + 1, '#e8c020']], size: [v, hh, dd + 0.6], cause: 'mover' });
+          S.bx(d, Ln.lx, yc + hh / 2 + 0.3, 2 * (h0 + amp) + 1.6, 0.6, dd + 0.4, 'hazard', undefined, false, { shadow: false });
+          yc0 = yc; wd0 = 2 * (h0 + amp); hd0 = hh; return;
+        }
         let w = hole, h = hole;
         if (shape === 'slit') { w = Math.min(2 * v - 4, hole * 3.4); h = hole * 0.62; } else if (shape === 'slot') { w = hole * 0.62; h = hole * 2.0 + 4; }
         const lo = (zone === 'chute' || zone === 'tour' || zone === 'sky') ? Math.max(0, Ln.y - 52) : 0, top = (zone === 'usine' ? 76 : Ln.y + (zone === 'city' || zone === 'tour' || zone === 'chute' ? 150 : 80)), yc = Math.max(Ln.y, lo + h / 2 + 0.4);

@@ -614,6 +614,8 @@
         this.flash = Math.min(0.28, 0.1 + 0.03 * L); this.flashColor = L >= 4 ? '#bff4ff' : '#ffe0a0';
         this.hitStop = 0.07 + 0.016 * L;                                  // ralenti à l'impact
         { const sz = t.size ? new V(t.size[0], t.size[1], t.size[2]) : new V(5, 3, 5); fx.shatter(c, sz, rocket.vel, 'brick'); fx.shatter(c, sz.clone().multiplyScalar(0.7), rocket.vel, 'glass');
+          for (let k = 0; k < 3; k++) fx.addSmoker(c.clone().add(new V((Math.random() - 0.5) * 3, 0.5, (Math.random() - 0.5) * 3)), new V((Math.random() - 0.5) * 3, 5 + Math.random() * 3, (Math.random() - 0.5) * 3), 2.4, -1.5, 0.5, true);
+          fx.shatter(c, sz.clone().multiplyScalar(1.2), rocket.vel.clone().multiplyScalar(1.4), 'planks');
           setTimeout(() => { try { fx.explosion(c.clone().add(new V((Math.random() - 0.5) * 6, 2 + Math.random() * 3, (Math.random() - 0.5) * 6)), null, true, 'orange'); } catch (e) { /* ignoré */ } }, 140); }   // v070 : débris + explosion secondaire
         this.audio.play('boom', c); this.audio.play('target');
         // v070 : PALIERS DE COMBO — 5 et 10 (puis tous les 5) : ralenti cinématique, barres de cinéma, pluie d'écrous
@@ -857,7 +859,11 @@
             if (rk.pos.y < killY || (rk.pos.length() > 4000 && !this.endlessRun)) this.onRocketCrash('outOfBounds', rk.pos.clone(), null);   // v033 : le couloir infini n'a pas de bord
             // v032 : roquette immobilisée (posée en glissant sur un toit, sans essence) → comptée comme un crash, sinon
             // la partie ne peut plus avancer
-            this.stallT = rk.speed < 3 && this.flightTime > 1 ? (this.stallT || 0) + dt : 0;
+            const stuck = rk.speed < 6 && this.flightTime > 1;
+            if (stuck && this.endlessRun && rk.fuel > 0.3) {   // v072 : de l'essence mais presque immobile (posée sur un toit, en l'air) : boost de secours qui relance la fusée
+              this.stallT = (this.stallT || 0) + dt;
+              if (this.stallT > 0.5) { this.stallT = 0; rk.fbTime = Math.max(rk.fbTime, rk.age - rk.cfg.ignitionDelay + 1.4); rk.vel.addScaledVector(rk.fwd, 24); rk.vel.y += 8; if (rk.sliding > 0) rk.sliding = 0; }
+            } else this.stallT = stuck ? (this.stallT || 0) + dt : 0;
             if (rk.active && this.stallT > 1.5) { this.stallT = 0; this.onRocketCrash('stalled', rk.pos.clone(), null); }
           }
           this.runTime += dt;

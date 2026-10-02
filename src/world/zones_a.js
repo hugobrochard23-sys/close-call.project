@@ -395,12 +395,23 @@
   function climbRoofs(S, A, pts, s0, s1, seg) {
     const sr = S.sr, TINTS = ['#e8e4dc', '#d8dce0', '#e8d8c8', '#d0d8e0'];
     for (let s = s0; s < s1; s += seg) {
-      const e = Math.min(s + seg, s1), top = Math.min(pw(pts, s), pw(pts, e)) - 10, dc = A((s + e) / 2);
+      const e = Math.min(s + seg, s1), top = Math.min(pw(pts, s), pw(pts, e)) - 16, dc = A((s + e) / 2);
       if (top < 8) continue;
       S.item(dc, (r) => { S.bx(dc, 0, top / 2 - 0.4, 62, top, e - s - 0.4, { side: r.pick(['facade', 'facadePink', 'facadeTan']), top: 'concrete', bottom: 'concreteDark' }, r.pick(TINTS));
         for (const sg of [-1, 1]) if (r() < 0.6) S.cyl(dc, sg * r.between([34, 44]), 0, 0.5, r.between([top + 20, top + 70]), 'col:#2c2f33', undefined, 6, 0.25); });
     }
   }
+
+  // v072 : guidage vers un puits — liseré jaune autour de l'ouverture, faisceau lumineux et grosses flèches
+  function guideHole(S, dcRim, lx, y, wd, ln, depth) {
+    S.item(dcRim, () => {
+      for (const sg of [-1, 1]) S.bx(dcRim, lx + sg * wd / 2, y + 0.3, 1.0, 0.6, ln, 'basic:#ffd23a', undefined, false, { shadow: false });
+      for (const sg of [-1, 1]) S.bx(dcRim + sg * ln / 2, lx, y + 0.3, wd, 0.6, 1.0, 'basic:#ffd23a', undefined, false, { shadow: false });
+      S.bx(dcRim, lx, y - depth / 2, 0.5, depth, 0.5, 'basic:#9fe8ff', undefined, false, { shadow: false });
+      if (S.b.arrow) for (const k of [0, 1]) { const e = S.b.arrow(S.at(dcRim - 14 - k * 12, lx, y + 7 + k * 2), 0); if (e && e.object) e.object.scale.setScalar(2.6); }
+    });
+  }
+  function climbHelis(S, A, s0, s1, step) { for (let s = s0, i = 0; s < s1; s += step, i++) { const dc = A(s), L = S.lane(dc); tgt(S, 'heli', dc, U.clamp(L.lx + (i % 2 ? 7 : -7), -12, 12), L.y + 2); } }
   // CITY 1 : copie de la séquence du niveau d'origine : rue de 18 m, bâtiment tunnel, bâtiment à vitres, toits bas + panneau + grue,
   // montée sur les toits, bloc du disque d'accroche, puis la CHUTE LIBRE VERTICALE dans le puits (70 câbles et 18 poutres en I aux positions exactes) et le couloir de sortie
   const PIT = 800, SHIFT = 190;   // début du puits (m dans la scène) ; altitude du fond du puits d'origine (y = -190) ramenée au sol (0)
@@ -482,6 +493,8 @@
       for (const [x, z] of [[-8, -255], [8, -295], [-8, -330]]) { const dc = A(Z(z)); S.item(dc, () => S.bx(dc, x, T2 + 6.5, 2, 12, 2, 'concrete')); }
       for (let z = -240; z > -368; z -= 15) { const dc = A(Z(z)); S.item(dc, () => S.bx(dc, 0, T2 + 12.8, 50, 1.4, 1.4, 'concrete')); }
       { const dc = A(Z(-402)); S.item(dc, () => S.bx(dc, 0, T2 + 3, 30, 5, 8, 'concreteWarm')); }
+      guideHole(S, A(SH + 10), 0, T2 + 0.6, 2 * W2, 20, T2);
+      climbHelis(S, A, 60, SH - 140, 54);
       { const dc = A(Z(-378)); S.item(dc, () => { if (S.b.arrow) S.b.arrow(S.at(dc, 0, T2 + 6), 0); }); }
       farTowers(S, 90, 170, 4);
     } };
@@ -497,7 +510,8 @@
   // ---------- v067 : MISSIONS MILITAIRES dans la ville — des groupes de cibles à détruire en série (combo) ----------
   const TS = { tank: 2.4, truck: 2.4, sam: 2.4, radar: 2.4, heli: 2.2 };
   function tgt(S, type, dc, lx, y, yawAdd) {
-    S.item(dc, () => { S.b.target(type, S.at(dc, lx, y || 0), S.yaw(dc) + (yawAdd || 0) + (type === 'truck' ? 90 : type === 'tank' ? 180 : 0), { unarmed: false, scale: TS[type] || 2.4 }); S.gate(dc - 14, S.lane(dc - 14).lx, 8); S.gate(dc, lx, Math.max(4, y || 5)); });
+    if (location.search.indexOf('notgt') >= 0) return;   // banc de test
+    S.item(dc, () => { S.b.target(type, S.at(dc, lx, y || 0), S.yaw(dc) + (yawAdd || 0) + (type === 'truck' ? 90 : type === 'tank' ? 180 : 0), { unarmed: S.d0 < 900, scale: TS[type] || 2.4 }); S.gate(dc - 14, S.lane(dc - 14).lx, 8); S.gate(dc, lx, Math.max(4, y || 5)); });
   }
   function sandbags(S, dc, lx, n) { for (let i = 0; i < n; i++) S.item(dc + i * 3.2, () => S.bx(dc + i * 3.2, lx, 0.8, 3, 1.6, 1.4, 'col:#8a7a58', undefined, true)); }
   // CONVOI : une colonne de camions et de chars sur l'avenue, un hélicoptère de couverture au bout
@@ -531,7 +545,7 @@
     farTowers(S, 90, 180, 4);
   } };
   city.scenes.convoi2 = Object.assign({}, city.scenes.convoi); city.scenes.camp2 = Object.assign({}, city.scenes.camp); city.scenes.helis2 = Object.assign({}, city.scenes.helis);
-  city.notFirst = ['toits'];
+  city.notFirst = ['toits', 'city1', 'escalier', 'cheminee'];
   city.early = [['city1', 'escalier'], ['virage', 'chicane', 'epingle']];
 
 

@@ -213,6 +213,7 @@
         b.box({ p: T.at(gd, 0, 30), s: [2 * hf, 1.4, 1.2], r: [0, yw, 0], mat: 'basic:#ffd23a', collide: false, shadow: false });
         b.box({ p: T.at(gd, 0, 0.12), s: [2 * hf, 0.1, 1.6], r: [0, yw, 0], mat: 'basic:#ffd23a', collide: false, shadow: false });
       } }
+    if (location.search.indexOf('notgt') >= 0) tgt.length = 0;   // banc de test : ?notgt=1 (pilote automatique sans cibles)
     for (const t of tgt) {
       const d = t.d, ly = T.laneY(d), type = t.zone === 'mini' ? 'fuel' : r.pick(ly < 15 ? ['tank', 'truck', 'heli', 'heli', 'sam'] : ['heli', 'heli', 'heli', 'heli', 'truck']), lx = t.lx, air = type === 'heli';   // v069 : sur la ligne directrice : hélicoptère à hauteur de la trajectoire, ou char / camion si elle descend
       const p = air ? T.at(d, lx, U.clamp(ly + (t.dy || 0) + r.between([-1.5, 1.5]), 8, 400)) : T.at(d, lx, 0);
@@ -393,6 +394,10 @@
         const e = job.c.builder.guard(job.t.type || 'tank', job.t.pos, job.t.yaw, { scale: job.t.type === 'heli' ? 2.2 : 2.4 });   // s'ajoute aux listes du tronçon
         g.targets.push(e); g.entities.push(e);
       }
+      this.hint = null;   // v072 : où aller pendant la montée et le plongeon
+      { const zi0 = this.T.zoneIndex(this.dist), sc0 = CC.Zones.plan(this.T, zi0).scenes.find((q) => this.dist >= q.d0 && this.dist < q.d1);
+        if (sc0 && (sc0.name === 'city1' || sc0.name === 'escalier')) { const rel = this.dist - sc0.d0, dive = sc0.name === 'city1' ? 800 : 425;
+          if (rel > 50 && rel < dive - 150) this.hint = { kind: 'up' }; else if (rel >= dive - 150 && rel < dive + 25) this.hint = { kind: 'down', d: Math.max(0, Math.round(dive - rel)) }; } }
       // palier de difficulté
       const st = stageOf(this.dist);
       if (st !== this.stage) {
