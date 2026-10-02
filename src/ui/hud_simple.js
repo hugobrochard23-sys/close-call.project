@@ -47,4 +47,5 @@
     }
   };
   CC.HUD.prototype.drawCine = function () {};
+  CC.HUD.prototype.drawHint = function () {};   // v076 : plus de MONTE / PLONGE en pixels
 })();

@@ -404,6 +404,7 @@
 
   // v072 : guidage vers un puits — liseré jaune autour de l'ouverture, faisceau lumineux et grosses flèches
   function guideHole(S, dcRim, lx, y, wd, ln, depth) {
+    return;   // v076 : plus de liseré / faisceau / flèches : seules les flèches vertes du chemin guident
     S.item(dcRim, () => {
       for (const sg of [-1, 1]) S.bx(dcRim, lx + sg * wd / 2, y + 0.3, 1.0, 0.6, ln, 'basic:#ffd23a', undefined, false, { shadow: false });
       for (const sg of [-1, 1]) S.bx(dcRim + sg * ln / 2, lx, y + 0.3, wd, 0.6, 1.0, 'basic:#ffd23a', undefined, false, { shadow: false });
@@ -495,7 +496,6 @@
       { const dc = A(Z(-402)); S.item(dc, () => S.bx(dc, 0, T2 + 3, 30, 5, 8, 'concreteWarm')); }
       guideHole(S, A(SH + 10), 0, T2 + 0.6, 2 * W2, 20, T2);
       climbHelis(S, A, 60, SH - 140, 54);
-      { const dc = A(Z(-378)); S.item(dc, () => { if (S.b.arrow) S.b.arrow(S.at(dc, 0, T2 + 6), 0); }); }
       farTowers(S, 90, 170, 4);
     } };
   // v060 : un RESERVOIR à la fin de chaque grande section (les scènes à trajectoire imposée n'en reçoivent pas du générateur)

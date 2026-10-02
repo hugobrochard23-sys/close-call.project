@@ -6,7 +6,7 @@
  * jamais dans le métro ni le monde miniature, ni en transition de zone, ni près d'une scène signature, d'une épingle, d'une cible ou d'anneaux. */
 (function () {
   const U = CC.U, G = CC.Gen, Z = CC.Zones, C = () => CC.CONFIG.endless;
-  const SKIP = { metro: 1, mini: 1 };
+  const SKIP = { metro: 1, mini: 1, forest: 1 };
   const THEME = {
     city:   { mat: { side: 'facade', top: 'concrete', bottom: 'concreteDark' }, tints: ['#ffffff', '#f2eee8', '#e8ecf0'] },
     port:   { mat: 'corrugated', tints: ['#b8382c', '#2a5a8a', '#c89a20', '#3a8a5a', '#8a8a90'] },

@@ -12,6 +12,7 @@
   const _f = new V(), _u = new V(), _o = new V(), _z = new V(0, 0, 1), _y = new V(0, 1, 0), _t1 = new V(), _t2 = new V(), _t3 = new V();
   const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _tq = new THREE.Quaternion();
 
+  const _yAx = new THREE.Vector3(0, 1, 0), _nb = new THREE.Vector3();
   class CameraRig {
     constructor(camera, game) {
       this.cam = camera; this.game = game; this.cfg = CC.CONFIG.camera;
@@ -112,7 +113,14 @@
         // v019 : la caméra s'oriente vers la tête de la roquette (on monte → elle pivote vers le haut), par un double
         // lissage : le mouvement démarre et s'arrête en douceur, sans à-coup à chaque coup de joystick
         if (rk.active) {
-          this.camNose.lerp(rk.fwd, U.damp(c.noseLag, dt)).normalize();
+          let nose = rk.fwd;
+          const run = this.game.endlessRun;
+          if (run && run.T) {   // v076 : la caméra regarde déjà vers où le couloir tourne : le décor paraît en ligne droite
+            const T = run.T, a = T.at(run.dist + 8, 0, 0), b = T.at(run.dist + 80, 0, 0), cy = Math.atan2(b[0] - a[0], -(b[2] - a[2])), ry = Math.atan2(rk.fwd.x, -rk.fwd.z);
+            let df = cy - ry; df = Math.atan2(Math.sin(df), Math.cos(df));
+            nose = _nb.copy(rk.fwd).applyAxisAngle(_yAx, -U.clamp(df, -1.0, 1.0) * 0.9);
+          }
+          this.camNose.lerp(nose, U.damp(c.noseLag, dt)).normalize();
           const k = U.damp(c.followLag, dt);
           this.camDir.lerp(this.camNose, k).normalize();
           const u = _t1.copy(this.upRef).lerp(this.up, k);

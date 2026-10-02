@@ -146,9 +146,9 @@
     const cfg = C(), T = new Track(seed, opts && opts.zones);
     if (opts && opts.env) T.forceEnv = opts.env;   // banc de test : ?env=neonNight
     if (opts && opts.levelLen) {   // v075 : niveau à longueur fixe (arène + boss à la fin)
-      T.levelLen = opts.levelLen; T.difK = opts.difK || 1; T.bossHp = opts.bossHp || 4;
+      T.levelLen = opts.levelLen; T.difK = opts.difK || 1; T.bossHp = opts.bossHp || 1; T.bossType = opts.bossType || 'heli'; T.padStyle = opts.padStyle || 0;
     }
-    if (opts && opts.order && opts.order.length) { const o = opts.order.filter((z) => CC.Zones.PROFILE[z]); while (o.length < 90) o.push(o[o.length % Math.max(1, opts.order.length)]); T.zoneOrder = o; if (opts.levelLen) T.off = (o[1] && o[1] !== o[0]) ? C().zoneLen - 500 : 0; }   // banc de test : ?order=city,metro,…
+    if (opts && opts.order && opts.order.length) { const o = opts.order.filter((z) => CC.Zones.PROFILE[z]); while (o.length < 90) o.push(o[o.length % Math.max(1, opts.order.length)]); T.zoneOrder = o; if (opts.levelLen) { const dE = o[1] && o[1] !== o[0] ? Math.abs(CC.Zones.PROFILE[o[1]].elev - CC.Zones.PROFILE[o[0]].elev) : 0; T.off = dE ? C().zoneLen - (Math.max(130, 1.8 * dE) + 40) : 0; } }   // banc de test : ?order=city,metro,…
     const L = {
       id: 'endless', name: 'CLASSIQUE', hud: 'C', mode: 'endless', endless: true, seed, fuel: cfg.fuelMax,
       killY: -30, lookAhead: 16, terminalRange: 20, fireDelay: 0.35, impactVariant: 'orange',
@@ -161,7 +161,8 @@
         // v034 : le décor du lanceur (dalle, rail, pylônes, feux) est CC.Pad ; ici seulement la collision de la dalle et son pilier
         b.box({ p: [0, 11.1, 40], s: [2.6, 0.5, 5.2], mat: 'metal', render: false });
         b.box({ p: [0, 5.45, 40], s: [1.6, 10.9, 1.6], mat: 'metal', tint: '#6a717c' });
-        b.box({ p: [0, 40, 64], s: [120, 80, 4], mat: { side: 'facadeDark', top: 'concreteDark' }, tint: '#c8ccd4' });   // fond derrière le lanceur
+        const PW = [[{ side: 'facadeDark', top: 'concreteDark' }, '#c8ccd4'], [{ side: 'brick', top: 'concreteDark' }, '#d8c8c0'], [{ side: 'corrugated', top: 'metal' }, '#b8c4d0'], [{ side: 'concreteWarm', top: 'concrete' }, '#e8dcc8'], [{ side: 'rock', top: 'dirt' }, '#c8b8a0'], [{ side: 'metal', top: 'concreteDark' }, '#a8b4c0'], [{ side: 'planks', top: 'roofBrown' }, '#e0c8a0'], [{ side: 'facade', top: 'concrete' }, '#ffffff']], pw = PW[(T.padStyle || 0) % PW.length];
+        b.box({ p: [0, 40, 64], s: [120, 80, 4], mat: pw[0], tint: pw[1] });   // v076 : fond derrière le lanceur (change à chaque niveau)
       },
     };
     return L;
@@ -237,6 +238,16 @@
       busy.push(d);
       const hy = air ? p[1] - T.base(d) : type === 'fuel' ? 3.5 : 1.6;
       gates.push({ d: d - 55, lx: T.laneX(d - 55), y: T.laneY(d - 55) * 0.7 }, { d: d - 22, lx, y: hy + 3 }, { d, lx, y: hy }, { d: d + 30, lx: T.laneX(d + 30), y: T.laneY(d + 30) * 0.8 });
+    }
+
+    // v076 : FLECHES de chemin (copiées de l'ancien niveau City) : flèches vertes plates et translucides, une tous les 45 m, le long de la trajectoire
+    if (T.levelLen) for (let d = Math.ceil(Math.max(d0, 40) / 45) * 45; d < d1 - 1; d += 45) {
+      const sA = (CC.Zones.plan(T, T.zoneIndex(d)).scenes.find((q) => d >= q.d0 && d < q.d1)) || null;
+      if (!sA || sA.name === 'arene' || d > T.levelLen - 30) continue;
+      if (!((T.difK || 1) < 1.3 || sA.name === 'city1' || sA.name === 'escalier')) continue;
+      const pa = T.at(d, T.laneX(d), T.laneY(d) - 2.2), pb = T.at(d + 12, T.laneX(d + 12), T.laneY(d + 12) - 2.2), o = CC.Models.guideArrow(), P = new THREE.Vector3(pa[0], pa[1], pa[2]);
+      o.position.copy(P); o.lookAt(new THREE.Vector3(pb[0], pb[1], pb[2])); o.rotateX(0.6); o.scale.setScalar(2.4);
+      b.entity({ object: o, t: Math.random() * 6, base: P.y, update(dt) { this.t += dt; this.object.position.y = this.base + Math.sin(this.t * 3) * 0.3; } });
     }
 
     // drones : ils balaient le passage (le rail rouge montre leur course) ; dans les scènes libres seulement
@@ -438,7 +449,7 @@
       // v066 : MANIABILITE — le couloir tourne : la visée suit automatiquement le virage, le joueur ne corrige que l'écart
       if (rk.active && g.state === 'FLIGHT' && !g.useAutopilot && g.input && g.input.aimQ) {
         const a = this.T.theta(this.dist + Math.max(25, rk.speed) * dt) - this.T.theta(this.dist);
-        if (a) { g.input.aimQ.premultiply(_qa.setFromAxisAngle(_ay, -a * 0.92)); g.input.aimQ.normalize(); }
+        if (a) { g.input.aimQ.premultiply(_qa.setFromAxisAngle(_ay, -a * 0.5)); g.input.aimQ.normalize(); }
       }
       if (this.multT > 0) this.multT = Math.max(0, this.multT - dt);
       if (this.chainT > 0 && (this.chainT -= dt) <= 0) this.chain = 0;

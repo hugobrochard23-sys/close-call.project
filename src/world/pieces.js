@@ -28,7 +28,7 @@
   const GATES = {
     city:     { tunnel: 3, skybridge: 3, arch: 1.2, billboard: 2, pylons: 1.2, laser: 1.2, panel: 2.2, crane: 1.5 },
     night:    { tunnel: 3, skybridge: 3.5, billboard: 2, laser: 1.4, panel: 2, crane: 1.2 },
-    forest:   { ruin: 2.5, pylons: 1, panel: 2, log: 2, arch: 1.5 },
+    forest:   { log: 1 },   // v076 : plus de ruines / panneaux / arches grises dans la forêt
     snow:     { arch: 2.5, pylons: 2, panel: 1.6, tunnel: 1 },
     desert:   { arch: 4, pylons: 1.6, panel: 1.6, tunnel: 1.4 },
     industry: { tunnel: 3, skybridge: 2.5, laser: 2, pylons: 1.4, panel: 2, crane: 2.2 },

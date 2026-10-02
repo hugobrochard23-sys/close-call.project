@@ -12,7 +12,7 @@
     text(ctx, 'NIVEAUX', W / 2, Y(0.05), tp, '#ffffff', { align: 'center', skew: -0.2 });
     const cols = 5, gw = W * 0.9, cell = gw / cols, gap = cell * 0.14, size = cell - gap, x0 = W * 0.05 + gap / 2, y0 = Y(0.14), t = performance.now() / 1000;
     for (let n = 1; n <= CC.LM.count; n++) {
-      const col = (n - 1) % cols, row = Math.floor((n - 1) / cols), x = R(x0 + col * cell), y = R(y0 + row * cell), open = n <= max, isDone = !!done[n], isCur = n === cur && lv.mode !== 'endless';
+      const col = (n - 1) % cols, row = Math.floor((n - 1) / cols), x = R(x0 + col * cell), y = R(y0 + row * cell), open = n <= max, isDone = !!done[n], isCur = n === cur;
       const blink = isCur && Math.floor(t * 2.5) % 2 === 0;
       Home.pill(ctx, x, y, size, size, isDone ? 'rgba(20,70,40,0.95)' : open ? (blink ? 'rgba(90,70,24,0.97)' : 'rgba(38,45,54,0.97)') : 'rgba(18,22,28,0.95)', isCur ? GOLD : isDone ? GREEN : open ? '#5a6674' : '#2a313a', size * 0.14);
       if (open) text(ctx, String(n), x + size / 2, y + size * 0.3, ui.fitPx([String(n)], size * 0.6, size * 0.03), isDone ? GREEN : '#ffffff', { align: 'center' });
@@ -23,11 +23,6 @@
     const def = CC.LM.def(cur), zn = (CC.Zones.meta[def.zone] && CC.Zones.meta[def.zone].label) || def.zone.toUpperCase();
     const info = 'NIVEAU ' + cur + '   ' + zn, ip = ui.fitPx([info], W * 0.86, u * 0.0042);
     text(ctx, info, W / 2, Y(0.14) + 6 * (size + gap) + u * 0.02, ip, '#c8d0dc', { align: 'center' });
-    // mode sans fin
-    const bw = W * 0.6, bh = Math.max(u * 0.11, 44 * ui.pixelRatio()), bx = W / 2 - bw / 2, by = Y(0.79), endless = lv.mode === 'endless';
-    Home.pill(ctx, bx, by, bw, bh, endless ? 'rgba(90,70,24,0.97)' : 'rgba(38,45,54,0.97)', endless ? GOLD : '#5a6674', bh * 0.3);
-    text(ctx, 'SANS FIN', W / 2, by + bh / 2 - ui.fitPx(['SANS FIN'], bw * 0.7, bh * 0.04) * 3.6, ui.fitPx(['SANS FIN'], bw * 0.7, bh * 0.04), '#ffffff', { align: 'center' });
-    ui.buttons.push({ x: bx, y: by, w: bw, h: bh, action: () => { const S = (game.save.lvl = game.save.lvl || { cur: 1, max: 1, done: {}, tries: {}, mode: 'level' }); S.mode = 'endless'; game.writeSave(); ui.overlay = null; game.goHome({}); } });
     Home.backButton(ui, ctx, L, ui.key('RETOUR', 'ESC'), () => { ui.overlay = null; });
   };
 
@@ -36,7 +31,7 @@
   Home.drawHome = function (ui, ctx, game, W, H) {
     oldHome.apply(this, arguments);
     const L = Home.layout(ui, W, H), { u, Y } = L, lv = game.levelRun;
-    const label = lv ? 'NIVEAU ' + lv.n : 'SANS FIN', lp = ui.fitPx([label], W * 0.6, u * 0.009);
+    const label = lv ? 'NIVEAU ' + lv.n : '', lp = ui.fitPx([label], W * 0.6, u * 0.009);
     text(ctx, label, W / 2, Y(0.27), lp, '#ffffff', { align: 'center' });
     const bw = W * 0.4, bh = Math.max(u * 0.1, 40 * ui.pixelRatio()), bx = W * 0.05, by = Y(0.9) - bh;
     Home.pill(ctx, bx, by, bw, bh, 'rgba(38,45,54,0.97)', '#5a6674', bh * 0.3);

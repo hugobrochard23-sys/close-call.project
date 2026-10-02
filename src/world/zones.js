@@ -238,7 +238,7 @@
     const plan = planBase(T, zi);
     if (T.levelLen && !plan._lv) {
       plan._lv = true;
-      const L0 = T.levelLen, A0 = L0 - 80, A1 = L0 + 560, zl = C().zoneLen, start = Math.max(0, zi * zl - (T.off || 0)), end = zi * zl - (T.off || 0) + zl;
+      const L0 = T.levelLen, A0 = L0 - 80, A1 = L0 + 800, zl = C().zoneLen, start = Math.max(0, zi * zl - (T.off || 0)), end = zi * zl - (T.off || 0) + zl;
       plan.scenes = plan.scenes.filter((s) => s.d0 < A0 - 60); for (const s of plan.scenes) if (s.d1 > A0) s.d1 = A0;
       plan.pins = plan.pins.filter((p) => p.d0 < A0);
       if (start < A1 && end > A0) plan.scenes.push({ name: 'arene', d0: Math.max(A0, start), d1: Math.min(A1, end), zone: plan.zone, zi, key: zi + '_arena', stage: 0 });
@@ -467,8 +467,8 @@
   function arenaBuild(S, zone) {
     const T = S.T, V0 = 64, meta = Z.meta[zone] || Z.meta.city, wl = meta.wall ? meta.wall(S.sr) : { mat: 'concrete', tint: '#c8ccd0' };
     for (let dc = S.d0; dc < S.d1; dc += 40) S.item(dc + 20, () => { for (const sg of [-1, 1]) S.bx(dc + 20, sg * (V0 + 12), 55, 24, 110, 40.6, wl.mat, wl.tint); });
-    const dEnd = T.levelLen + 560; if (dEnd > S.d0 && dEnd <= S.d1 + 0.5) S.item(dEnd - 3, () => S.bx(dEnd - 3, 0, 55, 2 * (V0 + 24), 110, 6, wl.mat, wl.tint));
-    const dB = T.levelLen + 120; if (dB >= S.d0 && dB < S.d1) S.item(dB, () => S.b.target('heli', S.at(dB, 0, 26), S.yaw(dB), { scale: 6.5, hp: T.bossHp || 4, boss: true, unarmed: false, drift: 7, driftSpeed: 0.35 }));
+    const dEnd = T.levelLen + 800; if (dEnd > S.d0 && dEnd <= S.d1 + 0.5) S.item(dEnd - 3, () => S.bx(dEnd - 3, 0, 55, 2 * (V0 + 24), 110, 6, wl.mat, wl.tint));
+    const dB = T.levelLen + 110; if (dB >= S.d0 && dB < S.d1) S.item(dB, () => { const bt = T.bossType || 'heli'; S.b.target(bt, S.at(dB, 0, bt === 'heli' ? 26 : 0), S.yaw(dB) + (bt === 'tank' ? 180 : 0), { scale: 6.5, hp: T.bossHp || 1, boss: true, unarmed: false, drift: bt === 'heli' ? 7 : 3, driftSpeed: 0.35 }); });
   }
 
   /* ---------- point d'entrée : construit un tronçon de 200 m (sol, passages, scènes) ---------- */
@@ -507,7 +507,7 @@
     for (const side of [-1, 1]) CC.Scenery.side(ctx.b, T, ctx.r, c0, c1, side, ZONES, ctx.game);
     const po = { stage: Math.min(3, Math.floor(c0 / C().stageLen)), zone, ZONES, busy: ctx.busy, reserved: ctx.reserved, bridges: [], env: T.env(sc.zi), special: null };
     CC.Pieces.build(ctx.b, T, ctx.r, c0, c1, po);
-    CC.Pieces.far(ctx.b, T, ctx.r, c0, c1, po);
+    if (zone !== 'forest') CC.Pieces.far(ctx.b, T, ctx.r, c0, c1, po);
     if (CC.Zones.forestLife) CC.Zones.forestLife(new Scene(ctx, sc));
   }
 

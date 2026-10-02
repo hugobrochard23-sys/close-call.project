@@ -121,6 +121,7 @@
       if (this.type === 'tank' || this.type === 'sam') this.updateTank(dt, game, rk);
       if (this.type === 'radar') this.model.userData.dish.rotation.y += dt * 1.1;
       if (this.model.userData.beacon) this.model.userData.beacon.visible = (this.t + this.ph) % 1.4 < 0.15;
+      if (this.flyTo) { const dv = _v.subVectors(this.flyTo, this.base), dl = dv.length(); if (dl < 1) this.flyTo = null; else this.base.addScaledVector(dv, Math.min(1, (this.flySpeed || 90) * dt / dl)); }   // v076 : le boss s'éloigne après un coup
       if (this.type === 'heli' || this.type === 'heliCamo') this.updateObb();
       else if (!this.path && !this.patrol && this.drift) {   // v070 : les cibles au sol bougent un peu (balancement, léger pivot)
         const sw = Math.sin(this.t * this.driftSpeed + this.ph), yw = this.yaw0 + Math.sin(this.t * 0.6 + this.ph) * 0.05;

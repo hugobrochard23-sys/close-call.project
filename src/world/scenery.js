@@ -21,7 +21,7 @@
     night:    { block: 6, low: 1.3, park: 1, open: 0.5 },
     desert:   { low: 3, open: 4, cliff: 1.3 },
     snow:     { forest: 4, open: 3, cliff: 1.6, low: 1.2 },
-    forest:   { open: 9, forest: 0.5, cliff: 0.15 },
+    forest:   { open: 9, forest: 0.5 },
     industry: { block: 2.4, yard: 4, open: 1, low: 1 },
     canyon:   { cliff: 6, open: 1.3 },
   };
@@ -58,6 +58,7 @@
       if (zone === 'city' || zone === 'night' || zone === 'industry') wall(-0.2, 3.6, 0.35, zone === 'industry' ? 'concreteDark' : 'concrete', undefined, 0, 1, false);
       const fogc = new THREE.Color(env.fog.color).multiplyScalar(0.88);
       const far = (n, hMin, hMax, o0, o1, wMin, wMax) => {
+        if (zone === 'forest') return;   // v076 : pas de silhouettes grises dans la forêt
         for (let i = 0; i < n; i++) { const u = r(), w = r.between([wMin, wMax]), h = r.between([hMin, hMax]); box(u, r.between([o0, o1]), w, h, r.between([wMin, wMax]), 'basic:#' + fogc.clone().multiplyScalar(r.between([0.85, 1.05])).getHexString(), undefined, false); }
       };
 
