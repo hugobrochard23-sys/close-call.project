@@ -234,7 +234,7 @@
       const d = t.d, ly = T.laneY(d), type = t.zone === 'mini' ? 'fuel' : r.pick(ly < 15 ? ['tank', 'truck', 'heli', 'heli', 'sam'] : ['heli', 'heli', 'heli', 'heli', 'truck']), lx = t.lx, air = type === 'heli';   // v069 : sur la ligne directrice : hélicoptère à hauteur de la trajectoire, ou char / camion si elle descend
       const p = place(d, lx, ly + (t.dy || 0) + r.between([-1.5, 1.5]), air, air ? 8 : type === 'sam' ? 4.5 : 5.5);
       if (!p) continue;   // pas de place libre : pas de cible (jamais dans un mur)
-      b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0) + (type === 'tank' ? 180 : 0), { unarmed: d * dk < 900 || r() > U.clamp((d * dk - 600) / 6500, 0.05, 0.9), scale: air ? 2.2 : type === 'fuel' ? 2.0 : 2.4, drift: air ? 5 : 2.2, driftSpeed: 0.45 });   // les premiers ne tirent pas ; ensuite de plus en plus souvent
+      b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0) + (type === 'tank' ? 180 : 0), { unarmed: d * dk < 250 || r() > U.clamp(0.3 + (d * dk - 250) / 3000, 0.3, 0.9), scale: air ? 2.2 : type === 'fuel' ? 2.0 : 2.4, drift: air ? 5 : 2.2, driftSpeed: 0.45 });   // les premiers ne tirent pas ; ensuite de plus en plus souvent
       busy.push(d);
       const hy = air ? p[1] - T.base(d) : type === 'fuel' ? 3.5 : 1.6;
       gates.push({ d: d - 55, lx: T.laneX(d - 55), y: T.laneY(d - 55) * 0.7 }, { d: d - 22, lx, y: hy + 3 }, { d, lx, y: hy }, { d: d + 30, lx: T.laneX(d + 30), y: T.laneY(d + 30) * 0.8 });
@@ -265,16 +265,16 @@
     }
 
     // ennemis (faibles, en nombre limité) : chars et lance-missiles en bordure du volume, hélicoptères en altitude ; selon la zone
-    const ramp = 0, tanks = [], nT = 0;   // v073 : plus d'ennemis de garde : seulement les cibles sur la ligne   // v068 : ennemis de garde en nombre croissant
+    const ramp = U.clamp(d0 * dk / 3500, 0, 1), tanks = [], nT = Math.round(2 * ramp);   // v077 : ennemis de garde (chars, lance-missiles, hélicoptères) qui tirent, de plus en plus nombreux   // v068 : ennemis de garde en nombre croissant
     for (let i = 0; i < nT; i++) {
       const d = d0 + cfg.chunkLen * (i + r.between([0.2, 0.8])) / nT, zn = zoneAt(d); if (!free(d, 14) || inRamp(d) || tr0(d).t < 1 || !CC.Zones.enemies(zn).tank) continue;
       const lx = CC.Zones.edgeLx(T, d, r() < 0.5 ? -1 : 1, zn); tanks.push({ type: 'tank', pos: T.at(d, lx, 0), yaw: 180 - Math.sign(lx) * 20 }); busy.push(d);
     }
-    for (let i = 0; i < Math.round(3 * ramp); i++) {
+    for (let i = 0; i < Math.round(1.6 * ramp); i++) {
       const d = d0 + cfg.chunkLen * r.between([0.15, 0.85]), zn = zoneAt(d); if (!free(d, 20) || inRamp(d) || tr0(d).t < 1 || !CC.Zones.enemies(zn).sam) continue;
       const lx = CC.Zones.edgeLx(T, d, r() < 0.5 ? -1 : 1, zn); tanks.push({ type: 'sam', pos: T.at(d, lx, 0), yaw: 180 - Math.sign(lx) * 15 }); busy.push(d);
     }
-    for (let i = 0; i < Math.round(3 * ramp); i++) {
+    for (let i = 0; i < Math.round(1.6 * ramp); i++) {
       const d = d0 + cfg.chunkLen * r.between([0.2, 0.8]), zn = zoneAt(d); if (!free(d, 25) || inRamp(d) || tr0(d).t < 1 || !CC.Zones.enemies(zn).heli) continue;
       tanks.push({ type: 'heli', pos: T.at(d, T.laneX(d) + (r() < 0.5 ? -1 : 1) * 26, r.between([24, 36])), yaw: 180 }); busy.push(d);
     }
