@@ -64,7 +64,7 @@
       this.zoneOrder = CC.Zones.order(seed, zones, 90);
       // v053 : DEPART ALEATOIRE — une partie sur deux, la montée / la descente vers la 2e zone commence 15 à 40 m après le lanceur (au lieu de 2 000 m de ville)
       const ro = G.stream(seed, 'zoff'); this.off = 0;
-      if (this.zoneOrder.length > 1 && ro() < 0.55) { const hw1 = Math.max(130, 1.8 * Math.abs(CC.Zones.PROFILE[this.zoneOrder[1]].elev - CC.Zones.PROFILE[this.zoneOrder[0]].elev)); this.off = C().zoneLen - (hw1 + ro.between([15, 40])); }
+      if (this.zoneOrder.length > 1 && ro() < 0.55 && CC.Zones.PROFILE[this.zoneOrder[1]].elev !== CC.Zones.PROFILE[this.zoneOrder[0]].elev) { const hw1 = Math.max(130, 1.8 * Math.abs(CC.Zones.PROFILE[this.zoneOrder[1]].elev - CC.Zones.PROFILE[this.zoneOrder[0]].elev)); this.off = C().zoneLen - (hw1 + ro.between([15, 40])); }
     }
     // v034c : la TRAJECTOIRE (lane) — position latérale (relative au couloir) et altitude (relative au sol) qui serpentent, montent et
     // descendent ; les structures sont posées autour d'elle, le parcours est donc toujours faisable
@@ -180,16 +180,20 @@
     const inRamp = (d) => { const t = tr0(d); return !!t.k && T.elev(t.k) !== T.elev(t.k - 1); };
 
     // cibles en route, sur la colonne vertébrale (il faut parfois plonger vers le sol pour les prendre)
-    const nextT = (from) => from + r.between(cfg.targetGap) * U.lerp(2.4, 0.65, U.clamp(from / 7000, 0, 1));   // v068 : peu de cibles au départ, de plus en plus ensuite
-    if (T.nextTarget === undefined) T.nextTarget = 520;   // v040 : le premier réservoir vient APRES la première porte (tutoriel lisible)
+    const nextT = (from) => from + U.lerp(52, 40, U.clamp(from / 7000, 0, 1)) * r.between([0.8, 1.25]);   // v069 : une cible tous les ~50 m, une par une, sur la ligne directrice   // v068 : peu de cibles au départ, de plus en plus ensuite
+    if (T.nextTarget === undefined) T.nextTarget = 130;   // v040 : le premier réservoir vient APRES la première porte (tutoriel lisible)
     const tgt = [];
     while (T.nextTarget < d1) {
       const d = T.nextTarget;
-      const nearPin = [-150, -60, 0, 40].some((o) => CC.Zones.pinAt(T, d + o).length);   // pas de plongée vers une cible dans une scène à structure imposée
+      const scA = (CC.Zones.plan(T, T.zoneIndex(d)).scenes.find((q) => d >= q.d0 && d < q.d1)) || null, STRUCT = { passage: 55, tower: 55, carrefour: 50, viaduc: 90, vitres: 60, city1: 0, escalier: 0 };
+      const nearPin = zoneAt(d) === 'city' && scA ? (STRUCT[scA.name] !== undefined && (STRUCT[scA.name] === 0 || Math.abs(d - (scA.d0 + scA.d1) / 2) < STRUCT[scA.name])) : CC.Zones.pinAt(T, d).some((p) => d > p.d0 - 15 && d < p.d1 + 15);   // v069 : en ville, seules les scènes à structure centrale écartent les cibles   // pas de plongée vers une cible dans une scène à structure imposée
       if (d >= d0 + 10 && !inRamp(d) && tr0(d).t === 1 && Math.abs((d + T.off) % cfg.zoneLen) > 70 && !nearPin && !CC.Zones.noTargets[zoneAt(d)]) {
-        const zone = zoneAt(d), lx = CC.Zones.targetLx(T, d, zone) + r.between([-2, 2]);
+        const zone = zoneAt(d), lx = CC.Zones.targetLx(T, d, zone) + r.between([-1.5, 1.5]);
+        const sn = ((CC.Zones.plan(T, T.zoneIndex(d)).scenes.find((q) => d >= q.d0 && d < q.d1)) || {}).name;
+        if (['city1', 'escalier', 'cheminee', 'toits', 'plongee'].indexOf(sn) >= 0 && r() < 0.75) { T.nextTarget = nextT(d); continue; }   // temps calmes pendant les montées / chutes
         tgt.push({ d, lx, zone });
-        reserved.push({ d: d - 12, lx, w: 30, dd: 110 });
+        reserved.push({ d: d - 8, lx, w: 24, dd: 30 });
+        if (r() < U.clamp((d - 1500) / 6500, 0, 0.7)) { const sg = r() < 0.5 ? -1 : 1; tgt.push({ d: d + r.between([-14, 14]), lx: lx + sg * r.between([11, 17]), zone, extra: true }); }   // de plus en plus de cibles en même temps
       }
       T.nextTarget = nextT(d);
     }
@@ -207,9 +211,9 @@
         b.box({ p: T.at(gd, 0, 0.12), s: [2 * hf, 0.1, 1.6], r: [0, yw, 0], mat: 'basic:#ffd23a', collide: false, shadow: false });
       } }
     for (const t of tgt) {
-      const d = t.d, type = t.zone === 'mini' ? 'fuel' : r.pick(['tank', 'tank', 'tank', 'truck', 'heli', 'heli', 'sam', 'fuel']), lx = t.lx, air = type === 'heli';   // v066 : chars, camions, hélicoptères, lance-missiles
-      const p = air ? T.at(d, lx + r.between([-8, 8]), U.clamp(T.laneY(d) + r.between([-4, 8]), 10, 60)) : T.at(d, lx, 0);
-      b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0) + (type === 'tank' ? 180 : 0), { unarmed: d < 500, scale: air ? 2.2 : type === 'fuel' ? 2.0 : 2.4 });
+      const d = t.d, ly = T.laneY(d), type = t.zone === 'mini' ? 'fuel' : r.pick(ly < 15 ? ['tank', 'truck', 'heli', 'heli'] : ['heli', 'heli', 'heli', 'truck']), lx = t.lx, air = type === 'heli' || (type === 'truck' && ly >= 15 && false);   // v069 : sur la ligne directrice : hélicoptère à hauteur de la trajectoire, ou char / camion si elle descend
+      const p = air ? T.at(d, lx, U.clamp(ly + r.between([-1.5, 1.5]), 8, 70)) : T.at(d, lx, 0);
+      b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0) + (type === 'tank' ? 180 : 0), { unarmed: d < 400 || r() > U.clamp(0.2 + d / 6000, 0, 1), scale: air ? 2.2 : type === 'fuel' ? 2.0 : 2.4 });   // les premiers ne tirent pas ; ensuite de plus en plus souvent
       busy.push(d);
       const hy = air ? p[1] - T.base(d) : type === 'fuel' ? 3.5 : 1.6;
       gates.push({ d: d - 55, lx: T.laneX(d - 55), y: T.laneY(d - 55) * 0.7 }, { d: d - 22, lx, y: hy + 3 }, { d, lx, y: hy }, { d: d + 30, lx: T.laneX(d + 30), y: T.laneY(d + 30) * 0.8 });

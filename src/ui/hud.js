@@ -379,8 +379,8 @@
   HUD.prototype.drawMarks = function (game) {
     if (game.state !== 'FLIGHT' && game.state !== 'AIM') return;
     const W = this.canvas.width, H = this.canvas.height, ctx = this.ctx, cam = game.camera, rk = game.rocket, t = performance.now() / 1000;
-    const px = Math.max(3, Math.round(H * 0.0072)), base = H * 0.055;
-    const list = game.targets.filter((q) => q.alive && !q.hazard && q.obb).map((q) => ({ q, d: rk.pos.distanceTo(q.obb.c) })).filter((o) => o.d < 240).sort((a, b) => a.d - b.d).slice(0, 3);
+    const px = Math.max(5, Math.round(H * 0.012)), base = H * 0.034;   // v069 : petits, gros pixels
+    const list = game.targets.filter((q) => q.alive && !q.hazard && q.obb).map((q) => ({ q, d: rk.pos.distanceTo(q.obb.c) })).filter((o) => o.d < 240).sort((a, b) => a.d - b.d).slice(0, 2);
     const rect = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
     list.forEach((o, i) => {
       const q = o.q, p = CC.Curve.apply(this._v.copy(q.obb.c), cam).project(cam);
@@ -388,7 +388,7 @@
       if (_bk.subVectors(q.obb.c, rk.pos).dot(rk.fwd) < 0) return;   // une cible dépassée n'est plus affichée
       const hot = q.guard ? '#ff9a2a' : '#ff3b2e', hot2 = q.guard ? '#ffd080' : '#ff9a80', fade = U.clamp((240 - o.d) / 90, 0, 1);   // apparaît en fondu à l'approche (pleinement visible à 150 m)
       const sx = (p.x * 0.5 + 0.5) * W, sy = (-p.y * 0.5 + 0.5) * H, near = U.clamp((300 - o.d) / 300, 0, 1);
-      const r = base * (0.9 + 0.7 * near) * (1 + 0.06 * Math.sin(t * 9 + i)), arm = r * 0.62;
+      const r = Math.round(base * (0.9 + 0.5 * near) / px) * px, arm = Math.round(r * 0.6 / px) * px;   // pas de clignotement ni de pulsation, tailles par pas de pixel
       ctx.save(); ctx.globalAlpha = fade;
       for (const [col, off] of [['rgba(30,6,4,0.9)', px * 0.7], [hot, 0]]) {
         for (const [ax, ay] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
@@ -397,8 +397,8 @@
           rect(ax > 0 ? cx - px : cx, ay > 0 ? cy - arm : cy, px, arm, col);
         }
       }
-      rect(sx - px, sy - px * 0.5, px * 2, px, hot2); rect(sx - px * 0.5, sy - px, px, px * 2, hot2);
-      this.text(Math.round(o.d) + ' M', sx, sy + r + H * 0.034, 0.0036, hot2, { align: 'center' });
+      rect(sx - px / 2, sy - px / 2, px, px, hot2);
+      this.text(Math.round(o.d) + ' M', sx, sy + r + H * 0.03, 0.0028, hot2, { align: 'center' });
       ctx.restore();
     });
   };
