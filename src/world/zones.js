@@ -194,7 +194,8 @@
     const padIn = zi === 0 ? 0 : dIn ? Z.hw(T, zi) + (tight ? 4 : 50) : 40, padOut = dOut ? Z.hw(T, zi + 1) + (tight ? 4 : 50) : 40;
     if (!def) { plan.scenes.push({ name: 'legacy', d0: start + padIn, d1: end - padOut, zone, zi, key: zi + '_0', stage: 0 }); return plan; }
     const r = G.stream(T.seed, 'plan' + zi);
-    const names = Object.keys(def.scenes).filter((n) => n !== def.signature);
+    const skipQ = (new URLSearchParams(location.search).get('skip') || '').split(',');   // banc de test : ?skip=city1,escalier
+    const names = Object.keys(def.scenes).filter((n) => n !== def.signature && skipQ.indexOf(n) < 0);
     for (let i = names.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = names[i]; names[i] = names[j]; names[j] = t; }
     if (def.early) {   // v057 : une scène « copie du niveau d'origine » + une scène spéciale parmi les premières de la zone (jamais en toute première)
       const sp = [];
@@ -215,6 +216,7 @@
       if (len < 80) break;
       const sc = { name: nm, d0: d, d1: d + len, zone, zi, key: zi + '_' + i, stage: Math.min(3, Math.floor(d / cfg.stageLen)) };
       plan.scenes.push(sc);
+      if (sd.turns) { const sg = G.stream(T.seed, 'turn' + sc.key)() < 0.5 ? -1 : 1; sc.turns = sd.turns.map((t) => ({ d0: sc.d0 + t[0] * len, d1: sc.d0 + t[1] * len, ang: sg * t[2] * Math.PI / 180 })); }   // v063 : virages (fractions de la scène, degrés)
       if (sd.pin) { const p = sd.pin(T, sc, G.stream(T.seed, 'pin' + sc.key)); if (p) { p.d0 = sc.d0 + (p.from || 0); p.d1 = p.to !== undefined ? sc.d0 + p.to : sc.d1; plan.pins.push(p); } }
       d += len; i++;
     }
@@ -344,40 +346,48 @@
   function groundSlice(ctx, d, e) {
     const T = ctx.T, b = ctx.b, m = (d + e) / 2, tr = Z.trans(T, m), zone = tr.t < 0.5 ? tr.z0 : tr.z1, inRamp = tr.k && T.elev(tr.k) !== T.elev(tr.k - 1);
     const y0 = T.base(d), y1 = T.base(e), ym = (y0 + y1) / 2, pitch = Math.atan2(y1 - y0, e - d) * DEG, len = (e - d) + 1.6, W = 2 * (T.vol(m) + 30);
-    const slab = (yoff, w, th, mat, tint, extra) => b.box(Object.assign({ p: [T.cx(m), ym + yoff, -m], s: [w, th, len], r: [pitch, 0, 0], mat, tint, ground: true }, extra || {}));
+    const YW = T.yawAcross(m), dth = Math.abs(T.theta(e) - T.theta(d)), len2 = len + 60 * dth;
+    const rawBox = b['box'].bind(b);
+    const GP = (lx, y) => { const p = T.at(m, lx, 0); p[1] = y; return p; };
+    const bx2 = (o) => { if (!o.r) o.r = [0, YW, 0]; else if (o.r[1] === 0) o.r = [o.r[0], YW, o.r[2]]; if (o.s) o.s = [o.s[0], o.s[1], o.s[2] + (o.s[2] === len ? 60 * dth : 0)]; return rawBox(o); };
+    const slab = (yoff, w, th, mat, tint, extra) => {   // sol physique limité à 260 m de large (grille de collision) ; au-delà : plan visuel sans collision
+      const cw = Math.min(w, 260), ex = extra || {};
+      if (w > cw) bx2({ p: GP(0, ym + yoff - 0.02), s: [w, th, len], r: [pitch, 0, 0], mat, tint, collide: false, shadow: false });
+      return bx2(Object.assign({ p: GP(0, ym + yoff), s: [cw, th, len], r: [pitch, 0, 0], mat, tint, ground: true }, ex));
+    };
     if (inRamp) {
       slab(-1, 900, 2, (T.zoneOrder[(tr.k - 1) % T.zoneOrder.length] === 'forest' || T.zoneOrder[tr.k % T.zoneOrder.length] === 'forest') ? 'rock' : 'concreteDark', '#8a8e96');   // v038e : rampe en béton gris (le rocher clair éblouissait)
-      if (tr.z0 === 'eau' || tr.z1 === 'eau') b.box({ p: [T.cx(m), -3.6, -m], s: [2 * (T.vol(m) + 90), 0.2, len], mat: 'waterSurf', collide: false, shadow: false });   // v038 : la même surface d'eau sur la rampe qui y plonge
+      if (tr.z0 === 'eau' || tr.z1 === 'eau') bx2({ p: GP(0, -3.6), s: [2 * (T.vol(m) + 90), 0.2, len], mat: 'waterSurf', collide: false, shadow: false });   // v038 : la même surface d'eau sur la rampe qui y plonge
       return;
     }
     if (zone === 'city') {
       slab(-1, 900, 2, 'asphalt', '#ffffff');
-      for (const s of [-1, 1]) b.box({ p: [T.cx(m) + s * (T.vol(m) - 4.4), ym + 0.15, -m], s: [9, 0.36, len], r: [pitch, 0, 0], mat: 'concrete', tint: '#d8d8d4', collide: false, shadow: false });
+      for (const s of [-1, 1]) bx2({ p: GP(s * (T.vol(m) - 4.4), ym + 0.15), s: [9, 0.36, len], r: [pitch, 0, 0], mat: 'concrete', tint: '#d8d8d4', collide: false, shadow: false });
     } else if (zone === 'metro') {
       slab(-1, 2 * (T.vol(m) + 20), 2, 'concreteDark', '#a8acb0');
     } else if (zone === 'port') {
       const q = 17;    // le quai : bande centrale ; autour, l'eau
       slab(-1, 2 * q, 2, 'concrete', '#c8c8c4');
-      for (const s of [-1, 1]) b.box({ p: [T.cx(m) + s * (q + 120), ym - 3.6, -m], s: [900, 2, len], r: [pitch, 0, 0], mat: 'water', ground: true });
-      for (const s of [-1, 1]) b.box({ p: [T.cx(m) + s * q, ym - 0.4, -m], s: [0.8, 1.6, len], r: [pitch, 0, 0], mat: 'concreteDark', collide: false, shadow: false });
+      for (const s of [-1, 1]) bx2({ p: GP(s * (q + 120), ym - 3.6), s: [900, 2, len], r: [pitch, 0, 0], mat: 'water', ground: true });
+      for (const s of [-1, 1]) bx2({ p: GP(s * q, ym - 0.4), s: [0.8, 1.6, len], r: [pitch, 0, 0], mat: 'concreteDark', collide: false, shadow: false });
     } else if (zone === 'sky') {
       const hw = 50;
       slab(-2, 2 * hw, 4, 'concreteDark', '#8c929c');
       slab(-46, 2 * hw - 18, 88, 'rock', '#9aa0aa', { collide: true });              // le plateau sous la piste
-      b.box({ p: [T.cx(m), ym - 120, -m], s: [2600, 2, len + 4], mat: 'basic:#e8eef8', collide: false, shadow: false });   // mer de nuages très loin au-dessous
+      bx2({ p: GP(0, ym - 120), s: [2600, 2, len + 4], mat: 'basic:#e8eef8', collide: false, shadow: false });   // mer de nuages très loin au-dessous
     } else if (zone === 'chute' || zone === 'tour') {
       // la ville très loin en dessous : plan non éclairé (les tours géantes le plongeraient dans l'ombre) avec rues, places et parcs
       slab(-1, 420, 2, 'basic:#8e939e', undefined, { shadow: false });
       const rr = U.makeRng(Math.floor(m / 40) * 131 + 7);
-      for (let i = -3; i <= 3; i++) if (rr() < 0.8) b.box({ p: [T.cx(m) + i * 50 + rr() * 12, ym - 0.05, -m], s: [rr() < 0.3 ? 14 : 8, 0.1, len], r: [pitch, 0, 0], mat: 'basic:#b6bac4', collide: false, shadow: false });
-      if (Math.floor(m / 20) % 3 === 0) { b.box({ p: [T.cx(m), ym - 0.04, -m], s: [420, 0.1, 9], mat: 'basic:#b6bac4', collide: false, shadow: false }); }
-      if (rr() < 0.3) b.box({ p: [T.cx(m) + (rr() - 0.5) * 240, ym - 0.03, -m], s: [rr() * 50 + 30, 0.1, len * 0.8], mat: 'basic:#6f8f5a', collide: false, shadow: false });
+      for (let i = -3; i <= 3; i++) if (rr() < 0.8) bx2({ p: GP(i * 50 + rr() * 12, ym - 0.05), s: [rr() < 0.3 ? 14 : 8, 0.1, len], r: [pitch, 0, 0], mat: 'basic:#b6bac4', collide: false, shadow: false });
+      if (Math.floor(m / 20) % 3 === 0) { bx2({ p: GP(0, ym - 0.04), s: [420, 0.1, 9], mat: 'basic:#b6bac4', collide: false, shadow: false }); }
+      if (rr() < 0.3) bx2({ p: GP((rr() - 0.5) * 240, ym - 0.03), s: [rr() * 50 + 30, 0.1, len * 0.8], mat: 'basic:#6f8f5a', collide: false, shadow: false });
     } else if (zone === 'eau') {
       slab(-1, 2 * (T.vol(m) + 60), 2, 'sand', '#8aa8a0');
-      b.box({ p: [T.cx(m), -3.6, -m], s: [2 * (T.vol(m) + 90), 0.2, len], mat: 'waterSurf', collide: false, shadow: false });      // v038 : la surface, translucide (vue d'en dessous comme d'au-dessus)
+      bx2({ p: GP(0, -3.6), s: [2 * (T.vol(m) + 90), 0.2, len], mat: 'waterSurf', collide: false, shadow: false });      // v038 : la surface, translucide (vue d'en dessous comme d'au-dessus)
     } else if (zone === 'usine') {
       slab(-1, 2 * (T.vol(m) + 8), 2, 'concreteDark', '#b0aca0');
-      for (const s of [-1, 1]) b.box({ p: [T.cx(m) + s * (T.vol(m) - 6), ym + 0.06, -m], s: [1.0, 0.1, len], r: [pitch, 0, 0], mat: 'hazard', collide: false, shadow: false });
+      for (const s of [-1, 1]) bx2({ p: GP(s * (T.vol(m) - 6), ym + 0.06), s: [1.0, 0.1, len], r: [pitch, 0, 0], mat: 'hazard', collide: false, shadow: false });
     } else if (zone === 'mini') {
       slab(-1, 2 * (T.vol(m) + 14), 2, 'planks', '#e0c090', { tile: [18, 18] });
     } else {
@@ -432,7 +442,8 @@
   Z.build = function (ctx) {
     const T = ctx.T, cfg = C(), d0 = ctx.d0, d1 = ctx.d1, b = ctx.b;
     // sol
-    for (let d = d0; d < d1 - 0.01; d += 20) groundSlice(ctx, d, Math.min(d1, d + 20));
+    const stp = Math.abs(T.theta(d1) - T.theta(d0)) > 0.004 ? 5 : 20;   // v063 : en virage, sol découpé en tranches de 5 m
+    for (let d = d0; d < d1 - 0.01; d += stp) groundSlice(ctx, d, Math.min(d1, d + stp));
     // passages entre zones
     passage(ctx);
     // scènes qui recouvrent ce tronçon

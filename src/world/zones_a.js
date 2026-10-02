@@ -63,7 +63,7 @@
     opts = opts || {};
     let dc = S.d0;
     while (dc < S.d1) {
-      const dd = S.sr.between([16, 26]), cx = dc + dd / 2, h = S.sr.between([dist.lo, dist.hi]), set = S.sr.between([0, 2.2]), tint = S.sr.pick(dist.tints), roll = S.sr();
+      const dd = S.sr.between(opts.dd || [16, 26]), cx = dc + dd / 2, h = S.sr.between([dist.lo, dist.hi]), set = S.sr.between([0, 2.2]), tint = S.sr.pick(dist.tints), roll = S.sr();
       const cross = crosses.some((c) => Math.abs(c - cx) < dd / 2 + 8);
       if (!cross && !(opts.skip && opts.skip(cx))) {
         S.item(cx, (r) => {
@@ -494,7 +494,25 @@
   { const b1 = city.scenes.city1.build; city.scenes.city1.build = function (S) { b1.call(this, S); endTank(S, PIT + 68); }; }
   { const b2 = city.scenes.escalier.build; city.scenes.escalier.build = function (S) { b2.call(this, S); endTank(S, SH + 66); }; }
   city.notFirst = ['toits'];
-  city.early = [['city1', 'escalier'], ['slalom', 'cheminee', 'toits', 'ruelle', 'plongee']];
+  city.early = [['city1', 'escalier'], ['virage', 'chicane', 'epingle']];
+
+
+  // ---------- v063 : VIRAGES — le couloir tourne (le décor et les obstacles suivent) ----------
+  function turnScene(S, opt) {
+    const sr = S.sr, dist = district(S, sr.between(opt.lo || [26, 40]), sr.between(opt.hi || [46, 76]));
+    avenueRoad(S, []); furniture(S, [], { noTrees: !!opt.noTrees });
+    for (const s of [-1, 1]) buildingRow(S, s, dist, [], 0, { shops: true, dd: [8, 12] });
+    // portiques jaunes en travers du virage (la trajectoire passe dessous)
+    if (opt.gantry) for (let dc = S.d0 + S.len * 0.2; dc < S.d1 - S.len * 0.15; dc += S.len * 0.2) S.item(dc, () => {
+      const L = S.lane(dc), w = S.vol(dc) - 2, h = Math.max(L.y + S.R + 4, 18);
+      for (const sg of [-1, 1]) S.bx(dc, sg * w, h / 2, 2, h, 2, 'concreteDark', '#c8ccd0');
+      S.bx(dc, 0, h, 2 * w + 2, 2, 2.4, 'concreteDark', '#c8ccd0'); S.bx(dc, 0, h - 1.2, 2 * w, 0.5, 2.6, 'hazard', undefined, false); S.gate(dc, L.lx, L.y);
+    });
+    farTowers(S, 80, 170, 4);
+  }
+  city.scenes.virage = { len: [240, 290], turns: [[0.1, 0.9, 90]], build(S) { turnScene(S, { gantry: true }); } };
+  city.scenes.chicane = { len: [270, 330], turns: [[0.06, 0.46, 55], [0.54, 0.94, -55]], build(S) { turnScene(S, { gantry: true, noTrees: true }); } };
+  city.scenes.epingle = { len: [290, 350], turns: [[0.08, 0.92, 150]], build(S) { turnScene(S, { lo: [34, 50], hi: [60, 90] }); } };
 
   // ============================================================== METRO
   const H = 24;

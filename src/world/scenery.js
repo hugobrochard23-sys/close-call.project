@@ -45,7 +45,7 @@
       const zone = T.zoneId(Math.max(0, d + 10)), Z = ZONES[zone], prof = PROFILE[zone];
       const len = Math.min(d1 - d, r.between([30, 70])), e = d + len;
       const kind = r.weighted(prof);
-      const ax = T.cx(d) + side * T.vol(d), az = -d, bx = T.cx(e) + side * T.vol(e), bz = -e;
+      const pa = T.at(d, side * T.vol(d), 0), pb = T.at(e, side * T.vol(e), 0), ax = pa[0], az = pa[2], bx = pb[0], bz = pb[2];
       const dx = bx - ax, dz = bz - az, cl = Math.hypot(dx, dz), psi = Math.atan2(dx, dz);
       let ox = Math.cos(psi), oz = -Math.sin(psi); if (ox * side < 0) { ox = -ox; oz = -oz; }
       const base = T.base((d + e) / 2), zi = T.zoneIndex(Math.max(0, d + 10)), env = T.env(zi), dark = !!(env && env.dark > 0.4) || zone === 'night';
@@ -161,11 +161,12 @@
 
   S.groundSlices = function (b, T, d0, d1, Zg, cfg) {
     const flat = Math.abs(T.base(d0) - T.base(d1)) < 0.05 && Math.abs(T.base((d0 + d1) / 2) - T.base(d0)) < 0.05;
-    if (flat) { const mid = (d0 + d1) / 2; b.box({ p: [T.cx(mid), T.base(mid) - 1, -mid], s: [300, 2, cfg.chunkLen + 2], mat: Zg.ground, tint: Zg.groundTint, ground: true }); return; }
-    const step = 20;
+    if (flat && Math.abs(T.theta(d1) - T.theta(d0)) < 0.004) { const mid = (d0 + d1) / 2, p = T.at(mid, 0, 0); p[1] = T.base(mid) - 1; b.box({ p, s: [300, 2, cfg.chunkLen + 2], r: [0, T.yawAcross(mid), 0], mat: Zg.ground, tint: Zg.groundTint, ground: true }); return; }
+    const step = Math.abs(T.theta(d1) - T.theta(d0)) > 0.004 ? 5 : 20;
     for (let d = d0; d < d1 - 0.01; d += step) {
-      const e = Math.min(d1, d + step), m = (d + e) / 2, pitch = Math.atan2(T.base(e) - T.base(d), e - d) * DEG;
-      b.box({ p: [T.cx(m), T.base(m) - 1, -m], s: [300, 2, (e - d) + 1.6], r: [pitch, 0, 0], mat: Zg.ground, tint: Zg.groundTint, ground: true });
+      const e = Math.min(d1, d + step), m = (d + e) / 2, pitch = Math.atan2(T.base(e) - T.base(d), e - d) * DEG, p = T.at(m, 0, 0);
+      p[1] = T.base(m) - 1;
+      b.box({ p, s: [300, 2, (e - d) + 1.6 + 60 * Math.abs(T.theta(e) - T.theta(d))], r: [pitch, T.yawAcross(m), 0], mat: Zg.ground, tint: Zg.groundTint, ground: true });
     }
   };
 })();

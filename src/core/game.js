@@ -126,6 +126,8 @@
       this.sunDir = new V().fromArray(env.sun.dir).normalize();
       this.sun.castShadow = CC.CONFIG.render.shadows && env.sun.shadow !== false && this.shadowsAllowed !== false;
       this.postParams = Object.assign({}, CC.CONFIG.postfx, env.postfx || {});
+      // v063 : CAUSE DES ECRANS NOIRS — un fondu entre deux ambiances laissait des réglages indéfinis (bloom…) : NaN dans le post-traitement = écran noir
+      for (const k in CC.CONFIG.postfx) { const v = this.postParams[k]; if (v === undefined || (typeof v === 'number' && !Number.isFinite(v))) this.postParams[k] = CC.CONFIG.postfx[k]; }
       if (this.horizon) this.horizon.setEnv(env);
     }
 
@@ -387,8 +389,8 @@
     revive() {
       const run = this.endlessRun, rk = this.rocket, RC = CC.CONFIG.revive, T = run.T, cfg = CC.CONFIG.endless;
       this.reviveUsed = true; this.ui.overlay = null; this.paused = false;
-      const d = Math.max(30, run.dist - RC.back), sl = T.slope(d);
-      const pos = new V().fromArray(T.at(d, 0, cfg.cruise)), dir = new V(sl, 0.02, -1).normalize();
+      const d = Math.max(30, run.dist - RC.back);
+      const pos = new V().fromArray(T.at(d, 0, cfg.cruise)), p2 = T.at(d + 3, 0, cfg.cruise), dir = new V(p2[0] - pos.x, 0.06, p2[2] - pos.z).normalize();
       for (const m of this.missiles) this.scene.remove(m.object);
       this.missiles = [];
       const yaw = Math.atan2(-dir.x, -dir.z), pitch = Math.asin(dir.y);

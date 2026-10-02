@@ -111,11 +111,33 @@
       return this._env[zi];
     }
     // repère local du couloir en d : position monde d'un point (lx en travers, y au-dessus du sol), cap des objets en travers
-    at(d, lx, y) {
-      const s = this.slope(d), n = Math.sqrt(1 + s * s);
-      return [this.cx(d) + lx / n, y + this.base(d), -d + lx * s / n];
+    // v063 : le couloir TOURNE. Cap θ(d) = somme de virages lissés (scènes à virage, voir Z.plan) ; position P(d) intégrée tous les 2 m ;
+    // cx(d) reste l'ondulation latérale locale. Le repère (d, lx, y) ne change pas : les scènes continuent d'utiliser at() / yawAcross().
+    ensureTurns(d) {
+      const need = this.zoneIndex(Math.max(0, d)) + 1; if (this._tz === undefined) { this._tz = -1; this._turns = []; }
+      while (this._tz < need) { this._tz++; const plan = CC.Zones.plan(this, this._tz); for (const sc of plan.scenes) if (sc.turns) for (const t of sc.turns) this._turns.push(t); }
     }
-    yawAcross(d) { return -Math.atan(this.slope(d)) * DEG; }
+    theta(d) { this.ensureTurns(d); let th = 0; for (const t of this._turns) { if (d <= t.d0) continue; th += t.ang * (d >= t.d1 ? 1 : U.smooth(t.d0, t.d1, d)); } return th; }
+    P(d) {
+      if (d <= 0) return [0, -d];
+      const h = 2, tb = this._tb || (this._tb = [[0, 0]]), n = Math.floor(d / h);
+      while (tb.length <= n + 1) { const i = tb.length - 1, th = this.theta((i + 0.5) * h), p = tb[i]; tb.push([p[0] + Math.sin(th) * h, p[1] - Math.cos(th) * h]); }
+      const f = d / h - n, a = tb[n], b = tb[n + 1];
+      return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+    }
+    at(d, lx, y) {
+      const th = this.theta(d), P = this.P(d), cxo = this.cx(d), phi = th + Math.atan(this.slope(d));
+      return [P[0] + Math.cos(th) * cxo + Math.cos(phi) * lx, y + this.base(d), P[1] + Math.sin(th) * cxo + Math.sin(phi) * lx];
+    }
+    yawAcross(d) { return -(this.theta(d) + Math.atan(this.slope(d))) * DEG; }
+    // distance d du point du couloir le plus proche (en plan) de pos, cherché autour de hint (la roquette avance toujours)
+    project(pos, hint) {
+      let best = hint, bd = Infinity;
+      for (let d = Math.max(0, hint - 25); d <= hint + 90; d += 3) { const p = this.at(d, 0, 0), dx = p[0] - pos.x, dz = p[2] - pos.z, q = dx * dx + dz * dz; if (q < bd) { bd = q; best = d; } }
+      const c = best; bd = Infinity;
+      for (let d = Math.max(0, c - 3); d <= c + 3; d += 0.75) { const p = this.at(d, 0, 0), dx = p[0] - pos.x, dz = p[2] - pos.z, q = dx * dx + dz * dz; if (q < bd) { bd = q; best = d; } }
+      return best;
+    }
   }
   E.Track = Track;
 
@@ -356,7 +378,7 @@
     }
     update(dt) {
       const g = this.game, rk = g.rocket, cfg = C();
-      if (rk.active) this.dist = Math.max(this.dist, -rk.pos.z);
+      if (rk.active) this.dist = Math.max(this.dist, this.T.project(rk.pos, this.dist));   // v063 : progression le long du couloir (qui tourne)
       this.ensure(Math.floor(this.dist / cfg.chunkLen));
       const job = this.pending.shift();
       if (job && this.chunks.get(job.c.k) === job.c) {

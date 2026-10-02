@@ -190,15 +190,15 @@
   // anneaux d'or : on franchit le plan de chaque anneau (en z) ; dans le rayon → passé, hors du rayon → manqué (la série est perdue)
   Collect.rings = function (game, run, ch, p) {
     if (!ch.rings || !ch.rings.length) return;
-    const pz = this._pz;
-    if (pz === undefined) return;
+    if (!this._has) return;
     run.ringGroups = run.ringGroups || {};
     for (const q of ch.rings) {
       if (q.passed || q.missed) continue;
       if (!q.p) q.p = run.T.at(q.d, q.lx, q.y);
       const G = run.ringGroups[q.gid] || (run.ringGroups[q.gid] = { n: q.n, got: 0, dead: false });
-      if (pz > q.p[2] && p.z <= q.p[2]) {
-        const dx = p.x - q.p[0], dy = p.y - q.p[1];
+      const cr = crossing(run, q, p, this._pp);
+      if (cr) {
+        const dx = cr.lat, dy = p.y - q.p[1];
         if (dx * dx + dy * dy < q.rad * q.rad * 1.1) { q.passed = true; G.got++; game.onRing(q, G); }
         else { q.missed = true; G.dead = true; }
       }
@@ -207,18 +207,27 @@
   // portes serrées : on franchit le plan de la porte → PARFAIT si le centre est tenu, sinon simple passage
   Collect.doors = function (game, run, ch, p) {
     if (!ch.doors || !ch.doors.length) return;
-    const pz = this._pz; if (pz === undefined) return;
+    if (!this._has) return;
     for (const q of ch.doors) {
       if (q.passed) continue;
       if (!q.p) q.p = run.T.at(q.d, q.lx, q.y);
-      if (pz > q.p[2] && p.z <= q.p[2]) {
+      const cr = crossing(run, q, p, this._pp);
+      if (cr) {
         q.passed = true;
-        const dx = p.x - q.p[0], dy = p.y - q.p[1];
+        const dx = cr.lat, dy = p.y - q.p[1];
         game.onDoor(Math.abs(dx) < q.w * 0.3 && Math.abs(dy) < q.h * 0.3);
       }
     }
   };
-  Collect.frameEnd = function (rk) { this._pz = rk.active ? rk.pos.z : undefined; };
+  Collect.frameEnd = function (rk) { if (rk.active) { this._pp = (this._pp || new THREE.Vector3()).copy(rk.pos); this._has = true; } else this._has = false; };
+  // v063 : franchissement du plan d'un anneau / d'une porte (perpendiculaire au couloir, qui tourne) ; renvoie l'écart latéral au centre
+  function crossing(run, q, p, pp) {
+    if (!pp) return null;
+    if (!q.f) { const a = run.T.at(q.d - 1, 0, 0), b = run.T.at(q.d + 1, 0, 0), fx = b[0] - a[0], fz = b[2] - a[2], n = Math.hypot(fx, fz) || 1; q.f = [fx / n, fz / n]; }
+    const f = q.f, s0 = (pp.x - q.p[0]) * f[0] + (pp.z - q.p[2]) * f[1], s1 = (p.x - q.p[0]) * f[0] + (p.z - q.p[2]) * f[1];
+    if (!(s0 < 0 && s1 >= 0)) return null;
+    return { lat: (p.x - q.p[0]) * (-f[1]) + (p.z - q.p[2]) * f[0] };
+  }
   Collect.spin = function (col, dt) {
     const t = performance.now() * 0.001;
     for (const s of col.specials) {
