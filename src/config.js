@@ -230,7 +230,7 @@ CC.CONFIG = {
     ceiling: 99999,              // v035 : plus de plafond (les zones ont leur propre hauteur : métro, base aérienne, pièce…)                 // m : altitude au-dessus de laquelle l'alarme ALTITUDE! se déclenche
     ceilingGrace: 1.5,           // s au-dessus du plafond avant l'explosion
     cruise: 14,                  // m : altitude de vol du pilote automatique (banc de test)
-    fuelDrain: 1.5,              // v039 : l'essence descend 1,5× plus vite en boost
+    fuelDrain: 1.75,              // v039 : l'essence descend 1,5× plus vite en boost
     fuelStart: 38,               // s d'essence au départ (v034b : 14 → 30)
     fuelMax: 46,                 // s : taille du réservoir
     fuelPerStyle: 0.0035,        // s d'essence gagnées par point de STYLE (COLD IMPACT X2 = 200 pts → +0,7 s)

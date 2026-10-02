@@ -34,6 +34,10 @@
   };
   const fmtD = (n) => U.formatInt(n);
   const oldInd = CC.HUD.prototype.drawIndicators;
-  CC.HUD.prototype.drawIndicators = function (game) { if (game.endlessRun) return; oldInd.call(this, game); };   // v051 : plus de repères de cibles en vol
+  CC.HUD.prototype.drawIndicators = function (game) {   // v061 : seul le repère rouge des RESERVOIRS revient (crochets rouges à l'écran, flèche rouge hors champ)
+    if (!game.endlessRun) { oldInd.call(this, game); return; }
+    const all = game.targets; game.targets = all.filter((t) => t.type === 'fuel');
+    try { oldInd.call(this, game); } finally { game.targets = all; }
+  };
   CC.HUD.prototype.drawTutorial = function () {};   // v051 : en vol, plus aucun texte d'aide
 })();
