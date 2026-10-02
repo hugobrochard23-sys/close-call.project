@@ -186,7 +186,7 @@
 
   Z.TURN_PRESETS = [[[0.1, 0.9, 55]], [[0.1, 0.9, 40]], [[0.06, 0.46, 35], [0.54, 0.94, -35]], [[0.1, 0.9, 70]], [[0.1, 0.9, 30]]];   // virages : [début, fin, degrés] en fractions de la scène
   // ---------- plan des scènes d'une zone ----------
-  Z.plan = function (T, zi) {
+  const planBase = function (T, zi) {
     T._plans = T._plans || {};
     if (T._plans[zi]) return T._plans[zi];
     const zone = T.zoneOrder[zi % T.zoneOrder.length], def = Z.defs[zone], cfg = C(), L = cfg.zoneLen, start = Math.max(0, zi * L - (T.off || 0)), end = zi * L - (T.off || 0) + L;
@@ -201,6 +201,7 @@
     }
     const r = G.stream(T.seed, 'plan' + zi);
     const skipQ = (new URLSearchParams(location.search).get('skip') || '').split(',');
+    if (T.levelLen && (T.difK || 1) < 1.3) skipQ.push('city1', 'escalier', 'cheminee', 'plongee', 'toits', 'epingle', 'chicane', 'slalom', 'ruelle', 'enfilade');   // niveaux faciles : pas de montée / plongeon ni de virage serré
     skipQ.push('rame', 'presses', 'bras', 'chaine', 'grues', 'squelette', 'arche', 'levant', 'convoi', 'camp', 'helis', 'convoi2', 'camp2', 'helis2');   // v073 : scènes avec éléments mobiles ou superflus   // banc de test : ?skip=city1,escalier
     const names = Object.keys(def.scenes).filter((n) => n !== def.signature && skipQ.indexOf(n) < 0);
     for (let i = names.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = names[i]; names[i] = names[j]; names[j] = t; }
@@ -232,6 +233,18 @@
     if (plan.scenes.length) { plan.scenes[0].first = true; plan.scenes[plan.scenes.length - 1].last = true; }
     return plan;
   };
+  // v075 : niveau à longueur fixe — les scènes s'arrêtent 80 m avant la fin, puis une ARENE de 400 m (le mini-boss y vole)
+  Z.plan = function (T, zi) {
+    const plan = planBase(T, zi);
+    if (T.levelLen && !plan._lv) {
+      plan._lv = true;
+      const L0 = T.levelLen, A0 = L0 - 80, A1 = L0 + 560, zl = C().zoneLen, start = Math.max(0, zi * zl - (T.off || 0)), end = zi * zl - (T.off || 0) + zl;
+      plan.scenes = plan.scenes.filter((s) => s.d0 < A0 - 60); for (const s of plan.scenes) if (s.d1 > A0) s.d1 = A0;
+      plan.pins = plan.pins.filter((p) => p.d0 < A0);
+      if (start < A1 && end > A0) plan.scenes.push({ name: 'arene', d0: Math.max(A0, start), d1: Math.min(A1, end), zone: plan.zone, zi, key: zi + '_arena', stage: 0 });
+    }
+    return plan;
+  };
   // trajectoire : tient compte des « épingles » (scènes qui imposent le passage : avion, pont levant, tasse…)
   Z.pinAt = (T, d) => {
     const zi = T.zoneIndex(d), out = [];
@@ -244,7 +257,7 @@
     constructor(ctx, sc) {
       this.ctx = ctx; this.b = ctx.b; this.T = ctx.T; this.game = ctx.game; this.sc = sc; this.zone = sc.zone;
       this.c0 = ctx.d0; this.c1 = ctx.d1; this.d0 = sc.d0; this.d1 = sc.d1; this.len = sc.d1 - sc.d0; this.mid = (sc.d0 + sc.d1) / 2;
-      this.stage = sc.stage; this.R = U.lerp(9.6, 6.3, U.clamp(sc.d0 / 8000, 0, 1));   // v072 : le tube de dégagement se rétrécit à mesure qu'on avance
+      this.stage = sc.stage; this.R = U.lerp(9.6, 6.3, U.clamp(sc.d0 * (ctx.T.difK || 1) / 8000, 0, 1));   // v072 : le tube de dégagement se rétrécit à mesure qu'on avance
       this.sr = G.stream(ctx.T.seed, 'sc' + sc.key); this.sr.pick = (a) => a[Math.floor(this.sr() * a.length)];
       this.ic = 0; this.rects = ctx.reserved.slice(); this.env = ctx.T.env(sc.zi); this.dark = !!(this.env && this.env.dark > 0.4);
       this.vol = (dc) => ctx.T.vol(dc);
@@ -450,6 +463,14 @@
     });
   };
 
+  // ARENE : un grand espace fermé (murs hauts, mur du fond), le BOSS (hélicoptère géant à plusieurs points de vie) vole au milieu
+  function arenaBuild(S, zone) {
+    const T = S.T, V0 = 64, meta = Z.meta[zone] || Z.meta.city, wl = meta.wall ? meta.wall(S.sr) : { mat: 'concrete', tint: '#c8ccd0' };
+    for (let dc = S.d0; dc < S.d1; dc += 40) S.item(dc + 20, () => { for (const sg of [-1, 1]) S.bx(dc + 20, sg * (V0 + 12), 55, 24, 110, 40.6, wl.mat, wl.tint); });
+    const dEnd = T.levelLen + 560; if (dEnd > S.d0 && dEnd <= S.d1 + 0.5) S.item(dEnd - 3, () => S.bx(dEnd - 3, 0, 55, 2 * (V0 + 24), 110, 6, wl.mat, wl.tint));
+    const dB = T.levelLen + 120; if (dB >= S.d0 && dB < S.d1) S.item(dB, () => S.b.target('heli', S.at(dB, 0, 26), S.yaw(dB), { scale: 6.5, hp: T.bossHp || 4, boss: true, unarmed: false, drift: 7, driftSpeed: 0.35 }));
+  }
+
   /* ---------- point d'entrée : construit un tronçon de 200 m (sol, passages, scènes) ---------- */
   Z.build = function (ctx) {
     const T = ctx.T, cfg = C(), d0 = ctx.d0, d1 = ctx.d1, b = ctx.b;
@@ -466,6 +487,7 @@
       for (const sc of plan.scenes) {
         if (sc.d1 <= d0 || sc.d0 >= d1) continue;
         const S = new Scene(ctx, sc);
+        if (sc.name === 'arene') { arenaBuild(S, plan.zone); continue; }
         if (sc.name === 'legacy') { legacy(ctx, sc, plan.zone); continue; }
         const sd = def.scenes[sc.name];
         if (def.dress) def.dress(S);

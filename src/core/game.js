@@ -311,13 +311,19 @@
       opts = opts || {};
       if (seed === undefined || seed === null) seed = CC.Gen.randomSeed();
       this.generated = false; this.mission = null;
-      const ordP = this.params.get('order'), L = CC.Endless.level(seed, { zones: this.testMode ? null : this.progress.unlockedWorlds(), order: ordP ? ordP.split(',') : null, env: this.params.get('env') || null });
+      let ld = opts.levelDef !== undefined ? opts.levelDef : null;   // v075 : mode NIVEAUX
+      if (opts.levelDef === undefined && !this.testMode && !this.params.has('endless')) ld = this.curLevelDef();
+      if (opts.levelDef === undefined && this.params.has('level')) ld = CC.LM.def(parseInt(this.params.get('level'), 10) || 1);
+      this.levelRun = ld; this.levelWin = false; this.coinFx = null;
+      this.assistFuel = ld ? 3 * Math.min(5, ((this.save.lvl && this.save.lvl.tries && this.save.lvl.tries[ld.n]) || 0)) : 0;   // coup de pouce après plusieurs échecs
+      if (ld) seed = ld.seed;
+      const ordP = this.params.get('order'), L = CC.Endless.level(seed, { zones: this.testMode ? null : this.progress.unlockedWorlds(), order: ld ? ld.order : (ordP ? ordP.split(',') : null), env: this.params.get('env') || null, levelLen: ld && ld.len, difK: ld && ld.difK, bossHp: ld && ld.hp });
       this.loadLevelFrom(L, -1);
       this.endlessRun = new CC.Endless.Run(this, L);
       this.progress.beginRun(); this.reviveUsed = false; this.hudFeed.length = 0; this.cellHap = 0; this.cellSnd = 0;
       if (opts.home) { this.enterPad(); return; }
       this.restartLevel(true);
-      this.rocket.fuelMax = CC.CONFIG.endless.fuelMax + this.progress.fuelBonus(); this.rocket.fuel = CC.CONFIG.endless.fuelStart + this.progress.fuelBonus();
+      this.rocket.fuelMax = CC.CONFIG.endless.fuelMax + this.progress.fuelBonus(); this.rocket.fuel = CC.CONFIG.endless.fuelStart + this.progress.fuelBonus() + (this.assistFuel || 0);
       const rec = this.progress.P.best;
       this.centerMsg = rec ? 'RECORD ' + U.formatInt(rec) : 'VA LE PLUS LOIN POSSIBLE';
       this.centerMsgT = 2.6;
@@ -338,6 +344,8 @@
     }
 
     // v034 : retour rapide à l'accueil (fondu au noir le temps de bâtir le nouveau couloir, ~0,2 s), avec relance automatique éventuelle
+    curLevelDef() { const L = this.save.lvl; if (L && L.mode === 'endless') return null; return CC.LM.def((L && L.cur) || 1); }
+    setLevel(n) { const L = (this.save.lvl = this.save.lvl || { cur: 1, max: 1, done: {}, tries: {}, mode: 'level' }); L.cur = n; L.mode = 'level'; this.writeSave(); }
     goHome(opts) {
       this.pendingHome = { frames: 0, opts: opts || {} };
       this.paused = false; this.ui.overlay = null; this.input.exitLock();
@@ -368,7 +376,7 @@
       const pad = this.pad, PC = CC.CONFIG.pad, rk = this.rocket;
       this.input.setAim(0, pad.pitch); this.rig.setAim(0, pad.pitch);
       rk.launch(pad.origin.clone(), pad.dir.clone(), { speed: PC.launchSpeed, ignited: true, freeBoost: PC.freeBoost });
-      rk.fuelMax = CC.CONFIG.endless.fuelMax + this.progress.fuelBonus(); rk.fuel = Math.min(rk.fuel, CC.CONFIG.endless.fuelStart + this.progress.fuelBonus());
+      rk.fuelMax = CC.CONFIG.endless.fuelMax + this.progress.fuelBonus(); rk.fuel = Math.min(rk.fuelMax, CC.CONFIG.endless.fuelStart + this.progress.fuelBonus() + (this.assistFuel || 0));
       pad.ignite(); this.audio.play('padIgnite');
       this.rig.startHandoff(true); this.rig.startFlight();
       this.padMode = false;
@@ -414,6 +422,12 @@
       if (dist > (S.endless.best || 0)) S.endless.best = dist;
       const causes = { wall: 'MUR', hazard: 'LASER', cable: 'CABLE', missile: 'MISSILE', drone: 'DRONE', train: 'RAME', mover: 'OBSTACLE', crane: 'GRUE', press: 'PRESSE', arm: 'BRAS ROBOT', ball: 'BOULE', whale: 'BALEINE', heli: 'HELICO', train2: 'TRAIN', altitude: 'TROP HAUT', outOfBounds: 'CHUTE', stalled: 'PANNE SECHE' };
       this.results = Object.assign(res, { endless: true, time: this.runTime, stage: run.stageLabel(), cause: causes[this.crashKind] || 'CRASH', style: this.style.total, runStats: run.stats, xpDoubled: false, t: 0 });
+      if (this.levelRun) {   // v075 : résultat du niveau (victoire = coffre + niveau suivant ; échec = % parcouru, un coup de pouce après plusieurs essais)
+        const lv = this.levelRun, L = (S.lvl = S.lvl || { cur: 1, max: 1, done: {}, tries: {}, mode: 'level' }); L.tries = L.tries || {}; L.done = L.done || {};
+        const win = !!this.levelWin; this.results.level = { n: lv.n, len: lv.len, win, pct: win ? 1 : Math.min(0.99, run.dist / lv.len), chest: win ? lv.chest : 0, boss: !!(run.dist > lv.len - 80) };
+        if (win) { L.done[lv.n] = 1; L.max = Math.max(L.max || 1, lv.n + 1); L.cur = lv.n + 1; L.tries[lv.n] = 0; this.progress.P.materials = (this.progress.P.materials || 0) + lv.chest; }
+        else L.tries[lv.n] = (L.tries[lv.n] || 0) + 1;
+      }
       this.state = 'RESULTS'; this.centerMsg = null;
       if (this.ads) this.ads.onRunEnd(this.results);
       this.writeSave();
@@ -597,7 +611,23 @@
       else this.restartLevel();
     }
 
+    // v075 : coup sur un boss (il a plusieurs points de vie, la fusée traverse et doit revenir)
+    hitBoss(t, rocket) {
+      t.hp--; t.hitCool = 0.9;
+      const run = this.endlessRun, fx = this.effects, c = rocket.pos.clone();
+      fx.explosion(c, null, true, 'orange'); fx.ring(c, new V(0, 1, 0), 2, 36, 0.6, '#ffd060', 0.95); fx.flash(c, '#ffb040', 9, 110, 0.4, '#ff5020');
+      this.rig.shake = 1.4; this.flash = 0.25; this.flashColor = '#ffe0a0'; this.hitStop = 0.14; this.hitScale = 0.15; this.chromaBurst = 0.02;
+      this.audio.play('boom', c); this.audio.play('target');
+      run.points = (run.points || 0) + this.progress.pointMult(); run.addFuel(CC.CONFIG.endless.fuelTarget * 1.3);
+      (this.killPops = this.killPops || []).push({ p: c, t0: performance.now(), txt: t.hp + ' / ' + t.hpMax });
+    }
+    onBossDead(t, c, rocket) {
+      this.levelWin = true; this.hitStop = 1.4; this.hitScale = 0.2; this.chromaBurst = 0.03; this.flash = 0.5; this.flashColor = '#ffffff';
+      for (let i = 0; i < 7; i++) setTimeout(() => { try { this.effects.explosion(c.clone().add(new V((Math.random() - 0.5) * 16, Math.random() * 9, (Math.random() - 0.5) * 16)), null, true, i % 2 ? 'cyan' : 'orange'); this.audio.play('boom', c); } catch (e) { /* ignoré */ } }, i * 170);
+      setTimeout(() => { if (this.state === 'FLIGHT' && this.endlessRun) { const rk = this.rocket; rk.active = false; rk.mesh.visible = false; rk.light.intensity = 0; rk.rope.visible = false; this.finishEndless(); } }, 2000);
+    }
     onTargetHit(t, rocket) {
+      if (this.endlessRun && t.hp > 1 && !t.hazard) { this.hitBoss(t, rocket); return; }
       if (t.hazard) { this.onRocketCrash(t.cause || (t.type === 'train' ? 'train' : 'drone'), rocket.pos.clone(), new V(0, 1, 0)); return; }   // v034 : un drone ne se détruit pas, il détruit
       const c = t.obb.c.clone();
       t.kill(this);
@@ -616,6 +646,7 @@
           setTimeout(() => { try { fx.explosion(c.clone().add(new V((Math.random() - 0.5) * 6, 2 + Math.random() * 3, (Math.random() - 0.5) * 6)), null, true, 'orange'); } catch (e) { /* ignoré */ } }, 140); }
         this.audio.play('boom', c); this.audio.play('target');
         (this.killPops = this.killPops || []).push({ p: c.clone(), t0: performance.now(), txt: '+' + (Math.round(val * 10) / 10) });
+        if (t.boss) this.onBossDead(t, c, rocket);
         if (CC.Touch && CC.Touch.active && CC.Haptics) CC.Haptics.tick('warn');
         this.telemetry.event('targetHit', { target: t.type, speed: +rocket.vel.length().toFixed(2), runTime: +this.runTime.toFixed(3) });
         return;

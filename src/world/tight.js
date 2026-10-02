@@ -40,6 +40,7 @@
     const at = sceneAt(T, d); if (!at) return null;
     const { sc, zone } = at, def = Z.defs[zone];
     if (SKIP[zone] || !THEME[zone]) return null;
+    if (sc.name === 'arene') return null;
     if (def && def.signature === sc.name) return null;
     if (def && def.scenes[sc.name] && def.scenes[sc.name].noDoor) return null;   // v056 : scènes déjà percées
     if (d < sc.d0 + 28 || d > sc.d1 - 28) return null;
@@ -61,9 +62,9 @@
       const { sc, zone } = at, th = THEME[zone], st = U.clamp(Math.floor(d / cfg.stageLen), 0, 3);
       const S = new Z.Scene(ctx, { name: 'tight', d0: d - 10, d1: d + 10, zone, zi: sc.zi, key: 't' + Math.round(d), stage: st });
       let yc0 = 0, wd0 = 8, hd0 = 8;
-      const Ln = S.lane(d), v = T.vol(d) + (zone === 'usine' || zone === 'eau' ? 3 : zone === 'city' || zone === 'tour' || zone === 'chute' ? 46 : 26), hole = U.lerp(13.5, 6.2, U.clamp(d / 8000, 0, 1));   // v072 : plus on avance, plus l'ouverture est petite   // v038b : le panneau déborde largement sur les côtés (on n'en voit plus le bord)
+      const Ln = S.lane(d), v = T.vol(d) + (zone === 'usine' || zone === 'eau' ? 3 : zone === 'city' || zone === 'tour' || zone === 'chute' ? 46 : 26), hole = U.lerp(13.5, 6.2, U.clamp(d * (T.difK || 1) / 8000, 0, 1));   // v072 : plus on avance, plus l'ouverture est petite   // v038b : le panneau déborde largement sur les côtés (on n'en voit plus le bord)
       S.item(d, (r) => {
-        const shape = r.weighted({ win: 3, slit: 1.6, slot: 1.6, shutter: U.clamp((d - 1100) / 3500, 0, 1) * 2.6 });
+        const shape = r.weighted({ win: 3, slit: 1.6, slot: 1.6, shutter: U.clamp((d * (T.difK || 1) - 1100) / 3500, 0, 1) * 2.6 });
         if (shape === 'shutter') {   // v072 : VOLETS — deux panneaux qui s'ouvrent et se ferment, il faut passer quand c'est ouvert
           const hh = Math.max(9, hole * 0.95), lo2 = (zone === 'chute' || zone === 'tour' || zone === 'sky') ? Math.max(0, Ln.y - 52) : 0, top2 = (zone === 'usine' ? 76 : Ln.y + (zone === 'city' || zone === 'tour' || zone === 'chute' ? 150 : 80));
           const yc = Math.max(Ln.y, lo2 + hh / 2 + 0.4), amp = U.clamp(hole * 0.34, 1.8, 4.6), h0 = amp + 0.4, per = U.lerp(5.6, 3.2, U.clamp(d / 8000, 0, 1)), tn = r.pick(th.tints), dd = 4;

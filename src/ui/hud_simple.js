@@ -15,6 +15,17 @@
     const gh = Math.min(H * 0.34, 300), gw = Math.max(10, Math.round(px * 2.4)), gx = W - gw - Math.max(14, W * 0.05), gy = top + H * 0.02;
     this.drawFuelBar(game, rk, gx, gy, gw, gh);
     game.flyers.length = 0;
+    // v075 : niveau — fine ligne de progression tout en haut ; vie du boss quand il est proche
+    if (game.levelRun) {
+      const pct = U.clamp(run.dist / game.levelRun.len, 0, 1), th = Math.max(3, Math.round(px * 0.9));
+      ctx.fillStyle = 'rgba(8,12,18,0.4)'; ctx.fillRect(0, 0, W, th); ctx.fillStyle = '#d9a441'; ctx.fillRect(0, 0, Math.round(W * pct), th);
+      const boss = game.targets.find((q) => q.boss && q.alive);
+      if (boss && rk.active && rk.pos.distanceTo(boss.obb.c) < 700) {
+        const bw = Math.round(W * 0.42), bx = Math.round(W / 2 - bw / 2), by = Math.round(top + px * 10), bh = Math.max(6, Math.round(px * 1.6));
+        ctx.fillStyle = 'rgba(8,12,18,0.45)'; ctx.fillRect(bx, by, bw, bh); ctx.fillStyle = '#ff3b2e'; ctx.fillRect(bx, by, Math.round(bw * boss.hp / boss.hpMax), bh);
+        F.draw(ctx, 'BOSS', W / 2, by + bh + px, px * 0.7, '#ffffff', { align: 'center' });
+      }
+    }
   };
   // jauge d'essence : juste la barre (fond sombre translucide), aucun contour
   CC.HUD.prototype.drawFuelBar = function (game, rk, x, y, w, h) {

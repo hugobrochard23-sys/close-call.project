@@ -166,7 +166,7 @@
       const r = cfg.radius;
       // cibles (OBB mobiles, hors grille)
       for (const t of game.targets) {
-        if (!t.alive) continue;
+        if (!t.alive || t.hitCool > 0) continue;
         if (t.hazard && this.shieldT > 0) continue;   // v034 : le bouclier traverse aussi les drones
         const d = _d.subVectors(p1, this.pos);
         const hit = CC.World.segBox(t.obb, this.pos, d, r + 0.1, _hit);

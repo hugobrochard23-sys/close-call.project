@@ -52,6 +52,7 @@
       const SCL = opts.scale || 1; this.object.scale.setScalar(SCL);   // v067 : cibles agrandies (échelle du modèle ET de la boîte de collision)
       this.size = this.model.userData.size.map((v) => v * SCL); this.center = this.model.userData.center.map((v) => v * SCL);
       this.detectRange = opts.detectRange || 45;       // ESTIMATION
+      this.hp = opts.hp || 1; this.hpMax = this.hp; this.boss = !!opts.boss; this.hitCool = 0;   // v075 : boss à plusieurs points de vie
       this.unarmed = !!opts.unarmed;                   // v032 : cible qui vise (tourelle) mais ne tire pas (missions FACILE / MOYEN)
       this.drift = opts.drift || 0; this.driftSpeed = opts.driftSpeed || 0.35;
       this.alert = CC.Models.alertSprite(); this.alert.visible = false;
@@ -111,7 +112,7 @@
     updateObb() { this.object.updateMatrixWorld(true); this.obb = obbFrom(this.object, this.size, this.center, this.obb); }
 
     update(dt, game) {
-      this.t += dt;
+      this.t += dt; if (this.hitCool > 0) this.hitCool -= dt;
       if (!this.alive) { if (this.wreck) this.updateWreck(dt, game); return; }
       const rk = game.rocket && game.rocket.active ? game.rocket : null;
       if (this.path && game.state === 'FLIGHT' && rk && this.fleeDist < this.pathLen) { this.fleeDist += this.fleeSpeed * dt; this.placeOnPath(); }

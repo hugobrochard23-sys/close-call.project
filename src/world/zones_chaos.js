@@ -10,12 +10,12 @@
     usine: { mat: 'metal', tints: ['#b8b4a8', '#a8a49c', '#c8b890'] }, forest: { mat: 'bark', tints: ['#8a7a68', '#7a6a58'] }, sky: { mat: 'metal', tints: ['#d0d4dc', '#b8c0cc'] },
     tour: { mat: 'concreteDark', tints: ['#c8ccd0', '#b8bcc4'] }, chute: { mat: 'concreteDark', tints: ['#c8ccd0', '#b8bcc4'] }, eau: { mat: 'rock', tints: ['#6a8a90', '#5a7a82'] },
   };
-  const gapOf = (d) => [84, 70, 58, 48][U.clamp(Math.floor(d / C().stageLen), 0, 3)];   // v067 : carte plus lisible
+  const gapOf = (d, T) => [84, 70, 58, 48][U.clamp(Math.floor(d * ((T && T.difK) || 1) / C().stageLen), 0, 3)];   // v067 : carte plus lisible
   const WEIGHTS = { pillar: 3.5, beam: 3, laser: 1.2, hoop: 1.4, block: 1.4 };
 
   function list(T, dmax) {
     const L = T._chaos || (T._chaos = { pos: [], next: 300, r: G.stream(T.seed, 'chaos') });
-    while (L.next < dmax) { L.pos.push(L.next); L.next += gapOf(L.next) * L.r.between([0.8, 1.35]); }
+    while (L.next < dmax) { L.pos.push(L.next); L.next += gapOf(L.next, T) * L.r.between([0.8, 1.35]); }
     return L.pos;
   }
   function sceneAt(T, d) {
@@ -28,6 +28,7 @@
     const at = sceneAt(T, d); if (!at) return null;
     const { sc, zone } = at, def = Z.defs[zone];
     if (SKIP[zone] || !THEME[zone]) return null;
+    if (sc.name === 'arene') return null;
     if (def && (def.signature === sc.name || (def.scenes[sc.name] && def.scenes[sc.name].noChaos))) return null;
     if (d < sc.d0 + 24 || d > sc.d1 - 24) return null;
     if (Z.pinAt(T, d).length) return null;

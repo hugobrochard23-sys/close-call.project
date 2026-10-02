@@ -145,7 +145,10 @@
   E.level = function (seed, opts) {
     const cfg = C(), T = new Track(seed, opts && opts.zones);
     if (opts && opts.env) T.forceEnv = opts.env;   // banc de test : ?env=neonNight
-    if (opts && opts.order && opts.order.length) { const o = opts.order.filter((z) => CC.Zones.PROFILE[z]); while (o.length < 90) o.push(o[o.length % Math.max(1, opts.order.length)]); T.zoneOrder = o; }   // banc de test : ?order=city,metro,…
+    if (opts && opts.levelLen) {   // v075 : niveau à longueur fixe (arène + boss à la fin)
+      T.levelLen = opts.levelLen; T.difK = opts.difK || 1; T.bossHp = opts.bossHp || 4;
+    }
+    if (opts && opts.order && opts.order.length) { const o = opts.order.filter((z) => CC.Zones.PROFILE[z]); while (o.length < 90) o.push(o[o.length % Math.max(1, opts.order.length)]); T.zoneOrder = o; if (opts.levelLen) T.off = (o[1] && o[1] !== o[0]) ? C().zoneLen - 500 : 0; }   // banc de test : ?order=city,metro,…
     const L = {
       id: 'endless', name: 'CLASSIQUE', hud: 'C', mode: 'endless', endless: true, seed, fuel: cfg.fuelMax,
       killY: -30, lookAhead: 16, terminalRange: 20, fireDelay: 0.35, impactVariant: 'orange',
@@ -180,11 +183,13 @@
     const inRamp = (d) => { const t = tr0(d); return !!t.k && T.elev(t.k) !== T.elev(t.k - 1); };
 
     // cibles en route, sur la colonne vertébrale (il faut parfois plonger vers le sol pour les prendre)
-    const nextT = (from) => from + U.lerp(110, 36, U.clamp(from / 6000, 0, 1)) * r.between([0.8, 1.25]);   // v071 : une cible tous les ~110 m au départ, ~36 m vers 6 000 m   // v069 : une cible tous les ~50 m, une par une, sur la ligne directrice   // v068 : peu de cibles au départ, de plus en plus ensuite
+    const dk = T.difK || 1;
+    const nextT = (from) => from + U.lerp(110, 36, U.clamp(from * dk / 6000, 0, 1)) * r.between([0.8, 1.25]);   // v071 : une cible tous les ~110 m au départ, ~36 m vers 6 000 m   // v069 : une cible tous les ~50 m, une par une, sur la ligne directrice   // v068 : peu de cibles au départ, de plus en plus ensuite
     if (T.nextTarget === undefined) T.nextTarget = 130;   // v040 : le premier réservoir vient APRES la première porte (tutoriel lisible)
     const tgt = [];
     while (T.nextTarget < d1) {
       const d = T.nextTarget;
+      if (T.levelLen && d > T.levelLen - 90) { T.nextTarget = 1e9; break; }   // v075 : plus de cibles dans l'arène
       const scA = (CC.Zones.plan(T, T.zoneIndex(d)).scenes.find((q) => d >= q.d0 && d < q.d1)) || null, STRUCT = { passage: 55, tower: 55, carrefour: 50, viaduc: 90, vitres: 60, city1: 0, escalier: 0 };
       const nearPin = zoneAt(d) === 'city' && scA ? (STRUCT[scA.name] !== undefined && (STRUCT[scA.name] === 0 || Math.abs(d - (scA.d0 + scA.d1) / 2) < STRUCT[scA.name])) : CC.Zones.pinAt(T, d).some((p) => d > p.d0 - 15 && d < p.d1 + 15);   // v069 : en ville, seules les scènes à structure centrale écartent les cibles   // pas de plongée vers une cible dans une scène à structure imposée
       if (d >= d0 + 10 && !inRamp(d) && tr0(d).t === 1 && Math.abs((d + T.off) % cfg.zoneLen) > 70 && !nearPin && !CC.Zones.noTargets[zoneAt(d)]) {
@@ -195,7 +200,7 @@
         tgt.push({ d, lx, zone });
         reserved.push({ d: d - 8, lx, w: 24, dd: 26 });
         // v070 : cibles ÉPARPILLEES : des extras partout dans le volume (côtés, haut, bas), de plus en plus souvent
-        const pe = U.clamp((d - 2500) / 9000, 0, 0.6), vv = T.vol(d);
+        const pe = U.clamp((d * dk - 2500) / 9000, 0, 0.6), vv = T.vol(d);
         for (let e = 0; e < 2; e++) if (r() < pe * (e ? 0.4 : 1)) { const sg = r() < 0.5 ? -1 : 1; tgt.push({ d: d + r.between([-16, 16]), lx: U.clamp(lx + sg * r.between([9, Math.max(10, vv - 6)]), -(vv - 5), vv - 5), zone, extra: true, dy: r.between([-12, 18]) }); }
       }
       T.nextTarget = nextT(d);
@@ -228,7 +233,7 @@
       const d = t.d, ly = T.laneY(d), type = t.zone === 'mini' ? 'fuel' : r.pick(ly < 15 ? ['tank', 'truck', 'heli', 'heli', 'sam'] : ['heli', 'heli', 'heli', 'heli', 'truck']), lx = t.lx, air = type === 'heli';   // v069 : sur la ligne directrice : hélicoptère à hauteur de la trajectoire, ou char / camion si elle descend
       const p = place(d, lx, ly + (t.dy || 0) + r.between([-1.5, 1.5]), air, air ? 8 : type === 'sam' ? 4.5 : 5.5);
       if (!p) continue;   // pas de place libre : pas de cible (jamais dans un mur)
-      b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0) + (type === 'tank' ? 180 : 0), { unarmed: d < 900 || r() > U.clamp((d - 600) / 6500, 0.05, 0.9), scale: air ? 2.2 : type === 'fuel' ? 2.0 : 2.4, drift: air ? 5 : 2.2, driftSpeed: 0.45 });   // les premiers ne tirent pas ; ensuite de plus en plus souvent
+      b.target(type, p, T.yawAcross(d) + (type === 'truck' ? 90 : 0) + (type === 'tank' ? 180 : 0), { unarmed: d * dk < 900 || r() > U.clamp((d * dk - 600) / 6500, 0.05, 0.9), scale: air ? 2.2 : type === 'fuel' ? 2.0 : 2.4, drift: air ? 5 : 2.2, driftSpeed: 0.45 });   // les premiers ne tirent pas ; ensuite de plus en plus souvent
       busy.push(d);
       const hy = air ? p[1] - T.base(d) : type === 'fuel' ? 3.5 : 1.6;
       gates.push({ d: d - 55, lx: T.laneX(d - 55), y: T.laneY(d - 55) * 0.7 }, { d: d - 22, lx, y: hy + 3 }, { d, lx, y: hy }, { d: d + 30, lx: T.laneX(d + 30), y: T.laneY(d + 30) * 0.8 });
@@ -418,7 +423,7 @@
         void D;
       }
       const L = this.level;
-      L.aaThreat = param(cfg.threat, this.dist); L.aaSalvo = this.dist > 3500; L.aaMaxAlive = Math.round(U.lerp(1, 6, U.clamp(this.dist / 7000, 0, 1)));   // v068 : plus de missiles, pas plus précis
+      L.aaThreat = param(cfg.threat, this.dist); L.aaSalvo = this.dist * (this.T.difK || 1) > 3500; L.aaMaxAlive = Math.round(U.lerp(1, 6, U.clamp(this.dist * (this.T.difK || 1) / 7000, 0, 1)));   // v068 : plus de missiles, pas plus précis
       // zone de décor : l'ambiance glisse en 3 s vers celle de la nouvelle zone
       const zi = this.T.zoneIndex(this.dist);
       if (zi !== this.zone) { this.envFrom = this.T.env(this.zone); this.zone = zi; this.envT = 0; this.announce(zi); }
