@@ -485,6 +485,14 @@
       { const dc = A(Z(-378)); S.item(dc, () => { if (S.b.arrow) S.b.arrow(S.at(dc, 0, T2 + 6), 0); }); }
       farTowers(S, 90, 170, 4);
     } };
+  // v060 : un RESERVOIR à la fin de chaque grande section (les scènes à trajectoire imposée n'en reçoivent pas du générateur)
+  function endTank(S, sEnd) {
+    const dc = sEnd !== undefined ? S.d0 + sEnd : S.d1 - 22, L = S.lane(dc);
+    S.item(dc, () => { S.b.target('fuel', S.at(dc, L.lx, 0), S.yaw(dc), { unarmed: true }); S.gate(dc - 22, L.lx, 9); S.gate(dc, L.lx, 3.5); if (S.ctx.busy) S.ctx.busy.push(dc); });
+  }
+  for (const nm of ['ruelle', 'slalom', 'plongee', 'enfilade']) { const b0 = city.scenes[nm].build; city.scenes[nm].build = function (S) { b0.call(this, S); endTank(S); }; }
+  { const b1 = city.scenes.city1.build; city.scenes.city1.build = function (S) { b1.call(this, S); endTank(S, PIT + 68); }; }
+  { const b2 = city.scenes.escalier.build; city.scenes.escalier.build = function (S) { b2.call(this, S); endTank(S, SH + 66); }; }
   city.notFirst = ['toits'];
   city.early = [['city1', 'escalier'], ['slalom', 'cheminee', 'toits', 'ruelle', 'plongee']];
 
