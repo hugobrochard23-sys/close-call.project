@@ -46,6 +46,7 @@
     DS.iconButton(ui, ctx, W - m - 22 * k, ay + 25 * k, 42 * k, 'gear', () => { ui.overlay = 'msettings'; }, { k, shadow: false, color: '#FFFFFF' });
     // --- bas : navigation, MISSIONS, PLAY (de bas en haut)
     const lvl = prog.level, items = [];
+    items.push({ id: 'levels', icon: 'rocket', label: 'NIVEAUX' });   // v057 : les 9 niveaux d'origine, toujours accessibles depuis l'accueil
     if (lvl >= 2) items.push({ id: 'garage', icon: 'garage', label: 'GARAGE' });
     if (lvl >= 3) items.push({ id: 'map', icon: 'world', label: 'WORLD' });
     if (lvl >= 5) items.push({ id: 'shop', icon: 'shop', label: 'SHOP' });
@@ -53,7 +54,7 @@
     const gutter = Math.max(14 * k, (W - colW(L, k)) / 2);
     if (items.length) { const nh = DS.nav(ui, ctx, L, items, null, (id) => { ui.overlay = id; }); bottom -= nh; } else bottom -= 14 * k;
     DS.text(ctx, 'TOUCHE LA FUSEE', W / 2, bottom - 26 * k, 22 * k, T.white, { align: 'center', weight: 700, ls: 2, alpha: 0.75 + 0.25 * Math.sin(performance.now() / 1000 * Math.PI), shadow: 'rgba(0,0,0,0.55)' });   // v053 : plus de bouton PLAY
-    const ph = 0, gutter2 = gutter; bottom -= 24 * k;
+    const ph = 0, gutter2 = gutter; bottom -= 46 * k;
     if ((P.launches || 0) < 3) { const msg = 'PASSE LES TROUS  ·  VISE LES RESERVOIRS'; DS.text(ctx, msg, W / 2, bottom - 14 * k, DS.fit(ctx, msg, 14 * k, W - 2 * gutter), T.white, { align: 'center', weight: 700, shadow: 'rgba(0,0,0,0.6)', ls: 1 }); }
     
     ctx.restore();
@@ -155,7 +156,7 @@
   };
   function rrClip(ctx, x, y, w, h, r) { DS.rr(ctx, x, y, w, h, r); ctx.clip(); }
   function navBar(ui, ctx, L, game, active) {
-    const lvl = game.progress.level, items = [{ id: 'garage', icon: 'garage', label: 'GARAGE', lv: 2 }, { id: 'map', icon: 'world', label: 'WORLD', lv: 3 }, { id: 'shop', icon: 'shop', label: 'SHOP', lv: 5 }].filter((i) => lvl >= i.lv);
+    const lvl = game.progress.level, items = [{ id: 'levels', icon: 'rocket', label: 'NIVEAUX', lv: 1 }, { id: 'garage', icon: 'garage', label: 'GARAGE', lv: 2 }, { id: 'map', icon: 'world', label: 'WORLD', lv: 3 }, { id: 'shop', icon: 'shop', label: 'SHOP', lv: 5 }].filter((i) => lvl >= i.lv);
     if (items.length) DS.nav(ui, ctx, L, items, active, (id) => { ui.overlay = id === active ? null : id; });
   }
   Home.drawProgress = Home.drawUpgrades = Home.drawGarage;

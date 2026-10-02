@@ -313,13 +313,6 @@
       S.gate(dc, L.lx, L.y);
     });
   }
-  city.scenes.chute = { len: [260, 330],
-    pin(T, sc) { const mid = (sc.d0 + sc.d1) / 2; return { lx: U.clamp(T.laneX0(mid), -4, 4), y: 68, y2: 12, from: 62, to: sc.d1 - sc.d0 - 20 }; },
-    build(S) {
-      const dist = district(S, S.sr.between([100, 130]), S.sr.between([130, 180])), half = S.R + 6.5;
-      shaft(S, half, 200, dist); cableWeb(S, half, S.d0 + 70, S.d1 - 30, 40); ledges(S, half, 12);
-      farTowers(S, 110, 200, 3);
-    } };
   // CHEMINEE : l'inverse, on remonte le long du puits jusqu'au-dessus des toits
   city.scenes.cheminee = { len: [260, 330],
     pin(T, sc) { const mid = (sc.d0 + sc.d1) / 2; return { lx: U.clamp(T.laneX0(mid), -4, 4), y: 12, y2: 72, from: 20, to: sc.d1 - sc.d0 - 62 }; },
@@ -398,75 +391,102 @@
         S.bxr(dm, x, y, 3, 0.5, 2.6, 'col:#2e2e30', undefined, roll, 0, true); S.bxr(dm, x, y + 1.4, 3, 0.5, 2.6, 'col:#2e2e30', undefined, roll, 0, false); S.bxr(dm, x, y + 0.7, 0.5, 1.4, 2.6, 'col:#2e2e30', undefined, roll, 0, false); });
     }
   }
-  // CITY 1 : la séquence du niveau d'origine (rue de 18 m, bâtiment tunnel, bâtiment à vitres, toits bas + panneau + grue, disque d'accroche), on monte, puis chute libre dans le puits à câbles
-  const C1 = [[0, 23], [215, 23], [245, 23], [268, 19], [290, 17], [321, 17], [356, 30], [380, 44], [405, 60], [520, 12], [600, 12]];
-  city.scenes.city1 = { len: [580, 580], noDoor: true,
+  // montée en escalier de toits : des immeubles dont le toit reste ~10 m sous la trajectoire (on prend de la hauteur avant la chute)
+  function climbRoofs(S, A, pts, s0, s1, seg) {
+    const sr = S.sr, TINTS = ['#e8e4dc', '#d8dce0', '#e8d8c8', '#d0d8e0'];
+    for (let s = s0; s < s1; s += seg) {
+      const e = Math.min(s + seg, s1), top = Math.min(pw(pts, s), pw(pts, e)) - 10, dc = A((s + e) / 2);
+      if (top < 8) continue;
+      S.item(dc, (r) => { S.bx(dc, 0, top / 2 - 0.4, 62, top, e - s - 0.4, { side: r.pick(['facade', 'facadePink', 'facadeTan']), top: 'concrete', bottom: 'concreteDark' }, r.pick(TINTS));
+        for (const sg of [-1, 1]) if (r() < 0.6) S.cyl(dc, sg * r.between([34, 44]), 0, 0.5, r.between([top + 20, top + 70]), 'col:#2c2f33', undefined, 6, 0.25); });
+    }
+  }
+  // CITY 1 : copie de la séquence du niveau d'origine : rue de 18 m, bâtiment tunnel, bâtiment à vitres, toits bas + panneau + grue,
+  // montée sur les toits, bloc du disque d'accroche, puis la CHUTE LIBRE VERTICALE dans le puits (70 câbles et 18 poutres en I aux positions exactes) et le couloir de sortie
+  const PIT = 800, SHIFT = 190;   // début du puits (m dans la scène) ; altitude du fond du puits d'origine (y = -190) ramenée au sol (0)
+  const C1 = [[0, 23], [215, 23], [245, 23], [268, 19], [290, 17], [321, 17], [PIT - 50, 266], [PIT - 12, 250], [PIT - 5, 240], [PIT, 214], [PIT + 3, 150], [PIT + 6, 70], [PIT + 9, 30], [PIT + 14, 12], [PIT + 30, 10], [PIT + 60, 10], [PIT + 200, 10]];
+  city.scenes.city1 = { len: [PIT + 90, PIT + 90], noDoor: true,
     pin(T, sc) { return { lx: 0, fy: (d) => pw(C1, d - sc.d0), from: 20, to: sc.d1 - sc.d0 - 20 }; },
     build(S) {
       const sr = S.sr, A = (s) => S.d0 + s, SIDES = ['facade', 'facadePink', 'facadeTan'], TINTS = ['#ffffff', '#f6f2f0', '#eeeeee', '#f7f5f3'];
-      const blk = (s0, s1, x0, x1, h, y0, o) => {   // immeuble : s (m dans la scène), x (m depuis l'axe), hauteur, altitude de base
-        const dc = A((s0 + s1) / 2);
-        S.item(dc, (r) => S.bx(dc, (x0 + x1) / 2, (y0 || 0) + h / 2 - 0.4, x1 - x0, h, s1 - s0, { side: r.pick(SIDES), top: 'concrete', bottom: 'concreteDark' }, r.pick(TINTS), true, o));
-      };
+      const blk = (s0, s1, x0, x1, h, y0, o) => { const dc = A((s0 + s1) / 2); S.item(dc, (r) => S.bx(dc, (x0 + x1) / 2, (y0 || 0) + h / 2 - 0.4, x1 - x0, h, s1 - s0, { side: r.pick(SIDES), top: 'concrete', bottom: 'concreteDark' }, r.pick(TINTS), true, o)); };
       avenueRoad(S, []);
-      // rue principale : immeubles de 22 m de large de part et d'autre d'une rue de 18 m
       for (let s = 20; s < 215; s += 32) { const e = Math.min(s + 31, 215); for (const sg of [-1, 1]) { const h = S.sr.between([55, 90]); const dc = A((s + e) / 2); S.item(dc, (r) => S.bx(dc, sg * 20, h / 2 - 0.4, 22, h, e - s, { side: r.pick(SIDES), top: 'concrete', bottom: 'concreteDark' }, r.pick(TINTS))); } }
-      // B : le bâtiment qui barre la rue, tunnel y 18..28, trois vitres à la sortie
-      { const s0 = 215, s1 = 245, dc = A(230);
+      { const s0 = 215, s1 = 245, dc = A(230);        // B : tunnel y 18..28, trois vitres à la sortie
         blk(s0, s1, -40, -5, 46); blk(s0, s1, 5, 40, 46); blk(s0, s1, -5, 5, 18); blk(s0, s1, -5, 5, 18, 28);
         S.item(dc, () => { for (const x of [-4.8, 4.8]) S.bx(dc, x, 23, 0.4, 10, 30, 'concreteDark', undefined, true); S.bx(dc, 0, 18.2, 9.2, 0.4, 30, 'concreteDark', undefined, true, { ground: true }); S.bx(dc, 0, 27.8, 9.2, 0.4, 30, 'concreteDark', undefined, true);
           for (const x of [-3, 0, 3]) S.b.glass(S.at(A(s1 - 0.4), x, 23), [3, 9.6, 0.12], [0, S.yaw(A(s1 - 0.4)), 0]); });
         S.gate(A(s0 - 8), 0, 23); S.gate(dc, 0, 23); S.gate(A(s1 + 8), 0, 22); }
-      // place entre B et C
       blk(245, 290, -60, -14, S.sr.between([40, 60])); blk(245, 290, 14, 60, S.sr.between([40, 60]));
-      // C : ouverture vitrée y 12..22, vitres à l'entrée et à la sortie
-      { const s0 = 290, s1 = 321, dc = A(305.5);
+      { const s0 = 290, s1 = 321, dc = A(305.5);       // C : ouverture vitrée y 12..22, vitres à l'entrée et à la sortie
         blk(s0, s1, -30, -5, 34); blk(s0, s1, 5, 30, 34); blk(s0, s1, -5, 5, 12); blk(s0, s1, -5, 5, 12, 22);
         S.item(dc, () => { for (const x of [-4.8, 4.8]) S.bx(dc, x, 17, 0.4, 10, 31, 'concreteDark', undefined, true); S.bx(dc, 0, 12.2, 9.2, 0.4, 31, 'concreteDark', undefined, true, { ground: true }); S.bx(dc, 0, 21.8, 9.2, 0.4, 31, 'concreteDark', undefined, true);
           for (const z of [s0 + 0.2, s1 - 0.2]) S.b.glass(S.at(A(z), 0, 17), [9.6, 9.6, 0.12], [0, S.yaw(A(z)), 0]); });
         S.gate(A(s0 - 8), 0, 17); S.gate(dc, 0, 17); S.gate(A(s1 + 8), 0, 17); }
-      // toits bas, panneau publicitaire, grue jaune
-      blk(321, 357, -45, -8, 20); blk(321, 357, 8, 45, 16);
+      blk(321, 357, -45, -8, 20); blk(321, 357, 8, 45, 16);     // toits bas, panneau publicitaire, grue jaune
       { const dc = A(335);
         S.item(dc, () => {
           S.bx(dc, -20, 29, 16, 8, 0.4, 'col:#2a2a2a', undefined, true, { render: false });
           const bb = CC.Textures.special('billboard'), dark = new THREE.MeshLambertMaterial({ color: '#2a2a2a' });
           const board = new THREE.Mesh(new THREE.BoxGeometry(16, 8, 0.4), [dark, dark, dark, dark, new THREE.MeshLambertMaterial({ map: bb }), dark]);
-          const p = S.at(dc, -20, 29); board.position.set(p[0], p[1], p[2]); board.rotation.y = S.yaw(dc); S.b.add(board);
+          const p = S.at(dc, -20, 29); board.position.set(p[0], p[1], p[2]); board.rotation.y = S.yaw(dc) * Math.PI / 180; S.b.add(board);
           S.bx(dc - 0.4, -24, 22.5, 0.4, 5, 0.4, 'col:#303030', undefined, true); S.bx(dc - 0.4, -16, 22.5, 0.4, 5, 0.4, 'col:#303030', undefined, true);
         });
         const dcg = A(337);
         S.item(dcg, () => { S.bx(dcg, 22, 30, 2.2, 60, 2.2, 'col:#d8a820'); S.bx(dcg, 8, 59, 34, 1.6, 1.6, 'col:#d8a820'); S.bx(dcg, 34, 59, 12, 1.6, 1.6, 'col:#d8a820'); S.bx(dcg, 36, 56, 4, 4, 3, 'concreteDark'); }); }
-      // bloc du disque d'accroche (décor : le grappin n'est pas jouable dans le mode infini)
-      { const dc = A(368.5); S.item(dc, (r) => { S.bx(dc, 0, 10, 50, 20, 23, { side: 'facadePink', top: 'concrete', bottom: 'concreteDark' }, undefined);
-          const p = S.at(dc, 6, 22.2), q = S.at(dc + 1, 6, 22.2), n = [q[0] - p[0], q[1] - p[1], q[2] - p[2]];
-          if (S.b.grapplePoint) S.b.grapplePoint(p, n, 1.6); }); }
-      // le puits : parois de 25 m de large à ±15 m de l'axe (s 380 → 560), toile de câbles, poutres en I
-      for (let s = 380; s < 560; s += 20) { const dc = A(s + 10); S.item(dc, (r) => { S.bx(dc, -27.5, 80, 25, 160, 20.2, { side: 'facade', top: 'concrete', bottom: 'concreteDark' }, r.pick(TINTS)); S.bx(dc, 27.5, 80, 25, 160, 20.2, { side: 'facadeTan', top: 'concrete', bottom: 'concreteDark' }, r.pick(TINTS)); }); }
-      cableWeb(S, 15, A(410), A(535), 56); ledges(S, 15, 14);
+      climbRoofs(S, A, C1, 357, PIT - 23, 44);                    // on prend de la hauteur par-dessus quelques immeubles
+      // bloc sud (toit à y 20 + 190) et disque d'accroche (décor)
+      { const dc = A(PIT - 11.5); S.item(dc, () => { S.bx(dc, 0, (SHIFT + 20) / 2, 50, SHIFT + 20, 23, { side: 'facadePink', top: 'concrete', bottom: 'concreteDark' }, undefined);
+          if (S.b.grapplePoint) S.b.grapplePoint(S.at(A(PIT - 0.1), 6, 22.2 + SHIFT), [0, 0, -1], 1.6); }); }
+      // le puits : parois (x ±15 → ±40), bloc nord percé d'un couloir de 10 m (y 4..20)
+      { const dc = A(PIT + 15), H = 70 + SHIFT;
+        S.item(dc, () => { S.bx(dc, -27.5, H / 2, 25, H, 30, { side: 'facade', top: 'concrete' }); S.bx(dc, 27.5, H / 2, 25, H, 30, { side: 'facadeTan', top: 'concrete' }); });
+        const dn = A(PIT + 40);
+        S.item(dn, () => { S.bx(dn, -22.5, H / 2, 35, H, 20, { side: 'facade', top: 'concrete' }); S.bx(dn, 22.5, H / 2, 35, H, 20, { side: 'facade', top: 'concrete' });
+          S.bx(dn, 0, 2, 10, 4, 20, 'concreteDark', undefined, true, { ground: true }); S.bx(dn, 0, (20 + 76 + SHIFT) / 2, 10, 76 + SHIFT - 20, 20, { side: 'facade', top: 'concrete' }); });
+      }
+      // câbles et poutres : positions exactes du niveau d'origine (repère d'origine : puits à z -365 → -395, fond à y -190)
+      const P = CC.CityPit, pd = (z) => A(PIT + (-365 - z));
+      P.cables.forEach((c, i) => { const dm = pd((c[0][2] + c[1][2]) / 2); S.item(dm, () => { S.b.cable(S.at(pd(c[0][2]), c[0][0], c[0][1] + SHIFT), S.at(pd(c[1][2]), c[1][0], c[1][1] + SHIFT), 0.12); }); });
+      P.ledges.forEach((l) => { const dm = pd(l.p[2]); S.item(dm, () => S.b.box({ p: S.at(dm, l.p[0], l.p[1] + SHIFT), s: l.s, r: [0, S.yaw(dm) + l.r[1], l.r[2]], mat: 'col:#2e2e30', collide: l.c })); });
       farTowers(S, 90, 180, 6);
     } };
-  // ESCALIER : la cage d'escalier du niveau CHANTIER — volées alternées le long des murs, on descend en suivant les marches (pente 0,5 comme les marches d'origine)
-  const ESC = [[0, 64], [60, 64], [160, 16], [260, 16]];
-  city.scenes.escalier = { len: [260, 260], noDoor: true,
-    pin(T, sc) { return { lx: 0, fy: (d) => pw(ESC, d - sc.d0), from: 20, to: sc.d1 - sc.d0 - 20 }; },
+  // ESCALIER : copie de la cage d'escalier du niveau CHANTIER (dalle de béton à piliers, trémie de 16 × 20 m, volées alternées sur les murs est / ouest, fenêtre de sortie)
+  const SH = 425, T2 = 148, W2 = 8;   // trémie (m dans la scène), niveau de la dalle (160 − 12), demi-largeur
+  const ESCP = [[0, 23], [25, 23], [SH - 130, 152], [SH - 6, 151], [SH + 8, 144], [SH + 11, 118], [SH + 12, 78], [SH + 13, 28], [SH + 17, 14], [SH + 28, 8], [SH + 60, 10], [SH + 200, 10]];
+  const ESCX = [[0, 0], [SH - 130, 0], [SH - 113, 4], [SH - 73, -4], [SH - 38, 3], [SH - 18, 0], [SH + 200, 0]];
+  city.scenes.escalier = { len: [SH + 100, SH + 100], noDoor: true,
+    pin(T, sc) { return { lx: 0, fx: (d) => pw(ESCX, d - sc.d0), fy: (d) => pw(ESCP, d - sc.d0), from: 20, to: sc.d1 - sc.d0 - 20 }; },
     build(S) {
-      const W = 9, A = (s) => S.d0 + s, tints = ['#ffffff', '#f6f2f0', '#eeeeee'];
+      const A = (s) => S.d0 + s, side = { side: 'concreteWarm', top: 'concrete', bottom: 'concreteDark' };
+      const Z = (z) => SH + (-368 - z);   // repère d'origine (z) → m dans la scène
       avenueRoad(S, []);
-      for (let s = 20; s < 240; s += 20) { const dc = A(s + 10); S.item(dc, (r) => { for (const sg of [-1, 1]) S.bx(dc, sg * (W + 15), 70, 30, 140, 20.2, { side: 'concreteWarm', top: 'concrete', bottom: 'concreteDark' }, r.pick(tints)); }); }
-      for (let k = 0; k * 10 < 100 / 1.8 + 1; k++) {
-        const east = k % 2 === 0, x = east ? W - 2.5 : -W + 2.5;
+      climbRoofs(S, A, ESCP, 30, SH - 130, 44);
+      // masse du bâtiment : blocs est et ouest (x 8 → 30), bloc avant (x ±8) jusqu'à la trémie, linteau de la fenêtre de sortie (y 21 → dalle)
+      for (let s = SH - 130; s < SH + 42; s += 20) { const e = Math.min(s + 20, SH + 42), dc = A((s + e) / 2);
+        S.item(dc, () => { for (const sg of [-1, 1]) S.bx(dc, sg * (30 + W2) / 2, T2 / 2, 30 - W2, T2, e - s, side, '#e8e0d0');
+          if (e <= SH) S.bx(dc, 0, T2 / 2, 2 * W2, T2, e - s, side, '#e8e0d0');
+          if (s >= SH + 20) S.bx(dc, 0, (21 + T2) / 2, 2 * W2, T2 - 21, e - s, side, '#e8e0d0'); }); }
+      { const dc = A(SH - 65); S.item(dc, () => S.bx(dc, 0, T2 + 0.25, 60, 0.5, 130, 'concrete', '#d8d4cc', false)); }   // dalle de béton
+      // cage d'escalier : volées alternées (exactement la construction d'origine, y décalé de −12)
+      for (let k = 0; k * 9 < 160 - 20; k++) {
+        const east = k % 2 === 0, x = east ? W2 - 2.5 : -W2 + 2.5;
         for (let i = 0; i < 10; i++) {
-          const n = k * 10 + i, s = 60 + n * 1.8; if (s > 160) break;
-          const dc = A(s), y = pw(ESC, s) - 2.2;
+          const y = 160 - 1 - (k * 10 + i) * 0.9 - 12; if (y < 2) break;
+          const z = east ? -368 - 1 - i * 1.8 : -388 + 1 + i * 1.8, dc = A(Z(z));
           S.item(dc, () => S.bx(dc, x, y, 5, 0.5, 1.8, 'concreteWarm', undefined, true, { ground: true }));
         }
-        if (60 + k * 18 < 160) S.gate(A(60 + k * 18 + 9), 0, pw(ESC, 60 + k * 18 + 9));
       }
+      // piliers et poutres de la dalle (fenêtre z -240 → -368 de l'original)
+      for (const x of [-24, -12, 12, 24]) for (let z = -240; z > -368; z -= 15) { const dc = A(Z(z)); S.item(dc, () => S.bx(dc, x, T2 + 6.5, 2, 12, 2, 'concrete')); }
+      for (const [x, z] of [[-8, -255], [8, -295], [-8, -330]]) { const dc = A(Z(z)); S.item(dc, () => S.bx(dc, x, T2 + 6.5, 2, 12, 2, 'concrete')); }
+      for (let z = -240; z > -368; z -= 15) { const dc = A(Z(z)); S.item(dc, () => S.bx(dc, 0, T2 + 12.8, 50, 1.4, 1.4, 'concrete')); }
+      { const dc = A(Z(-402)); S.item(dc, () => S.bx(dc, 0, T2 + 3, 30, 5, 8, 'concreteWarm')); }
+      { const dc = A(Z(-378)); S.item(dc, () => { if (S.b.arrow) S.b.arrow(S.at(dc, 0, T2 + 6), 0); }); }
       farTowers(S, 90, 170, 4);
     } };
   city.notFirst = ['toits'];
-  city.early = [['city1', 'escalier'], ['chute', 'slalom', 'cheminee', 'toits', 'ruelle', 'plongee']];
+  city.early = [['city1', 'escalier'], ['slalom', 'cheminee', 'toits', 'ruelle', 'plongee']];
 
   // ============================================================== METRO
   const H = 24;
