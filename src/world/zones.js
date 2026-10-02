@@ -201,10 +201,15 @@
     }
     const r = G.stream(T.seed, 'plan' + zi);
     const skipQ = (new URLSearchParams(location.search).get('skip') || '').split(',');
-    if (T.levelLen && (T.difK || 1) < 1.3) skipQ.push('city1', 'escalier', 'cheminee', 'plongee', 'toits', 'epingle', 'chicane', 'slalom', 'ruelle', 'enfilade');   // niveaux faciles : pas de montée / plongeon ni de virage serré
+    if (T.levelLen && (T.difK || 1) < 1.3) skipQ.push('city1', 'escalier', 'cheminee', 'plongee', 'toits', 'epingle', 'chicane', 'slalom', 'ruelle', 'enfilade', 'chuteLibre', 'montee', 'pontPlongeon', 'gradins');   // niveaux faciles : pas de montée / plongeon ni de virage serré
     skipQ.push('rame', 'presses', 'bras', 'chaine', 'grues', 'squelette', 'arche', 'levant', 'convoi', 'camp', 'helis', 'convoi2', 'camp2', 'helis2');   // v073 : scènes avec éléments mobiles ou superflus   // banc de test : ?skip=city1,escalier
     const names = Object.keys(def.scenes).filter((n) => n !== def.signature && skipQ.indexOf(n) < 0);
     for (let i = names.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = names[i]; names[i] = names[j]; names[j] = t; }
+    if (T.levelLen && !(new URLSearchParams(location.search).has('norelief'))) {   // v079 : en mode niveaux, une scène « relief » sur deux (le parcours monte, descend, plonge)
+      const rel = names.filter((n) => def.scenes[n].relief), oth = names.filter((n) => !def.scenes[n].relief), mix = [];
+      for (let k = 0; k < Math.max(rel.length, oth.length); k++) { if (k < oth.length) mix.push(oth[k]); if (k < rel.length) mix.push(rel[k]); }
+      names.length = 0; for (const n of mix) names.push(n);
+    }
     if (def.early) {   // v057 : une scène « copie du niveau d'origine » + une scène spéciale parmi les premières de la zone (jamais en toute première)
       const sp = [];
       for (const grp of def.early) { const av = grp.filter((n) => names.indexOf(n) >= 0 && sp.indexOf(n) < 0); if (av.length) sp.push(av[Math.floor(r() * av.length)]); }
@@ -220,12 +225,14 @@
       const nm = names[i % names.length], sd = def.scenes[nm];
       if (zi === 0 && def.notFirst && plan.scenes.length === 0 && def.notFirst.indexOf(nm) >= 0 && (T._nf = (T._nf || 0) + 1) < 200) { names.push(names.splice(i % names.length, 1)[0]); continue; }   // jamais de montée / chute en toute première scène
       if (sd.minD && d < sd.minD && (T._mg = (T._mg || 0) + 1) < 4000) { names.push(names.splice(i % names.length, 1)[0]); continue; }   // v068 : scènes militaires seulement plus loin (reportées en fin de liste)
+      if (T.levelLen && sd.relief && d + sd.len[1] > T.levelLen - 95 && (T._rc = (T._rc || 0) + 1) < 4000) { const j = names.findIndex((n) => !def.scenes[n].relief); if (j >= 0 && j !== i % names.length) { const t = names[i % names.length]; names[i % names.length] = names[j]; names[j] = t; continue; } }   // pas de relief qui déborderait sur l'arène
       let len = r.between(sd.len);
       if (sd.len[0] === sd.len[1] && d + len > end - padOut) { i++; continue; }   // v057 : scène à longueur fixe (copie du niveau City) : elle ne se tronque pas
       if (d + len > end - padOut) len = end - padOut - d;
       if (len < 80) break;
       const sc = { name: nm, d0: d, d1: d + len, zone, zi, key: zi + '_' + i, stage: Math.min(3, Math.floor(d / cfg.stageLen)) };
       plan.scenes.push(sc);
+      if (sd.relief) { const rl = sd.relief(T, sc, G.stream(T.seed, 'rel' + sc.key)); if (rl) { sc.rel = { d0: sc.d0, d1: sc.d1, fn: rl.fn }; sc.relMax = rl.max || 0; } }   // v079 : profil de terrain de la scène (fn(d) → mètres, nul aux deux bouts)
       if (sd.turns) { const tr0 = G.stream(T.seed, 'turn' + sc.key), sg = tr0() < 0.5 ? -1 : 1, spec = sd.turns === 'auto' ? Z.TURN_PRESETS[Math.floor(tr0() * Z.TURN_PRESETS.length)] : sd.turns; sc.turns = spec.map((t) => ({ d0: sc.d0 + t[0] * len, d1: sc.d0 + t[1] * len, ang: sg * t[2] * Math.PI / 180 })); }   // v063 : virages (fractions de la scène, degrés)
       if (sd.pin) { const p = sd.pin(T, sc, G.stream(T.seed, 'pin' + sc.key)); if (p) { p.d0 = sc.d0 + (p.from || 0); p.d1 = p.to !== undefined ? sc.d0 + p.to : sc.d1; plan.pins.push(p); } }
       d += len; i++;
@@ -239,7 +246,7 @@
     if (T.levelLen && !plan._lv) {
       plan._lv = true;
       const L0 = T.levelLen, A0 = L0 - 80, A1 = L0 + 800, zl = C().zoneLen, start = Math.max(0, zi * zl - (T.off || 0)), end = zi * zl - (T.off || 0) + zl;
-      plan.scenes = plan.scenes.filter((s) => s.d0 < A0 - 60); for (const s of plan.scenes) if (s.d1 > A0) s.d1 = A0;
+      plan.scenes = plan.scenes.filter((s) => s.d0 < A0 - 60 && !(s.rel && s.d1 > A0 + 0.5)); for (const s of plan.scenes) if (s.d1 > A0) s.d1 = A0;
       plan.pins = plan.pins.filter((p) => p.d0 < A0);
       if (start < A1 && end > A0) plan.scenes.push({ name: 'arene', d0: Math.max(A0, start), d1: Math.min(A1, end), zone: plan.zone, zi, key: zi + '_arena', stage: 0 });
     }
@@ -393,7 +400,7 @@
     } else if (zone === 'port') {
       const q = 17;    // le quai : bande centrale ; autour, l'eau
       slab(-1, 2 * q, 2, 'concrete', '#c8c8c4');
-      for (const s of [-1, 1]) bx2({ p: GP(s * (q + 120), ym - 3.6), s: [900, 2, len], r: [pitch, 0, 0], mat: 'water', ground: true });
+      for (const s of [-1, 1]) bx2({ p: GP(s * (q + 120), ym - T.rel(m) - 3.6), s: [900, 2, len], r: [0, 0, 0], mat: 'water', ground: true });   // v079 : l'eau reste plate quand le quai monte
       for (const s of [-1, 1]) bx2({ p: GP(s * q, ym - 0.4), s: [0.8, 1.6, len], r: [pitch, 0, 0], mat: 'concreteDark', collide: false, shadow: false });
     } else if (zone === 'sky') {
       const hw = 50;
@@ -475,7 +482,7 @@
   Z.build = function (ctx) {
     const T = ctx.T, cfg = C(), d0 = ctx.d0, d1 = ctx.d1, b = ctx.b;
     // sol
-    const stp = Math.abs(T.theta(d1) - T.theta(d0)) > 0.004 ? 5 : 20;   // v063 : en virage, sol découpé en tranches de 5 m
+    const stp = Math.abs(T.theta(d1) - T.theta(d0)) > 0.004 || T.rel(d0) !== 0 || T.rel(d1) !== 0 || T.rel((d0 + d1) / 2) !== 0 ? 5 : 20;   // v063 : en virage, sol découpé en tranches de 5 m
     for (let d = d0; d < d1 - 0.01; d += stp) groundSlice(ctx, d, Math.min(d1, d + stp));
     // passages entre zones
     passage(ctx);
@@ -490,7 +497,7 @@
         if (sc.name === 'arene') { arenaBuild(S, plan.zone); continue; }
         if (sc.name === 'legacy') { legacy(ctx, sc, plan.zone); continue; }
         const sd = def.scenes[sc.name];
-        if (def.dress) def.dress(S);
+        if (def.dress && !sd.noDress) def.dress(S);   // v079 : les scènes de relief des zones fermées (métro, usine, pièce) ont leur propre enceinte
         sd.build(S);
       }
     }
@@ -511,6 +518,7 @@
     if (CC.Zones.forestLife) CC.Zones.forestLife(new Scene(ctx, sc));
   }
 
+  Z.legacy = legacy;
   // allures des ennemis autorisés par zone (chars au sol, lance-missiles, hélicoptères)
   Z.noTargets = {};   // v078 : des cibles dans TOUTES les zones (sinon un niveau « tour » ou « eau » ne pouvait pas être fini)
   Z.enemies = (zone) => ({ city: { tank: 1, sam: 1, heli: 1 }, forest: { tank: 1, sam: 1, heli: 1 }, metro: { tank: 1, sam: 1, heli: 0 }, chute: { tank: 0, sam: 1, heli: 1 }, tour: { tank: 0, sam: 1, heli: 1 }, eau: { tank: 1, sam: 1, heli: 1 }, usine: { tank: 1, sam: 1, heli: 1 }, port: { tank: 1, sam: 1, heli: 1 }, sky: { tank: 1, sam: 1, heli: 1 }, mini: { tank: 1, sam: 1, heli: 1 } }[zone] || { tank: 1, sam: 1, heli: 1 });

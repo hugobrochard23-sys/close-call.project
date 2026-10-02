@@ -615,7 +615,7 @@
     hitBoss(t, rocket) {
       t.hp--; t.hitCool = 0.9;
       { const run0 = this.endlessRun, T0 = run0.T, lv0 = this.levelRun; let dN = 0, best = 1e18; for (let d = Math.max(0, run0.dist - 40); d < run0.dist + 900; d += 6) { const p = T0.at(d, 0, 0), dx = p[0] - t.base.x, dz = p[2] - t.base.z, q = dx * dx + dz * dz; if (q < best) { best = q; dN = d; } }
-        const step = (t.mini ? 110 : 420) / Math.max(1, t.hpMax), dT = Math.min(dN + step, (lv0 ? lv0.len : 0) + 640), lx = (Math.random() - 0.5) * 50, yy = t.type === 'heli' ? 20 + Math.random() * 22 : 0, np = T0.at(dT, lx, yy);
+        const step = t.mini ? 70 : Math.max(45, Math.min(120, 330 / Math.max(1, t.hpMax))), dT = Math.min(dN + step, (lv0 ? lv0.len : 0) + 640), lx = (Math.random() - 0.5) * 50, yy = t.type === 'heli' ? 20 + Math.random() * 22 : 0, np = T0.at(dT, lx, yy);
         t.flyTo = new V(np[0], np[1], np[2]); t.flySpeed = 110; }   // il fuit vers le fond de l'arène et continue de tirer
       const run = this.endlessRun, fx = this.effects, c = rocket.pos.clone();
       fx.explosion(c, null, true, 'orange'); fx.ring(c, new V(0, 1, 0), 2, 36, 0.6, '#ffd060', 0.95); fx.flash(c, '#ffb040', 9, 110, 0.4, '#ff5020');

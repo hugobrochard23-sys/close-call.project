@@ -58,6 +58,7 @@
       this.alert = CC.Models.alertSprite(); this.alert.visible = false;
       this.alert.position.set(0, this.size[1] + 1.2, 0); this.object.add(this.alert);
       this.dot = CC.Models.targetDot(); this.dot.position.fromArray(this.center); this.object.add(this.dot);
+      if (this.boss || this.mini) this.model.traverse((o) => { if (o.isMesh && o.material && !o.material.transparent) { o.material = o.material.clone(); o.material.fog = false; } });   // v079 : le boss ne se noie jamais dans le brouillard (il « disparaissait » au loin)
       this.obb = null;
       this.yaw0 = this.object.rotation.y; this.yaw = this.yaw0; this.yawW = 0;   // cap (hélicoptère : tourne avec inertie)
       this.hv = new V(); this.ha = new V(); this.prevPos = null; this.att = new V();   // vitesse / accélération lissées → assiette

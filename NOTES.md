@@ -1,4 +1,4 @@
-# COLD IMPACT — notes de projet (état v078)
+# COLD IMPACT — notes de projet (état v079)
 
 Jeu mobile de fusée (JS vanilla, Three.js r149, canvas 2D pour l'UI/HUD). Dépôt `hugobrochard23-sys/cold-impact.project`, branche `main`, déploiement GitHub Pages
 (https://hugobrochard23-sys.github.io/cold-impact.project/). Le propriétaire teste sur téléphone ; **toujours donner ce lien à la fin d'un message** (cache à vider / navigation privée).
@@ -41,6 +41,14 @@ Le pilote automatique ne sait pas viser, attendre un volet ni plonger verticalem
 - MINI-BOSS (`T.mids`, option `mini` des cibles) dès le niveau 4 : 1 à 3 par niveau, plusieurs PV, ils fuient à chaque coup, 3 points.
 - `Z.noTargets` vidé : il y a des cibles dans toutes les zones (avant, tour/eau/chute n'en avaient pas : niveaux infinissables).
 - Écran de fin : coffre pixel animé (`ui/levelmap.js`) ; icônes pièce/réglages pixel ; bouton NIVEAUX retiré de l'accueil (carte via l'onglet MAP).
+
+## v079 — RELIEF
+- `T.rel(d)` (endless.js) : le SOL monte et descend ; chaque scène « relief » (src/world/zones_relief.js) fournit `relief(T, sc, r)` → `{fn(d)}` nul aux deux bouts ; `base()` l'ajoute, tout (sol, trajectoire, cibles) suit.
+- 9 scènes génériques habillées par zone (parois, accessoires `PROPS`) : colline, soussol (tunnel couvert), chuteLibre (falaise + barres de fer), montee (cheminée), pontPlongeon (canyon + tablier), gradins, montagnesRusses (portiques), defile (slalom en creux), salle (hall fermé : verre, cuves, conteneurs, grotte, serveurs…).
+- En niveaux, une scène relief sur deux (`Z.plan`), jamais en première scène ; niveaux faciles (difK<1.3) : pas de chuteLibre/montee/pontPlongeon/gradins. `?norelief=1` pour comparer.
+- Port : sol qui ne fait que monter (eau plate) ; mer : que descendre ; tour et chute : déjà verticales (pas de relief ajouté). Forêt est maintenant une zone à scènes (`plaine` = ancien décor).
+- Banc de test : le pilote suit le relief (niveaux 2-5, 7-10, 12 finis de bout en bout) ; il échoue sur cheminee/city1 (anciennes scènes de ville).
+- Boss : fuit moins loin (≤120 m par coup) et n'est plus mangé par le brouillard (`fog=false`).
 
 ## À vérifier au doigt (jamais testé sur téléphone)
 Équilibrage des ennemis/missiles, difficulté des niveaux 2 à 5, taille de l'arène, caméra en virage, lisibilité des flèches (petites de loin), forêt dégagée.

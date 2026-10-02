@@ -83,9 +83,11 @@
     base(d) {
       if (d <= 0) return 0;
       const tr = CC.Zones.trans(this, d);
-      if (!tr.k) return CC.Zones.PROFILE[tr.z1].elev;
-      return CC.Zones.PROFILE[tr.z0].elev + (CC.Zones.PROFILE[tr.z1].elev - CC.Zones.PROFILE[tr.z0].elev) * tr.t;
+      if (!tr.k) return CC.Zones.PROFILE[tr.z1].elev + this.rel(d);
+      return CC.Zones.PROFILE[tr.z0].elev + (CC.Zones.PROFILE[tr.z1].elev - CC.Zones.PROFILE[tr.z0].elev) * tr.t + this.rel(d);
     }
+    // v079 : RELIEF — les scènes « relief » (collines, fosses, chutes, gradins…) font monter et descendre le sol lui-même (elles reviennent à 0 à leurs deux bouts)
+    rel(d) { this.ensureTurns(d); const L = this._rels; let h = 0; for (let i = 0; i < L.length; i++) { const q = L[i]; if (d > q.d0 && d < q.d1) h += q.fn(d); } return h; }
     cx(d) {
       const a = param(C().bend, d), fade = U.clamp(d / 120, 0, 1);   // départ en ligne droite
       return fade * (a * Math.sin(d / this.l[0] + this.p[0]) + a * 0.35 * Math.sin(d / this.l[1] + this.p[1]) - a * Math.sin(this.p[0]) - a * 0.35 * Math.sin(this.p[1]));
@@ -114,8 +116,8 @@
     // v063 : le couloir TOURNE. Cap θ(d) = somme de virages lissés (scènes à virage, voir Z.plan) ; position P(d) intégrée tous les 2 m ;
     // cx(d) reste l'ondulation latérale locale. Le repère (d, lx, y) ne change pas : les scènes continuent d'utiliser at() / yawAcross().
     ensureTurns(d) {
-      const need = this.zoneIndex(Math.max(0, d)) + 1; if (this._tz === undefined) { this._tz = -1; this._turns = []; }
-      while (this._tz < need) { this._tz++; const plan = CC.Zones.plan(this, this._tz); for (const sc of plan.scenes) if (sc.turns) for (const t of sc.turns) this._turns.push(t); }
+      const need = this.zoneIndex(Math.max(0, d)) + 1; if (this._tz === undefined) { this._tz = -1; this._turns = []; this._rels = []; }
+      while (this._tz < need) { this._tz++; const plan = CC.Zones.plan(this, this._tz); for (const sc of plan.scenes) { if (sc.turns) for (const t of sc.turns) this._turns.push(t); if (sc.rel) this._rels.push(sc.rel); } }
     }
     theta(d) { this.ensureTurns(d); let th = 0; for (const t of this._turns) { if (d <= t.d0) continue; th += t.ang * (d >= t.d1 ? 1 : U.smooth(t.d0, t.d1, d)); } return th; }
     P(d) {
@@ -244,7 +246,7 @@
     if (T.levelLen) for (let d = Math.ceil(Math.max(d0, 40) / 45) * 45; d < d1 - 1; d += 45) {
       const sA = (CC.Zones.plan(T, T.zoneIndex(d)).scenes.find((q) => d >= q.d0 && d < q.d1)) || null;
       if (!sA || sA.name === 'arene' || d > T.levelLen - 30) continue;
-      if (!((T.difK || 1) < 1.3 || sA.name === 'city1' || sA.name === 'escalier')) continue;
+      if (!((T.difK || 1) < 1.3 || sA.name === 'city1' || sA.name === 'escalier' || (CC.Zones.reliefNames || []).indexOf(sA.name) >= 0)) continue;
       const pa = T.at(d, T.laneX(d), T.laneY(d) - 2.2), pb = T.at(d + 12, T.laneX(d + 12), T.laneY(d + 12) - 2.2), o = CC.Models.guideArrow(), P = new THREE.Vector3(pa[0], pa[1], pa[2]);
       o.position.copy(P); o.lookAt(new THREE.Vector3(pb[0], pb[1], pb[2])); o.rotateX(0.6); o.scale.setScalar(2.4);
       b.entity({ object: o, t: Math.random() * 6, base: P.y, update(dt) { this.t += dt; this.object.position.y = this.base + Math.sin(this.t * 3) * 0.3; } });
