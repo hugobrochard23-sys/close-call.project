@@ -387,6 +387,7 @@
       this.rig.startHandoff(true); this.rig.startFlight();
       this.padMode = false;
       this.state = 'FLIGHT'; this.flightTime = 0; this.stallT = 0; this.boostK = 0;
+      { const ln = this.endlessRun && this.endlessRun.T.levelLen && this.levelRun && this.levelRun.n; if (ln && ln <= 2 && !this.testMode) rk.shieldT = 9999; }   // v093 : niveaux 1-2 : impossible de perdre contre un mur (bouclier permanent)
       if (CC.Touch && CC.Touch.active) { this.settings.tutorialFlights = (this.settings.tutorialFlights || 0) + 1; const T = this.input.touch; if (T) T.reboostUntil = performance.now() + 1800; }   // le doigt posé juste après le départ = boost tout de suite
       this.telemetry.event('fire', { runTime: this.runTime, pad: true });
     }
@@ -717,7 +718,7 @@
         this.audio.play('boom', c); if (run.streak > 0) this.audio.play('door', null, run.streak); else this.audio.play('target');
         if (t.golden) { this.audio.play('ringSeries'); fx.ring(c, up, 3, 46, 0.9, '#ffd23a', 0.95); fx.ring(c, new V(1, 0, 0), 2, 38, 0.8, '#fff4b0', 0.9); fx.flash(c, '#ffd23a', 12, 130, 0.6, '#ffb020'); this.flash = 0.3; this.flashColor = '#ffe9a0'; this.hitStop = 0.14; }
         if (t.grp && this.targets.every((x) => x.grp !== t.grp || !x.alive)) { run.points = (run.points || 0) + 3 * this.progress.pointMult(); run.addFuel(CC.CONFIG.endless.fuelTarget * 1.5); this.audio.play('levelUp'); fx.ring(c, up, 3, 50, 1.0, '#ffd23a', 0.95); fx.flash(c, '#ffd23a', 10, 120, 0.5, '#ffb020'); this.hitStop = 0.12; if (t.noDrop) this.spawnModPickup(c); if (CC.Haptics) CC.Haptics.pattern('mission'); }
-        (this.killPops = this.killPops || []).push({ p: c.clone(), t0: performance.now(), txt: '+' + (Math.round(val * 10) / 10) });
+        (this.killPops = this.killPops || []).push({ p: c.clone(), t0: performance.now(), txt: '+' + (Math.round(val * 10) / 10), chain: run.streak || 0 });   // v093 : le +1 grossit avec la série
         if (t.golden) { this.settings.seenGold = true; if (CC.Haptics) CC.Haptics.pattern('levelUp'); }
         if (t.golden && !t.noDrop) this.spawnModPickup(c);   // v082 : l'engin doré lâche une caisse verte (un module)
         { const rad = this.meta.warRadius();   // v082 : module OGIVE : tout ce qui est proche explose aussi
@@ -960,7 +961,12 @@
         case 'CRASHED':
           this.impactT += dt;
           if (this.endlessRun) {   // v033 : une seule vie ; v034 : une chance de continuer (publicité récompensée) avant l'écran de fin
-            if (this.impactT > 0.9) { if (this.canRevive()) this.beginRevive(); else this.finishEndless(); }
+            if (this.impactT > 0.9) {
+              // v093 : niveaux 1-3 : pas d'écran, la partie se relance aussitôt (essayer = instantané)
+              const cl = this.endlessRun.T.levelLen && this.levelRun && this.levelRun.n;
+              if (cl && cl <= 3 && !this.testMode && this.crashKind !== 'win') { if (!this.pendingHome) this.goHome({ autoLaunch: true }); }
+              else if (this.canRevive()) this.beginRevive(); else this.finishEndless();
+            }
             break;
           }
           if (this.level.mode === 'targets') this.runTime += dt;
@@ -1125,7 +1131,7 @@
       let sdt = dt; if (this.hitStop > 0) { this.hitStop -= dt; sdt = dt * (this.hitScale || 0.18); if (this.hitStop <= 0) this.hitScale = 0; }
       if (this.chromaBurst) this.chromaBurst = this.chromaBurst < 0.001 ? 0 : this.chromaBurst * 0.95;   // v066 : ralenti à chaque destruction
       const tutHold = CC.Tutorial && this.state === 'FLIGHT' && !this.paused ? CC.Tutorial.update(this, dt) : false;   // v089 : tutoriel interactif = jeu figé tant que le geste n'est pas fait
-      if (!this.paused && this.state !== 'BOOT' && !tutHold) this.safe(() => this.update(this.endlessRun && this.state === 'CRASHED' && this.impactT < 0.3 ? sdt * 0.4 : sdt));   // v040 : ralenti sur la collision
+      if (!this.paused && this.state !== 'BOOT' && !tutHold) this.safe(() => this.update(this.endlessRun && this.state === 'CRASHED' && this.impactT < 0.6 ? sdt * 0.35 : sdt));   // v040 : ralenti sur la collision
       else { this.input.poll(0); this.rig.update(0); }
       try { this.render(performance.now() / 1000); this.renderErr = 0; }
       catch (e) { (window.__errs || (window.__errs = [])).push(String(e && e.stack || e).slice(0, 300)); if (this.testMode) throw e; if ((this.renderErr = (this.renderErr || 0) + 1) === 20) this.recoverBlack('exception'); }

@@ -115,3 +115,6 @@ Boss plus personnalisés par zone, plusieurs zones par niveau, missions du jour,
 - Victoire : plus de texte bleu écrous ni bouton DEFIER.
 - HANGAR (src/ui/hangar.js) : boutique = carrousel 3D (aperçu WebGL hors écran), flèches, prix en écrous (600/1800/4500), pub +150 écrous, prix EUR en petit ; 8 nouvelles fusées (src/entities/skins2.js).
 - Flèche verte sur l'onglet GARAGE (jusqu'à tutDone) puis PASS (jusqu'à visite) ; unlock = animation + OK (plus de cartes). Pass : aperçu 3D de la prochaine fusée premium.
+
+## v093
+- Niveaux 1-2 : longueur 900/1200, bouclier permanent ; niveaux 1-3 : crash = relance immédiate (pas d écran). Victoire épurée (plus de score/record/XP pass). Réglage SENSIBILITE (touchSens). Le +1 grossit avec la série, ralenti de crash 0,6 s.

@@ -226,12 +226,9 @@
           Home.gridDraw(ctx, 'star', px, Y(0.16), sz * (on && ta > 0 && ta < 1 ? 1.5 - 0.5 * ta : 1), on && ta > 0 ? '#ffd23a' : '#3a424c');
           if (on && ta >= 1 && !r.sd[i]) { r.sd[i] = 1; game.audio.play('door', null, i * 2 + 1); }
         }
-        if (t > 1.6 && lv.score !== undefined) { const isRec = lv.rec && (lv.rec.score || lv.rec.time), rt = lv.score + ' PTS   ' + (lv.time || 0).toFixed(1) + ' S' + (isRec ? '   RECORD !' : ''); text(ctx, rt, cx, Y(0.225), ui.fitPx([rt], W * 0.86, u * 0.0042), isRec ? '#ffd23a' : '#8a96a8', { align: 'center' }); }
-        if (t > 1.6 && lv.challenge) { const ct = 'DEFI RELEVE ! +CAISSE'; text(ctx, ct, cx, Y(0.195), ui.fitPx([ct], W * 0.8, u * 0.0042), '#6aff9a', { align: 'center' }); }
       }
       if (t > 2.3) { let yy = Y(0.655); const fa = U.clamp((t - 2.3) / 0.4, 0, 1); ctx.globalAlpha = fa;
         for (const dr of (lv.drops || []).slice(0, 2)) { const md = CC.Meta.MODS[dr.id]; Home.modIcon(ctx, dr.id, cx - u * 0.25, yy + u * 0.02, u * 0.07); text(ctx, md.name + (dr.up ? '  NIV ' + dr.lvl + ' !' : ' +1'), cx - u * 0.19, yy - u * 0.005, ui.fitPx(['MODULE 00000000'], W * 0.55, u * 0.0042), '#6aff9a', {}); yy += u * 0.085; }
-        if (lv.passXp) text(ctx, '+' + lv.passXp + ' XP PASS', cx, Y(0.705) + ((lv.drops || []).length > 1 ? u * 0.05 : 0), ui.fitPx(['+000 XP PASS'], W * 0.5, u * 0.0042), '#8fd0ff', { align: 'center' });
         ctx.globalAlpha = 1; }
       if (!r.cheered && t > 1.0) { r.cheered = true; game.audio.play('levelUp'); if (CC.Haptics) CC.Haptics.pattern('levelUp'); }
       if (!r.thump && t > 0.45) { r.thump = true; game.audio.play('boom'); }
@@ -243,7 +240,7 @@
       text(ctx, Math.round(pct * 100) + ' %', cx, by + bh + u * 0.04, pp, '#ffffff', { align: 'center' });
       if (lv.boss) text(ctx, 'BOSS ATTEINT', cx, Y(0.56), ui.fitPx(['BOSS ATTEINT'], W * 0.8, u * 0.006), '#ff6a5a', { align: 'center' });
       { let yy = Y(0.64); for (const dr of (lv.drops || []).slice(0, 2)) { const md = CC.Meta.MODS[dr.id]; Home.modIcon(ctx, dr.id, cx - u * 0.25, yy + u * 0.02, u * 0.07); text(ctx, md.name + (dr.up ? '  NIV ' + dr.lvl + ' !' : ' +1'), cx - u * 0.19, yy - u * 0.005, ui.fitPx(['MODULE 00000000'], W * 0.55, u * 0.0042), '#6aff9a', {}); yy += u * 0.085; }
-        if (lv.passXp) text(ctx, '+' + lv.passXp + ' XP PASS', cx, Math.max(yy, Y(0.7)), ui.fitPx(['+000 XP PASS'], W * 0.5, u * 0.0042), '#8fd0ff', { align: 'center' }); }
+      }
     }
     // boutons
     const bw = W * 0.8, bx = cx - bw / 2, bh1 = Math.max(u * 0.17, 60 * ui.pixelRatio()), bh0 = Math.max(u * 0.1, 40 * ui.pixelRatio()), yMain = Y(0.975) - bh1, yMap = yMain - bh0 - u * 0.03;
