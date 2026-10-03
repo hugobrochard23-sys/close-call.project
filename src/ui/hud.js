@@ -222,6 +222,7 @@
      * fois, dans un cartouche en haut de l'écran (hors de la trajectoire), avec un pictogramme animé du geste. */
     drawTutorial(game, W, H) {
       if (game.state !== 'FLIGHT' || game.paused) return;
+      if (CC.Tutorial && CC.Tutorial.draw(this.ctx, W, H, game)) return;   // v089 : tutoriel interactif du niveau 1
       const rk = game.rocket, run = game.endlessRun, t = game.flightTime || 0, S0 = game.settings;
       let label = null, kind = 'drag';
       // v083 : explications UNE SEULE FOIS, au moment où le joueur voit la chose pour la première fois
@@ -237,7 +238,7 @@
       }
       if (!label) return;
       // v088 : une GROSSE main qui glisse montre le geste (3 premiers vols, sans texte à lire) : piquer vers la cible puis relever
-      if ((kind === 'drag' || kind === 'hold') && (game.progress.P.launches || 0) <= 5 && CC.Touch && CC.Touch.active) {
+      if (false && (kind === 'drag' || kind === 'hold')) {
         const c2 = this.ctx, k2 = (t % 2.6) / 2.6, r2 = Math.min(W, H) * 0.07, hx = W * 0.5 + Math.sin(k2 * Math.PI * 2) * W * 0.12, hy = H * 0.66 + (kind === 'hold' ? 0 : Math.sin(k2 * Math.PI * 2 + 1.2) * H * 0.07);
         c2.save(); c2.globalAlpha = 0.5 + 0.2 * Math.sin(t * 6); c2.fillStyle = '#ffffff'; c2.beginPath(); c2.arc(hx, hy, r2, 0, 6.283); c2.fill();
         c2.globalAlpha = 0.35; c2.strokeStyle = '#ffffff'; c2.lineWidth = r2 * 0.16; c2.beginPath(); c2.arc(hx, hy, r2 * (1.3 + (kind === 'hold' ? (k2 * 3) % 1 * 0.6 : 0)), 0, 6.283); c2.stroke();

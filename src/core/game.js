@@ -1124,7 +1124,8 @@
       if (this.fadeIn > 0) this.fadeIn = Math.max(0, this.fadeIn - dt);
       let sdt = dt; if (this.hitStop > 0) { this.hitStop -= dt; sdt = dt * (this.hitScale || 0.18); if (this.hitStop <= 0) this.hitScale = 0; }
       if (this.chromaBurst) this.chromaBurst = this.chromaBurst < 0.001 ? 0 : this.chromaBurst * 0.95;   // v066 : ralenti à chaque destruction
-      if (!this.paused && this.state !== 'BOOT') this.safe(() => this.update(this.endlessRun && this.state === 'CRASHED' && this.impactT < 0.3 ? sdt * 0.4 : sdt));   // v040 : ralenti sur la collision
+      const tutHold = CC.Tutorial && this.state === 'FLIGHT' && !this.paused ? CC.Tutorial.update(this, dt) : false;   // v089 : tutoriel interactif = jeu figé tant que le geste n'est pas fait
+      if (!this.paused && this.state !== 'BOOT' && !tutHold) this.safe(() => this.update(this.endlessRun && this.state === 'CRASHED' && this.impactT < 0.3 ? sdt * 0.4 : sdt));   // v040 : ralenti sur la collision
       else { this.input.poll(0); this.rig.update(0); }
       try { this.render(performance.now() / 1000); this.renderErr = 0; }
       catch (e) { (window.__errs || (window.__errs = [])).push(String(e && e.stack || e).slice(0, 300)); if (this.testMode) throw e; if ((this.renderErr = (this.renderErr || 0) + 1) === 20) this.recoverBlack('exception'); }

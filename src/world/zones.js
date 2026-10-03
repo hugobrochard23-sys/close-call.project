@@ -177,7 +177,7 @@
   Z.yCenter = (T, zone, zi, d) => {
     const P = PROFILE[zone];
     if (!P.drift) return (P.y[0] + P.y[1]) / 2;
-    const L = C().zoneLen, k = U.clamp((d + (T.off || 0) - zi * L) / L, 0, 1); return P.drift[0] + (P.drift[1] - P.drift[0]) * k;
+    const L = C().zoneLen, k = T.levelLen ? U.clamp(d / T.levelLen, 0, 1) : U.clamp((d + (T.off || 0) - zi * L) / L, 0, 1); return P.drift[0] + (P.drift[1] - P.drift[0]) * k;   // v089 : en niveau, la chute / l'ascension s'étale sur TOUT le niveau (avant : elle recommençait à 245 m toutes les 2000 m → boss inatteignable au niveau 10)
   };
   Z.prof = (T, d, key) => {
     const tr = Z.trans(T, d), a = PROFILE[tr.z0][key], b = PROFILE[tr.z1][key];

@@ -100,3 +100,7 @@ Boss plus personnalisés par zone, plusieurs zones par niveau, missions du jour,
 
 ## v088
 - Remontée auto près du sol (raycast vers le bas, pente max selon la hauteur) ; sensibilité tactile 3.0 → 2.3 + lissage ; `hitPad` +1,3 m au niveau 1 (→ 0 vers le niveau 12) ; grosse main animée au tuto (3 premiers vols).
+
+## v089
+- Tutoriel interactif niveau 1 (`src/ui/tutorial.js`, tactile, `?tut=1` pour forcer) : jeu figé jusqu'au geste (glisser → maintenir/boost → viser la 1re cible), `settings.tutStep`.
+- Zones à dérive (chute/tour) : `yCenter` s'étale sur tout le niveau (avant : reset à 245 m tous les 2000 m → boss du niveau 10 inatteignable).
