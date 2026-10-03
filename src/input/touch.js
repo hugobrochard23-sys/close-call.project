@@ -58,6 +58,7 @@
       buzz('touch');                                 // v026 : mini vibration dès que le doigt touche l'écran en partie
       if (finger) return;                            // un seul doigt pilote
       const t = e.changedTouches[0];
+      T.down = true;   // v090 : le tutoriel sait si un doigt est posé
       finger = { id: t.identifier, x: t.clientX, y: t.clientY, x0: t.clientX, y0: t.clientY, t0: performance.now(), moved: false };
       // v026 : dans la seconde qui suit la fin d'un boost, reposer le doigt relance le boost tout de suite (sans appui long)
       if (game.state === 'FLIGHT' && performance.now() < T.reboostUntil) { finger.boost = true; T.reboostUntil = 0; boostOn(); }
@@ -93,7 +94,7 @@
         if (t.identifier !== finger.id) continue;
         const tap = !finger.moved && !finger.boost && performance.now() - finger.t0 < cfg.tapMaxMs;
         if (finger.boost && game.state === 'FLIGHT') T.reboostUntil = performance.now() + cfg.reboostMs;   // v026
-        finger = null;
+        finger = null; T.down = false;
         boostOff();                                  // v024 : doigt levé → boost coupé
         if (!tap || !playing()) return;
         e.preventDefault();

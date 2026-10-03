@@ -22,19 +22,22 @@
     if (!T.enabled(g) || g.state !== 'FLIGHT' || g.paused) { T.hold = false; if (!T.enabled(g)) T.st = null; return false; }
     const st = T.st || (T.st = { step: S.tutStep || 0, t: 0, ok: 0, got: false });
     const rk = g.rocket, tt = g.input.touch;
-    const advance = (n) => { st.step = n; st.t = 0; st.ok = 0; st.f0 = null; S.tutStep = n; g.writeSave(); T.hold = false; if (g.audio) g.audio.play('card'); if (CC.Haptics) CC.Haptics.pattern('mission'); };
+    const advance = (n) => { st.step = n; st.t = 0; st.ok = 0; st.f0 = null; S.tutStep = n; st.armed = false; st.pressed = false; g.writeSave(); T.hold = false; if (g.audio) g.audio.play('card'); if (CC.Haptics) CC.Haptics.pattern('mission'); };
     if (st.step === 0 || st.step === 1) st.t += dt; else if (st.step === 3) st.t += dt;
-    if (st.step === 0 && !T.hold && g.flightTime > 0.7) { T.hold = true; st.f0 = aimFwd(g, new V()); }
-    if (st.step === 0 && T.hold && st.f0) { if (aimFwd(g, _f).angleTo(st.f0) > 0.4) advance(1); }
+    // v090 : le geste ne compte que si le doigt a d'abord été LEVE (« armé »), puis reposé : un doigt déjà posé ne valide jamais une étape
+    const down = !!(tt && tt.down);
+    if (T.hold) { if (!st.armed) { if (!down) { st.armed = true; st.f0 = aimFwd(g, new V()); } } else if (down) st.pressed = true; }
+    if (st.step === 0 && !T.hold && g.flightTime > 0.7) { T.hold = true; st.armed = false; st.pressed = false; }
+    if (st.step === 0 && T.hold && st.armed && st.f0) { if (st.pressed && aimFwd(g, _f).angleTo(st.f0) > 0.4) advance(1); }
     else if (st.step === 1) {
-      if (!T.hold && st.t > 1.6) T.hold = true;
-      if (T.hold) { st.ok = tt && tt.thrust ? st.ok + dt : 0; if (st.ok > 0.5) advance(2); }
+      if (!T.hold && st.t > 1.6) { T.hold = true; st.armed = false; st.pressed = false; }
+      if (T.hold) { st.ok = st.armed && tt && tt.thrust ? st.ok + dt : 0; if (st.ok > 0.5) advance(2); }
     } else if (st.step === 2) {
       const tg = target(g);
-      if (!T.hold && tg) { T.hold = true; st.tg = tg; }
+      if (!T.hold && tg) { T.hold = true; st.tg = tg; st.armed = false; st.pressed = false; }
       if (T.hold && st.tg) {
         if (!st.tg.alive) advance(3);
-        else { const dir = _t.subVectors(st.tg.object.position, rk.pos).normalize(); if (aimFwd(g, _f).angleTo(dir) < 0.14) { advance(3); } }
+        else { const dir = _t.subVectors(st.tg.object.position, rk.pos).normalize(); if (st.armed && st.pressed && aimFwd(g, _f).angleTo(dir) < 0.14) { advance(3); } }
       }
     } else if (st.step === 3) {   // on laisse jouer jusqu'à la cible (ou 9 s) : fin du tutoriel
       if (st.t > 9 || (st.tg && !st.tg.alive)) advance(4);
@@ -61,16 +64,16 @@
     if (st.step === 0) {
       const k = Math.sin(t * 2.6); hand(ctx, W * 0.5 + k * W * 0.2, H * 0.68, r, t, false);
       ctx.save(); ctx.fillStyle = '#35ff4a'; ctx.globalAlpha = 0.8; const q = r * 0.3, d = k > 0 ? 1 : -1; for (let n = 0; n < 3; n++) ctx.fillRect(Math.round(W * 0.5 + k * W * 0.2 + d * (r * 1.7 + n * q * 1.4)), Math.round(H * 0.68 - q / 2), Math.round(q), Math.round(q)); ctx.restore();
-      label(g, ctx, W, H, 'GLISSE POUR TOURNER');
+      label(g, ctx, W, H, st.armed ? 'GLISSE POUR TOURNER' : 'LEVE LE DOIGT');
     } else if (st.step === 1) {
       hand(ctx, W * 0.5, H * 0.68, r, t, true);
       const k = Math.min(1, st.ok / 0.5); ctx.save(); ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = r * 0.22; ctx.beginPath(); ctx.arc(W * 0.5, H * 0.68, r * 1.9, -Math.PI / 2, -Math.PI / 2 + k * 6.283); ctx.stroke(); ctx.restore();
-      label(g, ctx, W, H, 'MAINTIENS : BOOST');
+      label(g, ctx, W, H, st.armed ? 'MAINTIENS : BOOST' : 'LEVE LE DOIGT');
     } else if (st.step === 2 && st.tg) {
       const c = g.camera; _p.copy(st.tg.object.position); const pp = CC.Curve ? CC.Curve.apply(_p, c).project(c) : _p.project(c), sx = (pp.x * 0.5 + 0.5) * W, sy = (-pp.y * 0.5 + 0.5) * H, ok = pp.z < 1;
       if (ok) { const pr = r * (1.1 + 0.25 * Math.sin(t * 7)); ctx.save(); ctx.strokeStyle = '#ff3b2e'; ctx.lineWidth = r * 0.22; ctx.beginPath(); ctx.arc(sx, sy, pr, 0, 6.283); ctx.stroke(); ctx.beginPath(); ctx.moveTo(sx - pr * 1.5, sy); ctx.lineTo(sx - pr * 0.6, sy); ctx.moveTo(sx + pr * 1.5, sy); ctx.lineTo(sx + pr * 0.6, sy); ctx.moveTo(sx, sy - pr * 1.5); ctx.lineTo(sx, sy - pr * 0.6); ctx.moveTo(sx, sy + pr * 1.5); ctx.lineTo(sx, sy + pr * 0.6); ctx.stroke(); ctx.restore();
         const k = (t * 0.8) % 1, hx = W * 0.5 + (sx - W * 0.5) * k, hy = H * 0.72 + (sy - H * 0.72) * k; hand(ctx, hx, hy, r * 0.9, t, false); }
-      label(g, ctx, W, H, 'GLISSE VERS LA CIBLE');
+      label(g, ctx, W, H, st.armed ? 'GLISSE VERS LA CIBLE' : 'LEVE LE DOIGT');
     }
     return true;
   };

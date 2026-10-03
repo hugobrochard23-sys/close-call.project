@@ -104,3 +104,6 @@ Boss plus personnalisés par zone, plusieurs zones par niveau, missions du jour,
 ## v089
 - Tutoriel interactif niveau 1 (`src/ui/tutorial.js`, tactile, `?tut=1` pour forcer) : jeu figé jusqu'au geste (glisser → maintenir/boost → viser la 1re cible), `settings.tutStep`.
 - Zones à dérive (chute/tour) : `yCenter` s'étale sur tout le niveau (avant : reset à 245 m tous les 2000 m → boss du niveau 10 inatteignable).
+
+## v090
+- Tuto : une étape ne se valide que si le doigt a été levé puis reposé (« armé ») ; message LEVE LE DOIGT sinon (`input.touch.down`).
