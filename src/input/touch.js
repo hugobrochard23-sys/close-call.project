@@ -69,7 +69,7 @@
       for (const t of e.changedTouches) {
         if (t.identifier !== finger.id) continue;
         // v024 : au lanceur, la vue ne bouge pas ; en vol, le glissé dirige
-        if (game.state === 'FLIGHT') { const k = scale(); input.addAim(-(t.clientX - finger.x) * k, -(t.clientY - finger.y) * k); }
+        if (game.state === 'FLIGHT') { const k = scale(); const rx = (t.clientX - finger.x) * k, ry = (t.clientY - finger.y) * k; finger.sx = (finger.sx || 0) * 0.4 + rx * 0.6; finger.sy = (finger.sy || 0) * 0.4 + ry * 0.6; input.addAim(-finger.sx, -finger.sy); }   // v088 : sensibilité 3.0 → 2.3 + lissage (les nouveaux joueurs sur-corrigeaient)
         finger.x = t.clientX; finger.y = t.clientY;
         if (Math.hypot(t.clientX - finger.x0, t.clientY - finger.y0) > cfg.tapMaxMove) finger.moved = true;
       }

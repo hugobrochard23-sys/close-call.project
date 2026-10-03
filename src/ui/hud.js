@@ -236,6 +236,14 @@
         if (game.targets.some((q) => q.alive && !q.guard && q.pos && q.pos.distanceTo(rk.pos) < 330)) { label = 'TOUCHE LA CIBLE'; kind = 'fuel'; }
       }
       if (!label) return;
+      // v088 : une GROSSE main qui glisse montre le geste (3 premiers vols, sans texte à lire) : piquer vers la cible puis relever
+      if ((kind === 'drag' || kind === 'hold') && (game.progress.P.launches || 0) <= 5 && CC.Touch && CC.Touch.active) {
+        const c2 = this.ctx, k2 = (t % 2.6) / 2.6, r2 = Math.min(W, H) * 0.07, hx = W * 0.5 + Math.sin(k2 * Math.PI * 2) * W * 0.12, hy = H * 0.66 + (kind === 'hold' ? 0 : Math.sin(k2 * Math.PI * 2 + 1.2) * H * 0.07);
+        c2.save(); c2.globalAlpha = 0.5 + 0.2 * Math.sin(t * 6); c2.fillStyle = '#ffffff'; c2.beginPath(); c2.arc(hx, hy, r2, 0, 6.283); c2.fill();
+        c2.globalAlpha = 0.35; c2.strokeStyle = '#ffffff'; c2.lineWidth = r2 * 0.16; c2.beginPath(); c2.arc(hx, hy, r2 * (1.3 + (kind === 'hold' ? (k2 * 3) % 1 * 0.6 : 0)), 0, 6.283); c2.stroke();
+        if (kind === 'drag') { c2.globalAlpha = 0.35; c2.fillStyle = '#35ff4a'; const ay = hy + H * 0.1, q = r2 * 0.28; for (let n = 0; n < 3; n++) c2.fillRect(Math.round(hx - q * (2 - n) - q / 2), Math.round(ay + n * q), Math.round(q * (2 - n) * 2 + q), Math.round(q)); }
+        c2.restore();
+      }
       const ctx = this.ctx, px = this.refH * 0.0042, w = CC.Font.measure(label, px, !this.modern) + px * 14, h = px * 16, x = W / 2 - w / 2, y = H * 0.23;
       CC.Home.pill(ctx, x, y, w, h, 'rgba(38,45,54,0.97)', '#5a6674');
       const cx = x + px * 6, cy = y + h / 2, r = px * 2.2, k = (t % 3.2) / 3.2;

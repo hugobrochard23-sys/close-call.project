@@ -87,7 +87,7 @@ CC.CONFIG = {
     sensitivity: 0.0021, invertY: false, maxPitchDeg: 88, autoLevel: 1.5,
     // CHOIX v022 (Hugo) : commandes tactiles sans bouton (src/input/touch.js), remplacent le joystick de v017-v021
     touch: {
-      dragGain: 3.0,             // rad de visée pour un glissé de la largeur (ou hauteur, la plus petite) de l'écran
+      dragGain: 2.3,             // rad de visée pour un glissé de la largeur (ou hauteur, la plus petite) de l'écran
       tapMaxMs: 250, tapMaxMove: 12,   // un toucher court (ms) et presque immobile (px) = tap
       longPressMs: 400,          // v026 : 500 → 400 ms (Hugo) ; v024 : appui long (doigt immobile) qui déclenche le boost, maintenu tant que le doigt est posé
       reboostMs: 600,            // v029 : 1000 → 600 ms (Hugo) ; v026 : après un boost, fenêtre (ms) où reposer le doigt relance le boost sans appui long

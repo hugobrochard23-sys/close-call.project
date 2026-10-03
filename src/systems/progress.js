@@ -62,7 +62,7 @@
     upLv(id) { return this.up2(id).lv; }
     upLevel(id) { const o = this.up2(id); return o.tier * 5 + o.lv; }   // niveau total (0‥30)
     multCap() { return 2; }
-    hitPad() { return 0.15 * this.upLevel('mult'); }   // PRECISION : rayon de touche en plus (m)
+    hitPad() { const n = (this.game.save && this.game.save.lvl && this.game.save.lvl.cur) || 1; return 0.15 * this.upLevel('mult') + Math.max(0, 1.3 - 0.11 * (n - 1)); }   // v088 : cibles plus faciles à toucher au début (+1,3 m niveau 1 → 0 vers le niveau 12)   // PRECISION : rayon de touche en plus (m)
     fuelBonus() { return this.upLevel('tank'); }       // ESSENCE : +1 s par niveau
     drainK() { return 1 - 0.015 * this.upLevel('eff'); }
     hullCharges() { return 0; }

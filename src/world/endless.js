@@ -518,6 +518,19 @@
       if (rk.active && g.state === 'FLIGHT' && !g.useAutopilot && g.input && g.input.aimQ) {
         const a = this.T.theta(this.dist + Math.max(25, rk.speed) * dt) - this.T.theta(this.dist);
         if (a) { g.input.aimQ.premultiply(_qa.setFromAxisAngle(_ay, -a * 0.5)); g.input.aimQ.normalize(); }
+        // v088 : REMONTEE AUTO — près du sol, on ne peut pas piquer plus raide que la hauteur le permet : la visée se redresse doucement (le joueur peut toujours piquer sur une cible haute)
+        const q = g.input.aimQ, f = _fa.set(0, 0, -1).applyQuaternion(q);
+        if (f.y < -0.08) {
+          const hit = g.world.raycast(rk.pos, _dn, 60);
+          if (hit) {
+            const allow = -Math.min(0.85, Math.max(0, hit.dist - 6) / 55);
+            if (f.y < allow) {
+              const dp = Math.min(2.6 * dt, (allow - f.y) * 1.2), t0 = _fa.y;
+              _qb.copy(q).multiply(_qa.setFromAxisAngle(_ax, 0.05)); const up = _da.set(0, 0, -1).applyQuaternion(_qb).y > t0 ? 1 : -1;
+              q.multiply(_qa.setFromAxisAngle(_ax, up * dp)); q.normalize();
+            }
+          }
+        }
       }
       if (this.multT > 0) this.multT = Math.max(0, this.multT - dt);
       if (this.chainT > 0 && (this.chainT -= dt) <= 0) this.chain = 0;
@@ -554,7 +567,7 @@
   E.Run = Run;
 
   // ---------- interpolation d'ambiance (couleurs, nombres ; le reste bascule à mi-chemin) ----------
-  const _ca = new THREE.Color(), _cb = new THREE.Color(), _qa = new THREE.Quaternion(), _ay = new THREE.Vector3(0, 1, 0), _fa = new THREE.Vector3(), _da = new THREE.Vector3(), _xa = new THREE.Vector3();
+  const _ca = new THREE.Color(), _cb = new THREE.Color(), _qa = new THREE.Quaternion(), _ay = new THREE.Vector3(0, 1, 0), _dn = new THREE.Vector3(0, -1, 0), _ax = new THREE.Vector3(1, 0, 0), _qb = new THREE.Quaternion(), _fa = new THREE.Vector3(), _da = new THREE.Vector3(), _xa = new THREE.Vector3();
   function lerpEnv(a, b, t) {
     const out = {};
     for (const k of new Set(Object.keys(a).concat(Object.keys(b)))) {

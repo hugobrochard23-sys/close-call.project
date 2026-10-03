@@ -97,3 +97,6 @@ Boss plus personnalisés par zone, plusieurs zones par niveau, missions du jour,
 - Limites : plafond = point haut de la trajectoire sur -30/+100 m (+30 m), bord latéral sur la même fenêtre.
 - Piqué : le sol ne tue plus (glissade) si la normale est quasi verticale.
 - Garage simplifié : cartes plus grandes, flèche + prix, gris→vert GRATUIT, tuto (1re pièce gratuite + flèche verte), gros bouton ACCUEIL, bandeau SCORE retiré.
+
+## v088
+- Remontée auto près du sol (raycast vers le bas, pente max selon la hauteur) ; sensibilité tactile 3.0 → 2.3 + lissage ; `hitPad` +1,3 m au niveau 1 (→ 0 vers le niveau 12) ; grosse main animée au tuto (3 premiers vols).
