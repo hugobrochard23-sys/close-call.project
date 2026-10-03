@@ -250,12 +250,12 @@
     }
 
     // v076 : FLECHES de chemin (copiées de l'ancien niveau City) : flèches vertes plates et translucides, une tous les 45 m, le long de la trajectoire
-    if (T.levelLen) for (let d = Math.ceil(Math.max(d0, 40) / 45) * 45; d < d1 - 1; d += 45) {
+    if (T.levelLen) for (let d = Math.ceil(Math.max(d0, 40) / 70) * 70; d < d1 - 1; d += 70) {   // v087 : une flèche tous les 70 m
       const sA = (CC.Zones.plan(T, T.zoneIndex(d)).scenes.find((q) => d >= q.d0 && d < q.d1)) || null;
       if (!sA || sA.name === 'arene' || d > T.levelLen - 30) continue;
-      if (!((T.ease === undefined ? 1 : T.ease) < 0.25 || sA.name === 'city1' || sA.name === 'escalier' || (CC.Zones.reliefNames || []).indexOf(sA.name) >= 0)) continue;
-      const pa = T.at(d, T.laneX(d), T.laneY(d) - 2.2), pb = T.at(d + 45, T.laneX(d + 45), T.laneY(d + 45) - 2.2), o = CC.Models.guideArrow(), P = new THREE.Vector3(pa[0], pa[1], pa[2]);
-      o.position.copy(P); o.lookAt(new THREE.Vector3(pb[0], pb[1], pb[2])); o.rotateX(0.6); o.scale.setScalar(2.4);
+      if (!((T.ease === undefined ? 1 : T.ease) < 0.25 || Math.abs(T.laneY(d + 70) - T.laneY(d)) > 8 || sA.name === 'city1' || sA.name === 'escalier' || (CC.Zones.reliefNames || []).indexOf(sA.name) >= 0)) continue;
+      const pa = T.at(d, T.laneX(d), T.laneY(d) - 2.2), pb = T.at(d + 70, T.laneX(d + 70), T.laneY(d + 70) - 2.2), o = CC.Models.guideArrow(), P = new THREE.Vector3(pa[0], pa[1], pa[2]);
+      o.position.copy(P); o.lookAt(new THREE.Vector3(pb[0], pb[1], pb[2])); o.scale.setScalar(2.8);   // v087 : plus de rotateX(0.6) = la flèche pointait ~34° trop bas
       b.entity({ object: o, t: Math.random() * 6, base: P.y, update(dt) { this.t += dt; this.object.position.y = this.base + Math.sin(this.t * 3) * 0.3; } });
     }
 
@@ -524,9 +524,11 @@
       // v084 : LIMITES DU JEU — on ne peut plus sortir de la carte : un plafond invisible à 26 m au-dessus de la trajectoire (on ne passe plus par-dessus les obstacles)
       // et des bords latéraux ; la fusée glisse le long de la limite sans mourir
       if (rk.active && g.state === 'FLIGHT' && this.T.levelLen) {
-        const T = this.T, d = this.dist, cap = T.base(d) + T.laneY(d) + 26;
+        const T = this.T, d = this.dist; let cap = -1e9, vmax = 0;   // v087 : le plafond suit le POINT HAUT de la trajectoire sur -30 m / +100 m (il ne pousse plus le joueur vers le bas dans les descentes)
+        for (const k of [-30, 0, 35, 70, 100]) { cap = Math.max(cap, T.base(d + k) + T.laneY(d + k)); vmax = Math.max(vmax, T.vol(d + k)); }
+        cap += 30;
         if (rk.pos.y > cap) { rk.pos.y = cap; if (rk.vel.y > 0) rk.vel.y = 0; }
-        const c0 = T.at(d, 0, 0), c1 = T.at(d, 1, 0), sx = c1[0] - c0[0], sz = c1[2] - c0[2], sl = Math.hypot(sx, sz) || 1, nx = sx / sl, nz = sz / sl, lat = (rk.pos.x - c0[0]) * nx + (rk.pos.z - c0[2]) * nz, B = Math.max(T.vol(d) + 8, 24);
+        const c0 = T.at(d, 0, 0), c1 = T.at(d, 1, 0), sx = c1[0] - c0[0], sz = c1[2] - c0[2], sl = Math.hypot(sx, sz) || 1, nx = sx / sl, nz = sz / sl, lat = (rk.pos.x - c0[0]) * nx + (rk.pos.z - c0[2]) * nz, B = Math.max(vmax + 10, 28);
         if (Math.abs(lat) > B) { const ex = lat - Math.sign(lat) * B; rk.pos.x -= ex * nx; rk.pos.z -= ex * nz; const vl = rk.vel.x * nx + rk.vel.z * nz; if (vl * Math.sign(lat) > 0) { rk.vel.x -= vl * nx; rk.vel.z -= vl * nz; } }
       }
       // plafond : au-dessus, alarme puis explosion (le couloir est le terrain de jeu)

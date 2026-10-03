@@ -204,7 +204,7 @@
       const vDir = _a.copy(this.vel).divideScalar(Math.max(1e-4, speed));
       const impact = Math.asin(U.clamp(-vDir.dot(n), -1, 1)) * 180 / Math.PI;   // angle d'incidence (0 = rasant)
       const maxA = n.y > 0.35 ? cfg.slideMaxAngleDeg : cfg.slideMaxAngleDeg * 0.75;
-      if (hit.inside || impact < maxA) {
+      if (hit.inside || impact < maxA || ((hit.ground || hit.hf) && n.y > 0.6)) {   // v087 : le sol ne tue plus en piqué, on rase
         // glissade (OBSERVÉ : glisse sur un toit / un sol sans exploser)
         this.pos.addScaledVector(d, hit.t).addScaledVector(n, 0.02 + (hit.inside ? hit.pen : 0));
         const vn = this.vel.dot(n);

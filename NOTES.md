@@ -90,3 +90,10 @@ Le pilote automatique ne sait pas viser, attendre un volet ni plonger verticalem
 
 ## Idées en attente
 Boss plus personnalisés par zone, plusieurs zones par niveau, missions du jour, récompense de fin de niveau, tutoriel « touche l'hélicoptère » au premier niveau.
+
+## v087
+- Toucher : dans les menus, le tap est traité au touchend (tolérance 28 px) → plus de boutons (pub, fermer) qui ratent ; `Input.uiPress`.
+- Flèches de guide : cause de l'inclinaison = `rotateX(0.6)` (supprimé) ; une flèche tous les 70 m, aussi dans les descentes/montées.
+- Limites : plafond = point haut de la trajectoire sur -30/+100 m (+30 m), bord latéral sur la même fenêtre.
+- Piqué : le sol ne tue plus (glissade) si la normale est quasi verticale.
+- Garage simplifié : cartes plus grandes, flèche + prix, gris→vert GRATUIT, tuto (1re pièce gratuite + flèche verte), gros bouton ACCUEIL, bandeau SCORE retiré.

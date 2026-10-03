@@ -65,13 +65,12 @@
     // sous-écran : retour + distance totale
     const bk = hh * 0.5, bx = m, byy = T + hh / 2 - bk / 2, on = inRect(ui, bx, byy, bk, bk);
     ctx.fillStyle = on ? '#ffffff' : CREAM; { const q = Math.max(2, Math.round(bk * 0.14)); for (let i = 0; i < 4; i++) { const x = Math.round(bx + bk * 0.2 + (3 - Math.abs(i - 3 + 0) ) * 0), dx = Math.round(bk * 0.55 - i * q); ctx.fillRect(Math.round(bx + bk * 0.25 + (3 - i) * q), Math.round(byy + bk * 0.5 - (4 - i) * q * 0.9), q, q); ctx.fillRect(Math.round(bx + bk * 0.25 + (3 - i) * q), Math.round(byy + bk * 0.5 + (3 - i) * q * 0.9), q, q); } }
-    hit(ui, 0, T, hh * 1.2, hh, () => { ui.overlay = null; });
-    txt(ctx, 'DISTANCE: ' + U.formatInt(Math.round(P.stats.dist || 0)) + ' M', bk + m * 2.2, T + hh * 0.36, W - rw - bk - m * 5, 2, CREAM);
+    // v087 : GROS bouton vert « ACCUEIL » (les testeurs ne trouvaient pas le retour)
+    { const gw = Math.min(W * 0.4, W - rw - m * 4), gh = hh * 0.74, gx = m, gy = T + (hh - gh) / 2; Home.button3d(ctx, gx, gy, gw, gh, '', '', '', 1);
+      Home.gridDraw(ctx, 'home', gx + gh * 0.55, gy + gh * 0.5, gh * 0.55, '#14181d'); txt(ctx, 'ACCUEIL', gx + gh * 1.05 + (gw - gh * 1.15) / 2, gy + gh * 0.3, gw - gh * 1.2, 2, '#14181d', 'center');
+      hit(ui, 0, T, gw + m * 2, hh, () => { ui.overlay = null; }); }
     // bandeau SCORE / COMBO
-    const sh = HH * 0.05, sy = T + hh + 2;
-    ctx.fillStyle = NAVY; ctx.fillRect(0, sy, W * 0.58, sh); ctx.fillRect(W * 0.78, sy, W * 0.22, sh);
-    txt(ctx, 'SCORE: ', m, sy + sh * 0.3, W * 0.2, 1.5, CREAM); txt(ctx, U.formatInt(P.best || 0), m + F.measure('SCORE: ', 1.5), sy + sh * 0.3, W * 0.3, 1.5, GOLD);
-    return sy + sh;
+    return T + hh;   // v087 : plus de bandeau SCORE (trop d'infos)
   };
 
   // ---------- barre de trois onglets ----------

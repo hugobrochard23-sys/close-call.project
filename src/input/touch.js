@@ -39,7 +39,7 @@
     pause.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); wake(); buzz('button'); game.pause(); }, { passive: false });
 
     // --- glisser / toucher / appui long ---
-    let finger = null;
+    let finger = null, uiTouch = null;
     const scale = () => cfg.dragGain / Math.max(1, Math.min(window.innerWidth, window.innerHeight));
     const boostOff = () => { if (T.thrust) { T.thrust = false; if (Hap) Hap.boostStop(); } };
     const boostOn = () => { T.thrust = true; if (Hap) Hap.boostStart(); };   // v034 : le son du boost est joué par Game.onBoostStart
@@ -50,6 +50,9 @@
         const t0 = e.changedTouches[0], p = input.uiCoords(t0.clientX, t0.clientY);
         if (!game.ui.hitTest(p.x, p.y)) { e.preventDefault(); buzz('touch'); game.beginLaunch(); return; }
       }
+      // v087 : dans les menus, on traite le toucher NOUS-MEMES (au relâchement, avec une tolérance de 28 px) au lieu d'attendre le clic synthétique du navigateur
+      // qui disparaissait si le doigt bougeait un peu ou restait posé trop longtemps (boutons pub, fermer...)
+      if (!playing() && e.target !== pause) { const t0 = e.changedTouches[0]; uiTouch = { id: t0.identifier, x0: t0.clientX, y0: t0.clientY, x: t0.clientX, y: t0.clientY }; return; }
       if (!playing() || e.target === pause) return;   // menus, pause : le toucher devient un clic sur le jeu
       e.preventDefault();
       buzz('touch');                                 // v026 : mini vibration dès que le doigt touche l'écran en partie
@@ -60,6 +63,7 @@
       if (game.state === 'FLIGHT' && performance.now() < T.reboostUntil) { finger.boost = true; T.reboostUntil = 0; boostOn(); }
     }, { passive: false });
     document.addEventListener('touchmove', (e) => {
+      if (uiTouch) for (const t of e.changedTouches) if (t.identifier === uiTouch.id) { uiTouch.x = t.clientX; uiTouch.y = t.clientY; }
       if (!finger) return;
       e.preventDefault();
       for (const t of e.changedTouches) {
@@ -71,6 +75,19 @@
       }
     }, { passive: false });
     const end = (e) => {
+      if (uiTouch) {
+        for (const t of e.changedTouches) {
+          if (t.identifier !== uiTouch.id) continue;
+          const u = uiTouch; uiTouch = null;
+          if (e.type === 'touchend' && Math.hypot(t.clientX - u.x0, t.clientY - u.y0) < 28) {
+            if (e.cancelable) e.preventDefault();   // pas de clic synthétique en double
+            wake();
+            const p = input.uiCoords(u.x0, u.y0);
+            input.uiPress(p.x, p.y, 0);
+          }
+          return;
+        }
+      }
       if (!finger) return;
       for (const t of e.changedTouches) {
         if (t.identifier !== finger.id) continue;

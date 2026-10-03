@@ -72,13 +72,14 @@
     // coût du prochain pas : +niveau (dans le palier) ou promotion (au niveau 5) ; null si tout est au maximum
     upCost(id) {
       const u = Progress.UPG.find((x) => x.id === id), o = this.up2(id); if (this.isMaxed(id)) return null;
+      if (o.tier === 0 && (o.lv >= 5 || (id === 'tank' && !this.P.tutDone))) return 0;   // v087 : gris → vert GRATUIT ; la 1re pièce (tuto) est gratuite
       const k = Math.pow(2.1, o.tier); return o.lv >= 5 ? Math.round(u.base * 9 * k) : Math.round(u.base * (1 + 0.55 * o.lv) * k);
     }
     canBuy(id) { const c = this.upCost(id); return c !== null && (this.P.materials || 0) >= c; }
     // renvoie 'level' | 'promote' | false
     buy(id) {
       if (!this.canBuy(id)) return false; const o = this.up2(id), promote = o.lv >= 5; this.P.materials -= this.upCost(id);
-      if (promote) { o.tier++; o.lv = 0; } else o.lv++;
+      if (promote) { o.tier++; o.lv = 0; if (id === 'tank') this.P.tutDone = true; } else o.lv++;
       this.game.writeSave(); return promote ? 'promote' : 'level';
     }
 

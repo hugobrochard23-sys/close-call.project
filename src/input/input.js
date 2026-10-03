@@ -39,13 +39,7 @@
         game.audio.init(); game.audio.resume();
         const r = el.getBoundingClientRect();
         const x = (e.clientX - r.left) * (el.width / r.width), y = (e.clientY - r.top) * (el.height / r.height) - ((game.ui && game.ui.offsetY) || 0);
-        if (game.ui && (game.state === 'MENU' || game.state === 'RESULTS' || game.state === 'REVIVE' || game.paused || game.ui.overlay)) {
-          if (game.ui.click(x, y)) return;
-          if (game.state === 'MENU' && game.padMode && !game.ui.overlay && e.button === 0) { game.beginLaunch(); return; }   // v034 : un clic sur le lanceur = lancer
-          if (game.state === 'RESULTS' && e.button === 0 && !(game.results && game.results.endless)) { game.restartLevel(); return; }
-          if (game.paused && !game.ui.overlay && e.button === 0) { game.resume(); return; }
-          return;
-        }
+        if (this.uiPress(x, y, e.button)) return;
         if (!this.locked && !game.testMode) this.requestLock();
         if (e.button === 0) this.fireEdge = true;
         if (e.button === 2) { this.grappleHeld = true; this.grappleEdge = true; }
@@ -65,6 +59,17 @@
         this.locked = document.pointerLockElement === el;
         if (was && !this.locked) game.onPointerLost();
       });
+    }
+
+    // v087 : un appui sur les menus (souris OU toucher direct) ; renvoie vrai si on est dans un menu
+    uiPress(x, y, button) {
+      const game = this.game;
+      if (!(game.ui && (game.state === 'MENU' || game.state === 'RESULTS' || game.state === 'REVIVE' || game.paused || game.ui.overlay))) return false;
+      if (game.ui.click(x, y)) return true;
+      if (game.state === 'MENU' && game.padMode && !game.ui.overlay && button === 0) { game.beginLaunch(); return true; }   // v034 : un clic sur le lanceur = lancer
+      if (game.state === 'RESULTS' && button === 0 && !(game.results && game.results.endless)) { game.restartLevel(); return true; }
+      if (game.paused && !game.ui.overlay && button === 0) { game.resume(); return true; }
+      return true;
     }
 
     // v034 : coordonnées d'un point de l'écran dans le repère de l'interface (canvas du HUD)

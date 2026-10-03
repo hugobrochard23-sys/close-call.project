@@ -53,15 +53,8 @@
     // écrous (même icône que l'accueil)
     { const nl = U.formatInt(prog.P.materials || 0), nh = th * 0.62, nw = F.measure(nl, 1.6) + nh * 1.5, nx = W - m * 1.8, ny = ty + (th - nh) / 2;
       panel(ctx, nx - nw, ny, nw, nh, DARK, EDGE, nh * 0.3); Home.drawCoinIcon(ctx, nx - nw + nh * 0.6, ny + nh / 2, nh * 0.95); F.draw(ctx, nl, nx - nh * 0.3, ny + nh / 2 - 6, Math.min(1.6, (nw - nh * 1.2) / Math.max(1, F.measure(nl, 1))), GOLD, { align: 'right' }); }
-    // vitrine
-    const vy = ty + th + HH * 0.012, vh = HH * 0.115; panel(ctx, m, vy, W - 2 * m, vh, PANEL, EDGE, 10);
-    Home.gridDraw(ctx, 'rocket', m + vh * 0.7, vy + vh * 0.5 + Math.sin(t * 2) * 2, vh * 0.8, '#e8ecef');
-    let tot = 0; for (const up of CC.Progress.UPG) tot += prog.upLevel(up.id);
-    txt(ctx, 'NIVEAU DE LA FUSEE', m + vh * 1.45, vy + vh * 0.18, W - 2 * m - vh * 1.6, 1.3, DIM);
-    txt(ctx, tot + ' / ' + CC.Progress.UPG.length * 30, m + vh * 1.45, vy + vh * 0.42, W - 2 * m - vh * 1.6, 2.4, GOLD);
-    txt(ctx, 'ECROUS : ACHETE DES AMELIORATIONS', m + vh * 1.45, vy + vh * 0.78, W - 2 * m - vh * 1.6, 1.1, CY);
     // cartes d'amélioration
-    const rh = HH * 0.118, gap = HH * 0.008, ry = vy + vh + HH * 0.012;
+    const rh = HH * 0.14, gap = HH * 0.014, ry = ty + th + HH * 0.022;
     CC.Progress.UPG.forEach((up, i) => {
       const id = up.id, tier = prog.upTier(id), lv = prog.upLv(id), tcol = TI[tier].col, total = prog.upLevel(id), cost = prog.upCost(id), maxed = prog.isMaxed(id), promo = prog.needsPromote(id), can = prog.canBuy(id);
       const y = ry + i * (rh + gap), x = m, w = W - 2 * m, pulse = 0.5 + 0.5 * Math.sin(t * 6);
@@ -69,20 +62,27 @@
       const ib = rh * 0.72, ix = x + rh * 0.1, iy = y + (rh - ib) / 2;
       panel(ctx, ix, iy, ib, ib, DARK, tcol, 6); Home.gridDraw(ctx, up.icon, ix + ib / 2, iy + ib / 2, ib * 0.62, tcol);
       const bw = w * 0.27, bx2 = x + w - bw - 8, x0 = ix + ib + 10, tw = bx2 - x0 - 6;
-      txt(ctx, up.name, x0, y + rh * 0.1, tw * 0.62, 1.6, CREAM); txt(ctx, TI[tier].name, x0 + tw, y + rh * 0.12, tw * 0.36, 1.2, tcol, 'right');
-      const sg = tw / 5; for (let k = 0; k < 5; k++) { const filled = k < lv || (promo && !maxed), col = promo && !maxed ? TI[Math.min(5, tier + 1)].col : tcol; ctx.fillStyle = '#2d343d'; ctx.fillRect(R(x0 + k * sg), R(y + rh * 0.4), R(sg - 4), R(rh * 0.14)); if (filled) { ctx.globalAlpha = promo ? 0.55 + 0.45 * pulse : 1; ctx.fillStyle = col; ctx.fillRect(R(x0 + k * sg), R(y + rh * 0.4), R(sg - 4), R(rh * 0.14)); ctx.globalAlpha = 1; } }
-      const effTxt = maxed ? up.desc(total) + '  MAX' : promo ? 'PROMEUS LA PIECE : ' + TI[tier + 1].name : 'ACTUEL ' + up.desc(total).replace(/^[+-]?/, (a) => a);
-      txt(ctx, effTxt, x0, y + rh * 0.62, tw, 1.0, promo && !maxed ? TI[Math.min(5, tier + 1)].col : '#bfc8d4');
-      if (!maxed && !promo) txt(ctx, 'SUIVANT ' + up.desc(total + 1), x0, y + rh * 0.8, tw, 0.9, DIM);
+      txt(ctx, up.name, x0, y + rh * 0.1, tw * 0.6, 2.2, CREAM); txt(ctx, TI[tier].name, x0 + tw, y + rh * 0.14, tw * 0.38, 1.4, tcol, 'right');
+      const sg = tw / 5; for (let k = 0; k < 5; k++) { const filled = k < lv || (promo && !maxed), col = promo && !maxed ? TI[Math.min(5, tier + 1)].col : tcol; ctx.fillStyle = '#2d343d'; ctx.fillRect(R(x0 + k * sg), R(y + rh * 0.4), R(sg - 4), R(rh * 0.18)); if (filled) { ctx.globalAlpha = promo ? 0.55 + 0.45 * pulse : 1; ctx.fillStyle = col; ctx.fillRect(R(x0 + k * sg), R(y + rh * 0.4), R(sg - 4), R(rh * 0.18)); ctx.globalAlpha = 1; } }
+      const effTxt = total > 0 ? up.desc(total) : '';   // v087 : un seul chiffre, l'effet actuel
+      txt(ctx, effTxt, x0, y + rh * 0.68, tw, 1.6, promo && !maxed ? TI[Math.min(5, tier + 1)].col : '#bfc8d4');
       // bouton
       const bh = rh * 0.62, by = y + (rh - bh) / 2;
       if (maxed) { panel(ctx, bx2, by, bw, bh, DARK, tcol, 6); txt(ctx, 'MAX', bx2 + bw / 2, by + bh * 0.34, bw - 8, 1.6, tcol, 'center'); }
       else {
         const label = promo ? 'PROMOUVOIR' : 'AMELIORER', ncol = TI[Math.min(5, tier + 1)].col, on = inRect(ui, bx2, by, bw, bh);
         if (can) { if (promo) { Home.button3d(ctx, bx2, by, bw, bh, ncol, ncol, '#3a2a10', 1 + 0.04 * pulse); } else greenBtn(ctx, bx2, by, bw, bh, on); } else panel(ctx, bx2, by, bw, bh, DARK, EDGE, 6);
-        txt(ctx, label, bx2 + bw / 2, by + bh * 0.14, bw - 8, 1.0, can ? '#14181d' : DIM, 'center');
-        const cl = String(cost), cs = Math.min(1.5, (bw * 0.5) / Math.max(1, F.measure(cl, 1)));
-        Home.drawCoinIcon(ctx, bx2 + bw * 0.22, by + bh * 0.68, bh * 0.5); F.draw(ctx, cl, bx2 + bw * 0.9, by + bh * 0.6 - 3, cs, can ? '#14181d' : DIM, { align: 'right' });
+        // v087 : plus de libellé AMELIORER : une grosse flèche (étoile pour la promotion) + le prix (ou GRATUIT)
+        { const ac = can ? '#14181d' : DIM, q = Math.max(3, R(bh * 0.085)), ax = bx2 + bw / 2, ay = by + bh * 0.3;
+          ctx.fillStyle = ac; if (promo) { for (let n = 0; n < 5; n++) ctx.fillRect(R(ax - q * 2.5 + n * q), R(ay - q * (n < 3 ? n : 4 - n) - q), q, q * 2); ctx.fillRect(R(ax - q * 0.5), R(ay + q), q, q * 2); }
+          else { ctx.fillRect(R(ax - q * 0.5), R(ay - q * 2), q, q * 4); ctx.fillRect(R(ax - q * 1.5), R(ay - q * 1), q, q); ctx.fillRect(R(ax + q * 0.5), R(ay - q * 1), q, q); ctx.fillRect(R(ax - q * 2.5), R(ay), q, q); ctx.fillRect(R(ax + q * 1.5), R(ay), q, q); } }
+        if (cost === 0) txt(ctx, 'GRATUIT', bx2 + bw / 2, by + bh * 0.62, bw - 8, 1.3, can ? '#14181d' : DIM, 'center');
+        else { const cl = String(cost), cs = Math.min(1.7, (bw * 0.5) / Math.max(1, F.measure(cl, 1)));
+          Home.drawCoinIcon(ctx, bx2 + bw * 0.2, by + bh * 0.7, bh * 0.34); F.draw(ctx, cl, bx2 + bw * 0.92, by + bh * 0.68 - 3, cs, can ? '#14181d' : DIM, { align: 'right' }); }
+        // v087 : tuto — une flèche verte qui rebondit montre le bouton de la première pièce
+        if (!prog.P.tutDone && id === 'tank' && tier === 0) { const bx3 = bx2 - 6 - Math.abs(Math.sin(t * 5)) * bh * 0.25, q = Math.max(4, R(bh * 0.11)), cy3 = by + bh / 2; ctx.fillStyle = '#35ff4a';
+          for (let n = 0; n < 4; n++) ctx.fillRect(R(bx3 - q * (n + 1)), R(cy3 - q * n - q * 0.5), q, q * 2 * n + q); ctx.fillRect(R(bx3 - q * 7), R(cy3 - q * 0.5), q * 3, q);
+          ctx.strokeStyle = '#35ff4a'; ctx.lineWidth = 3; ctx.strokeRect(R(bx2 - 3), R(by - 3), R(bw + 6), R(bh + 6)); }
         hit(ui, bx2 - 4, y, bw + 12, rh, () => {
           const res = prog.buy(id);
           if (res === 'level') { game.audio.play('uiBuy'); if (CC.Haptics) CC.Haptics.pattern('mission'); }
@@ -104,7 +104,7 @@
     Home.drawTabs(ui, ctx, game, L, 'garage'); Home.drawToast(ui, ctx, L);
   };
   function garageToggle(ui, ctx, game, W, H, mods) {
-    const L = Home.layout(ui, W, H), { T, HH, u } = L, m = u * 0.04, top = T + HH * 0.1 + 2 + HH * 0.05 + HH * 0.018, th = HH * 0.062, bw = W * 0.24, bh = th * 0.7, bx = m * 1.6, by = top + (th - bh) / 2;
+    const L = Home.layout(ui, W, H), { T, HH, u } = L, m = u * 0.04, top = T + HH * 0.1 + HH * 0.018, th = HH * 0.062, bw = W * 0.24, bh = th * 0.7, bx = m * 1.6, by = top + (th - bh) / 2;
     panel(ctx, bx, by, bw, bh, mods ? '#3a3320' : '#2f4a3a', mods ? GOLD : GREEN, 6); txt(ctx, mods ? '< AMELIO.' : 'MODULES >', bx + bw / 2, by + bh * 0.3, bw - 8, 1.3, mods ? GOLD : GREEN, 'center');
     hit(ui, bx, by, bw, bh, () => { ui.garagePage = mods ? null : 'mods'; });
   }
