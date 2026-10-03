@@ -212,7 +212,7 @@
       this.drawIndicators(game);
       this.drawMissileWarning(game);
       if (lite) this.drawTutorial(game, W, H);
-      const msg = game.centerMsg || (lite && game.state === 'AIM' && !game.endlessRun ? 'TOUCHE POUR TIRER    MAINTIENS : BOOST' : null);
+      const msg = (CC.Tutorial && CC.Tutorial.enabled(game)) ? null : game.centerMsg || (lite && game.state === 'AIM' && !game.endlessRun ? 'TOUCHE POUR TIRER    MAINTIENS : BOOST' : null);
       // v032 : réduit si le message dépasse la largeur de l'écran (brief de mission long, téléphone en portrait)
       const cpx = msg ? Math.min(C.center.px, 0.94 * W / Math.max(1, CC.Font.measure(msg, this.refH, !this.modern))) : 0;
       if (msg && !game.paused) this.text(msg, 0.5 * W, C.center.y * H, cpx, '#101010', { align: 'center', outline: '#f0f0f0' });   // v024 : pas par-dessus le menu pause
@@ -228,7 +228,7 @@
       // v083 : explications UNE SEULE FOIS, au moment où le joueur voit la chose pour la première fois
       if (run && !S0.seenCrate && game.pickups && game.pickups.some((q) => q.obj.position.distanceTo(rk.pos) < 140)) { label = 'ATTRAPE LA CAISSE VERTE'; kind = 'fuel'; }
       else if (run && !S0.seenGold && game.targets.some((q) => q.alive && q.golden && q.obb && q.obb.c.distanceTo(rk.pos) < 260)) { label = 'ENGIN DORE : BONUS'; kind = 'fuel'; }
-      if (!label && (game.progress.P.launches || 0) > 3) return;
+      if (!label) return;   // v091 : plus de consignes « glisse / maintiens » après le tutoriel interactif
       if (label) { /* explication ponctuelle déjà choisie */ }
       else if (t < 2.2) { label = 'GLISSE POUR DIRIGER'; kind = 'drag'; }
       else if (!rk.thrusting && t < 6) { label = 'MAINTIENS : BOOST'; kind = 'hold'; }

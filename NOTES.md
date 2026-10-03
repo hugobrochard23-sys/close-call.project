@@ -107,3 +107,6 @@ Boss plus personnalisés par zone, plusieurs zones par niveau, missions du jour,
 
 ## v090
 - Tuto : une étape ne se valide que si le doigt a été levé puis reposé (« armé ») ; message LEVE LE DOIGT sinon (`input.touch.down`).
+
+## v091
+- Tuto : glisser = distance du doigt (dragPx) ; `touch.down` lu depuis le vrai doigt ; pause cachée pendant les consignes ; consignes glisse/boost des 3 premiers vols retirées ; 1er lancement / après RÉINITIALISER : direct dans le niveau 1 (pad.queued) ; réacteur de fond ×0,33, ambiances ×0,3.

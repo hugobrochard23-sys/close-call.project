@@ -28,7 +28,7 @@
     const down = !!(tt && tt.down);
     if (T.hold) { if (!st.armed) { if (!down) { st.armed = true; st.f0 = aimFwd(g, new V()); } } else if (down) st.pressed = true; }
     if (st.step === 0 && !T.hold && g.flightTime > 0.7) { T.hold = true; st.armed = false; st.pressed = false; }
-    if (st.step === 0 && T.hold && st.armed && st.f0) { if (st.pressed && aimFwd(g, _f).angleTo(st.f0) > 0.4) advance(1); }
+    if (st.step === 0 && T.hold && st.armed && st.f0) { if (st.pressed && ((tt.dragPx || 0) > 45 || aimFwd(g, _f).angleTo(st.f0) > 0.3)) advance(1); }
     else if (st.step === 1) {
       if (!T.hold && st.t > 1.6) { T.hold = true; st.armed = false; st.pressed = false; }
       if (T.hold) { st.ok = st.armed && tt && tt.thrust ? st.ok + dt : 0; if (st.ok > 0.5) advance(2); }
@@ -37,7 +37,7 @@
       if (!T.hold && tg) { T.hold = true; st.tg = tg; st.armed = false; st.pressed = false; }
       if (T.hold && st.tg) {
         if (!st.tg.alive) advance(3);
-        else { const dir = _t.subVectors(st.tg.object.position, rk.pos).normalize(); if (st.armed && st.pressed && aimFwd(g, _f).angleTo(dir) < 0.14) { advance(3); } }
+        else { const dir = _t.subVectors(st.tg.object.position, rk.pos).normalize(); if (st.armed && st.pressed && ((tt.dragPx || 0) > 40 || aimFwd(g, _f).angleTo(dir) < 0.16)) { advance(3); } }
       }
     } else if (st.step === 3) {   // on laisse jouer jusqu'à la cible (ou 9 s) : fin du tutoriel
       if (st.t > 9 || (st.tg && !st.tg.alive)) advance(4);

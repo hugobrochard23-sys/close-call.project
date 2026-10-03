@@ -119,7 +119,7 @@
       this.retroGain = ctx.createGain(); this.retroGain.gain.value = 0;
       rs.connect(this.retroFilter); this.retroFilter.connect(this.retroGain); this.retroGain.connect(this.sfx); rs.start();
       // v036 : FONDS SONORES propres à chaque zone (vent, grondement grave, souffle aigu) ; leurs niveaux glissent d'une zone à l'autre
-      this.ambBus = ctx.createGain(); this.ambBus.gain.value = 1; this.ambBus.connect(this.sfx);
+      this.ambBus = ctx.createGain(); this.ambBus.gain.value = 0.3; this.ambBus.connect(this.sfx);
       const bedW = loop(this.noise, 0.6); this.bedWindF = ctx.createBiquadFilter(); this.bedWindF.type = 'bandpass'; this.bedWindF.frequency.value = 500; this.bedWindF.Q.value = 0.5;
       this.bedWind = ctx.createGain(); this.bedWind.gain.value = 0; bedW.connect(this.bedWindF); this.bedWindF.connect(this.bedWind); this.bedWind.connect(this.ambBus);
       const bedL = loop(bb, 0.55); this.bedLowF = ctx.createBiquadFilter(); this.bedLowF.type = 'lowpass'; this.bedLowF.frequency.value = 180;
@@ -174,7 +174,8 @@
       const acc = dt > 0 ? (sp - (this.lastSp || 0)) / dt : 0; this.lastSp = sp;
       this.accS = U.lerp(this.accS || 0, U.clamp(acc / 30, 0, 1), U.damp(4, dt));   // accélération lissée 0..1
       const v = U.clamp(sp / 75, 0, 1);
-      this.engBus.gain.setTargetAtTime(thrust * 0.48, t, thrust ? 0.05 : 0.09);
+      this.engBus.gain.setTargetAtTime(thrust * 0.16,   // v091 : réacteur de fond beaucoup moins fort
+         t, thrust ? 0.05 : 0.09);
       this.subA.frequency.setTargetAtTime(42 + v * 14 + this.accS * 5, t, 0.2);
       this.subB.frequency.setTargetAtTime((42 + v * 14 + this.accS * 5) * 1.505, t, 0.2);
       this.roarFilter.frequency.setTargetAtTime(300 + v * 520 + this.accS * 300, t, 0.1);

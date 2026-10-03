@@ -40,6 +40,7 @@
 
     // --- glisser / toucher / appui long ---
     let finger = null, uiTouch = null;
+    Object.defineProperties(T, { down: { get: () => !!finger }, dragPx: { get: () => (finger && finger.dist) || 0 } });   // v091 : lus par le tutoriel (doigt posé ? distance glissée depuis la pose)
     const scale = () => cfg.dragGain / Math.max(1, Math.min(window.innerWidth, window.innerHeight));
     const boostOff = () => { if (T.thrust) { T.thrust = false; if (Hap) Hap.boostStop(); } };
     const boostOn = () => { T.thrust = true; if (Hap) Hap.boostStart(); };   // v034 : le son du boost est joué par Game.onBoostStart
@@ -58,7 +59,6 @@
       buzz('touch');                                 // v026 : mini vibration dès que le doigt touche l'écran en partie
       if (finger) return;                            // un seul doigt pilote
       const t = e.changedTouches[0];
-      T.down = true;   // v090 : le tutoriel sait si un doigt est posé
       finger = { id: t.identifier, x: t.clientX, y: t.clientY, x0: t.clientX, y0: t.clientY, t0: performance.now(), moved: false };
       // v026 : dans la seconde qui suit la fin d'un boost, reposer le doigt relance le boost tout de suite (sans appui long)
       if (game.state === 'FLIGHT' && performance.now() < T.reboostUntil) { finger.boost = true; T.reboostUntil = 0; boostOn(); }
@@ -70,6 +70,7 @@
       for (const t of e.changedTouches) {
         if (t.identifier !== finger.id) continue;
         // v024 : au lanceur, la vue ne bouge pas ; en vol, le glissé dirige
+        finger.dist = (finger.dist || 0) + Math.hypot(t.clientX - finger.x, t.clientY - finger.y);
         if (game.state === 'FLIGHT') { const k = scale(); const rx = (t.clientX - finger.x) * k, ry = (t.clientY - finger.y) * k; finger.sx = (finger.sx || 0) * 0.4 + rx * 0.6; finger.sy = (finger.sy || 0) * 0.4 + ry * 0.6; input.addAim(-finger.sx, -finger.sy); }   // v088 : sensibilité 3.0 → 2.3 + lissage (les nouveaux joueurs sur-corrigeaient)
         finger.x = t.clientX; finger.y = t.clientY;
         if (Math.hypot(t.clientX - finger.x0, t.clientY - finger.y0) > cfg.tapMaxMove) finger.moved = true;
@@ -94,7 +95,7 @@
         if (t.identifier !== finger.id) continue;
         const tap = !finger.moved && !finger.boost && performance.now() - finger.t0 < cfg.tapMaxMs;
         if (finger.boost && game.state === 'FLIGHT') T.reboostUntil = performance.now() + cfg.reboostMs;   // v026
-        finger = null; T.down = false;
+        finger = null;
         boostOff();                                  // v024 : doigt levé → boost coupé
         if (!tap || !playing()) return;
         e.preventDefault();
@@ -121,7 +122,7 @@
         if (push) input.addAim(-push * cfg.edgeTurnRate * dt, 0);
       }
       if (!flying) { boostOff(); if (game.state !== 'FLIGHT') T.reboostUntil = 0; }   // pause : la fenêtre reste ouverte
-      pause.hidden = !playing();
+      pause.hidden = !playing() || !!(CC.Tutorial && CC.Tutorial.hold);   // v091 : pas de bouton pause pendant les consignes du tuto
     };
     game.resize();   // plein écran
     return T;
