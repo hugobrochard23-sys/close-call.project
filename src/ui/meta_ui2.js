@@ -37,6 +37,17 @@
         else { game.audio.play('uiLock'); Home.toast(ui, t.label + ' : DEBLOQUE AU NIVEAU ' + meta.unlockAt(t.id)); }
       });
     });
+    // v092 : FLECHE de guidage vers GARAGE puis PASS tant que leur mini-tuto n'est pas fini (elle disparaît en partie, revient à l'accueil)
+    if (active === null && meta) {
+      const P = game.progress.P, gd = meta.isOpen('garage') && !P.tutDone ? 0 : meta.isOpen('pass') && !(meta.M.seen && meta.M.seen.pass_used) ? 1 : -1;
+      if (gd >= 0) {
+        const tt = now(), ax = bx + cw * (gd + 0.5), q = Math.max(4, R(bh * 0.1)), ay = by - bh * 0.78 - Math.abs(Math.sin(tt * 4.5)) * bh * 0.22, lab = gd === 0 ? 'AMELIORE TA FUSEE' : 'CADEAUX';
+        ctx.fillStyle = '#35ff4a'; ctx.beginPath(); ctx.moveTo(ax - q * 2.6, ay - q * 2.6); ctx.lineTo(ax + q * 2.6, ay - q * 2.6); ctx.lineTo(ax + q * 2.6, ay - q * 0.6); ctx.lineTo(ax, ay + q * 2.2); ctx.lineTo(ax - q * 2.6, ay - q * 0.6); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = '#0a3a12'; ctx.lineWidth = 3; ctx.stroke();
+        const lw = Math.min(W * 0.62, F.measure(lab, 1.5) + q * 6), lx = Math.max(W * 0.02, ax + q * 3.4 + lw > W * 0.97 ? ax - q * 3.4 - lw : ax + q * 3.4), ly = ay - q * 0.2 - bh * 0.27;
+        panel(ctx, lx, ly, lw, bh * 0.55, 'rgba(8,60,20,0.95)', '#56ff5a', 8); txt(ctx, lab, lx + lw / 2, ly + bh * 0.14, lw - q * 2, 1.5, '#ffffff', 'center');
+      }
+    }
     return bh + HH * 0.03;
   };
 
@@ -100,6 +111,7 @@
         }
       }
     });
+    if (!prog.P.tutDone) txt(ctx, 'AMELIORE TES COMPETENCES', W / 2, ry + 4 * (rh + gap) + HH * 0.004, W * 0.9, 1.8, '#56ff5a', 'center');   // v092
     garageToggle(ui, ctx, game, W, H, false);
     Home.drawTabs(ui, ctx, game, L, 'garage'); Home.drawToast(ui, ctx, L);
   };
@@ -143,17 +155,11 @@
       ctx.globalAlpha = U.clamp(k / 0.3, 0, 1); txt(ctx, f.name + ' DEBLOQUE !', cx, Y(0.46), W * 0.9, u * 0.0072, GOLD, 'center'); ctx.globalAlpha = 1;
       if (k < 0.18) { ctx.fillStyle = 'rgba(255,255,255,' + (0.7 * (1 - k / 0.18)) + ')'; ctx.fillRect(0, L.T, W, L.HH); }
     }
-    // mini-guide : trois cartes, une à la fois
+    // v092 : plus de cartes d'explication (personne ne les lit) : un bouton OK, puis une FLECHE sur l'accueil montre où aller
     if (t > 2.5) {
-      const steps = GUIDE[q.feat], s = steps[q.step], cw = W * 0.88, ch = L.HH * 0.27, x = (W - cw) / 2, y = Y(0.52);
-      panel(ctx, x, y, cw, ch, NAVY, GOLD, 10);
-      stepIcon(ctx, s[2], x + ch * 0.4, y + ch * 0.36, ch * 0.42);
-      txt(ctx, (q.step + 1) + '/' + steps.length + '  ' + s[0], x + ch * 0.8, y + ch * 0.12, cw - ch * 0.9, 1.8, GOLD);
-      wrap(s[1], 26).slice(0, 4).forEach((ln, i) => txt(ctx, ln, x + ch * 0.8, y + ch * 0.36 + i * ch * 0.14, cw - ch * 0.9, 1.15, CREAM));
-      const last = q.step === steps.length - 1, bw = cw * 0.5, bh = L.HH * 0.075, bx = W / 2 - bw / 2, by = y + ch + L.HH * 0.02, on = inRect(ui, bx, by, bw, bh);
-      greenBtn(ctx, bx, by, bw, bh, on); txt(ctx, last ? 'COMPRIS' : 'SUIVANT', bx + bw / 2, by + bh * 0.32, bw - 10, 1.8, DARK, 'center');
-      hit(ui, bx, by, bw, bh, () => { if (!last) { q.step++; return; } game.meta.markSeen(q.feat); const ft = q.feat; ui.unlock = null; ui.overlay = ft === 'chest' ? 'map' : ft; });
-      for (let i = 0; i < steps.length; i++) { ctx.fillStyle = i === q.step ? GOLD : '#3a424c'; ctx.fillRect(R(W / 2 - steps.length * 9 + i * 18), R(by + bh + 8), 10, 10); }
+      const bw = W * 0.56, bh = L.HH * 0.09, bx = W / 2 - bw / 2, by = Y(0.6), on = inRect(ui, bx, by, bw, bh);
+      greenBtn(ctx, bx, by, bw, bh, on); txt(ctx, 'OK', bx + bw / 2, by + bh * 0.3, bw - 10, 2.8, DARK, 'center');
+      hit(ui, bx - 20, by - 20, bw + 40, bh + 40, () => { game.meta.markSeen(q.feat); ui.unlock = null; ui.overlay = null; });
     }
     Home.drawToast(ui, ctx, L);
   };

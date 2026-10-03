@@ -216,7 +216,7 @@
         Home.drawCoinIcon(ctx, gx2 + ic / 2, Y(0.6) + np * 3.5, ic);
         text(ctx, lbl, gx2 + ic + np * 3, Y(0.6) - (pop - 1) * np * 8, np * pop, GOLD, {});
       }
-      if (t > 2.4 && (game.settings.coinTips || 0) < 4) { const tip = 'ECROUS : AMELIORATIONS AU GARAGE', tf = ui.fitPx([tip], W * 0.9, u * 0.0036); text(ctx, tip, cx, Y(0.64), tf, '#8fd0ff', { align: 'center' }); if (!r.tipCounted) { r.tipCounted = true; game.settings.coinTips = (game.settings.coinTips || 0) + 1; game.writeSave(); } }   // v085 : explique l'utilité des écrous les premières fois
+
       if (t < 2.3 && (r.tickAt || 0) + 0.06 < t && t > 1.25) { r.tickAt = t; game.audio.play('xpTick', null, Math.floor(shown / Math.max(1, lv.chest) * 8)); }
       // v082 : étoiles (apparaissent une à une), module(s) trouvé(s), XP du pass
       if (lv.stars !== undefined && Home.drawStars) {
@@ -252,15 +252,12 @@
       Home.button3d(ctx, bx, yMain, bw, bh1, on ? '#f0d28a' : GOLD, GOLD, '#9a7126', 1 + 0.02 * Math.sin(t * 5));
       text(ctx, lbl, cx, yMain + bh1 / 2 - lp * 3.6 - bh1 * 0.03, lp, '#14181d', { align: 'center' });
       ui.buttons.push({ x: bx, y: yMain, w: bw, h: bh1, action: () => { const go = () => game.goHome({ autoLaunch: !win }); game.ads ? game.ads.beforeContinue(go) : go(); } });
-      const mapOpen = !game.meta || game.meta.isOpen('chest'), wA = mapOpen ? bw * 0.58 : 0, wB = mapOpen ? bw - wA - 8 : bw, xB = mapOpen ? bx + wA + 8 : bx;   // v086 : NIVEAUX seulement une fois le coffre des étoiles débloqué
+      const mapOpen = !game.meta || game.meta.isOpen('chest');   // v092 : plus de bouton DEFIER ; NIVEAUX (si le coffre des étoiles est ouvert) prend toute la largeur
       if (mapOpen) {
-        Home.pill(ctx, bx, yMap, wA, bh0, 'rgba(38,45,54,0.97)', '#5a6674', bh0 * 0.3);
-        const mp = ui.fitPx(['NIVEAUX'], wA * 0.7, bh0 * 0.04); text(ctx, 'NIVEAUX', bx + wA / 2, yMap + bh0 / 2 - mp * 3.6, mp, '#ffffff', { align: 'center' });
-        ui.buttons.push({ x: bx, y: yMap, w: wA, h: bh0, action: () => { game.goHome({}); ui.overlay = 'map'; } });
+        Home.pill(ctx, bx, yMap, bw, bh0, 'rgba(38,45,54,0.97)', '#5a6674', bh0 * 0.3);
+        const mp = ui.fitPx(['NIVEAUX'], bw * 0.5, bh0 * 0.04); text(ctx, 'NIVEAUX', bx + bw / 2, yMap + bh0 / 2 - mp * 3.6, mp, '#ffffff', { align: 'center' });
+        ui.buttons.push({ x: bx, y: yMap, w: bw, h: bh0, action: () => { game.goHome({}); ui.overlay = 'map'; } });
       }
-      Home.pill(ctx, xB, yMap, wB, bh0, 'rgba(38,60,48,0.97)', '#56d98b', bh0 * 0.3);   // v083 : DEFIER UN AMI (lien à partager : son score et son temps)
-      const dp = ui.fitPx(['DEFIER'], wB * 0.7, bh0 * 0.04); text(ctx, 'DEFIER', xB + wB / 2, yMap + bh0 / 2 - dp * 3.6, dp, '#56d98b', { align: 'center' });
-      ui.buttons.push({ x: xB, y: yMap, w: wB, h: bh0, action: () => Home.shareChallenge(game, lv) });
       if (win && !lv.doubled && game.ads && game.ads.enabled() && !game.testMode) {   // v083 : publicité récompensée : le coffre double
         const yD = yMap - bh0 - u * 0.02, on2 = ui.mouse && ui.mouse.y >= yD && ui.mouse.y <= yD + bh0;
         Home.pill(ctx, bx, yD, bw, bh0, on2 ? 'rgba(52,62,74,0.97)' : 'rgba(38,45,54,0.97)', GOLD, bh0 * 0.3);

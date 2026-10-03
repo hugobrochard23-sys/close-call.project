@@ -47,15 +47,20 @@
   // ============================================================================================================
   Home.drawPass = function (ui, ctx, game, W, H) {
     const L = Home.layout(ui, W, H), { T, HH, u } = L, m = u * 0.04, meta = game.meta, tier = meta.tier, P = meta.M.pass, game_ = game;
+    if (meta.M.seen && !meta.M.seen.pass_used) { meta.M.seen.pass_used = 1; meta.save(); }   // v092 : la flèche de l'accueil disparaît une fois le pass visité
     backdrop(ctx, L); const top = Home.drawTop(ui, ctx, game, L, 'sub');
     const ty = top + HH * 0.018, th = titlePanel(ctx, L, ty, 'PASS');
     // palier + barre d'XP
     const py = ty + th + HH * 0.014, ph = HH * 0.115, pw = W - 2 * m; panel(ctx, m, py, pw, ph, PANEL, EDGE, 10);
     txt(ctx, 'SAISON ' + P.season, m + 12, py + ph * 0.1, pw * 0.5, 1, DIM);
-    txt(ctx, 'PALIER ' + tier + ' / ' + Meta.TIERS, m + 12, py + ph * 0.28, pw * 0.7, 2.6, CREAM);
-    const bx = m + 12, bw = pw - 24, by = py + ph * 0.66, bh = ph * 0.2, k = tier >= Meta.TIERS ? 1 : (P.xp % Meta.XP_PER) / Meta.XP_PER;
+    txt(ctx, 'PALIER ' + tier + ' / ' + Meta.TIERS, m + 12, py + ph * 0.28, pw * 0.54, 2.4, CREAM);
+    const bx = m + 12, bw = pw * 0.56 - 12, by = py + ph * 0.66, bh = ph * 0.2, k = tier >= Meta.TIERS ? 1 : (P.xp % Meta.XP_PER) / Meta.XP_PER;
     ctx.fillStyle = EDGE; ctx.fillRect(R(bx - 2), R(by - 2), R(bw + 4), R(bh + 4)); ctx.fillStyle = DARK; ctx.fillRect(R(bx), R(by), R(bw), R(bh)); ctx.fillStyle = GOLD; ctx.fillRect(R(bx), R(by), R(k * bw), R(bh)); ctx.fillStyle = '#f0d28a'; ctx.fillRect(R(bx), R(by), R(k * bw), Math.max(1, R(bh * 0.25)));
-    txt(ctx, tier >= Meta.TIERS ? 'COMPLET' : (P.xp % Meta.XP_PER) + ' / ' + Meta.XP_PER + ' XP', bx + bw, by - bh * 1.15, bw * 0.5, 1, DIM, 'right');
+    txt(ctx, tier >= Meta.TIERS ? 'COMPLET' : (P.xp % Meta.XP_PER) + ' / ' + Meta.XP_PER + ' XP', bx, by + bh * 1.5, bw * 0.8, 1, DIM);
+    // v092 : la PROCHAINE FUSEE du pass (piste premium) tourne en 3D à droite : on voit ce qu'on gagne
+    { let nt = 0, sid = null; for (let q = tier + 1; q <= Meta.TIERS; q++) { const pr = Meta.prototype.rewards.call(meta, q).prem; if (pr && pr.t === 'skin') { nt = q; sid = pr.id; break; } }
+      if (sid && CC.Hangar) { const vx = m + pw * 0.6, vw = pw * 0.38; ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(R(vx), R(py + 6), R(vw), R(ph - 12)); CC.Hangar.preview(ctx, sid, vx, py + 2, vw, ph - 4, performance.now() / 1000);
+        txt(ctx, 'PALIER ' + nt, vx + vw / 2, py + ph * 0.8, vw, 1.1, GOLD, 'center'); if (!P.premium) Home.icon.lock(ctx, vx + vw - ph * 0.12, py + ph * 0.18, ph * 0.09, '#d8dde2'); } }
     // grille : 5 paliers par page, deux pistes
     const per = 5, pages = Math.ceil(Meta.TIERS / per); if (ui.passPage === undefined || ui.passPage === null) ui.passPage = Math.min(pages - 1, Math.floor(Math.max(0, tier - 1) / per));
     const pg = U.clamp(ui.passPage, 0, pages - 1), gap = 5, cw = (W - 2 * m - gap * (per - 1)) / per, gy = py + ph + HH * 0.016, rowH = HH * 0.14, labW = 0;
@@ -85,7 +90,6 @@
     const px2 = m + bw2 + 8;
     if (P.premium) { panel(ctx, px2, by2, bw2, bh2, '#3a3320', GOLD, 8); txt(ctx, 'PREMIUM ACTIF', px2 + bw2 / 2, by2 + bh2 * 0.34, bw2 - 10, 1.4, GOLD, 'center'); }
     else { panel(ctx, px2, by2, bw2, bh2, NAVY, GOLD, 8); txt(ctx, 'PASS PREMIUM', px2 + bw2 / 2, by2 + bh2 * 0.34, bw2 - 10, 1.5, GOLD, 'center'); hit(ui, px2, by2, bw2, bh2, () => { const r = meta.buyPremium(); if (r === 'no-link') Home.toast(ui, 'PREMIUM BIENTOT DISPONIBLE'); }); }
-    txt(ctx, 'LE PASS MONTE EN JOUANT : NIVEAUX, ETOILES, QUOTIDIEN', W / 2, by2 + bh2 + HH * 0.012, W - 2 * m, 0.95, DIM, 'center');
     Home.drawTabs(ui, ctx, game, L, 'pass'); drawToast(ui, ctx, L);
   };
 

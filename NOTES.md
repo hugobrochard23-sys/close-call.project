@@ -110,3 +110,8 @@ Boss plus personnalisés par zone, plusieurs zones par niveau, missions du jour,
 
 ## v091
 - Tuto : glisser = distance du doigt (dragPx) ; `touch.down` lu depuis le vrai doigt ; pause cachée pendant les consignes ; consignes glisse/boost des 3 premiers vols retirées ; 1er lancement / après RÉINITIALISER : direct dans le niveau 1 (pad.queued) ; réacteur de fond ×0,33, ambiances ×0,3.
+
+## v092
+- Victoire : plus de texte bleu écrous ni bouton DEFIER.
+- HANGAR (src/ui/hangar.js) : boutique = carrousel 3D (aperçu WebGL hors écran), flèches, prix en écrous (600/1800/4500), pub +150 écrous, prix EUR en petit ; 8 nouvelles fusées (src/entities/skins2.js).
+- Flèche verte sur l'onglet GARAGE (jusqu'à tutDone) puis PASS (jusqu'à visite) ; unlock = animation + OK (plus de cartes). Pass : aperçu 3D de la prochaine fusée premium.
